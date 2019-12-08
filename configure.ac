@@ -2,7 +2,7 @@
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 m4_define([v_maj], [0])
 m4_define([v_min], [6])
-m4_define([v_mic], [31])
+m4_define([v_mic], [40])
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 m4_define([v_v], m4_join([], v_min, v_mic))
 m4_define([v_ver], [v_maj.v_v])
@@ -70,7 +70,7 @@ AC_ARG_ENABLE(
 
 if test x"$ASM" = x"yes"; then
 	AC_CHECK_PROG( ASM_PROG, nasm, nasm, no ) # fix to set ASM_PROG to nasm, not yes.
-	if test x"$ASM_PROG" = x"no "; then
+	if test x"$ASM_PROG" = x"no"; then
 		ASM=no
 	fi
 fi
