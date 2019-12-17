@@ -1,10 +1,11 @@
 MAINTAINERCLEANFILES = Makefile.in
 
-# Update -D
 AM_CFLAGS = \
   -D_REENTRANT \
+  -D_7ZIP_LARGE_PAGES \
   -I@top_builddir@ \
-  -I@top_srcdir@
+  -I@top_srcdir@ \
+  -I../include/ 
 
 ASM_S =
 ASM_H =
@@ -12,40 +13,37 @@ ASM_7z =
 C_S =
 if USE_ASM
   ASM_7z += 7zCrcOpt_asm
-  ASM_S += @top_srcdir@/lzma/ASM/x86/$(ASM_7z).asm
-  ASM_H += @top_srcdir@/lzma/ASM/x86/7zAsm.asm
-  C_S += 7zCrcT8.c
+  ASM_S += ../ASM/x86/$(ASM_7z).asm
+  ASM_H += ../ASM/x86/7zAsm.asm
+  AM_CFLAGS += -D_7ZIP_ASM
 else
-  C_S += 7zCrc.c 
+  C_S += 7zCrcOpt.c 
 endif
 
 noinst_LTLIBRARIES = liblzma.la
-# need separate variable for ASM so that make will compile later
-# to prevent an error even if -j## is used.
 liblzma_la_SOURCES = \
-	$(C_S) \
-	7z.Crc.h \
-	LzmaDec.h \
-	LzmaEnc.h \
-	LzFind.c \
-	LzFind.h \
-	LzFindMt.c \
-	LzFindMt.h \
-	LzmaDec.c \
-	LzmaEnc.c \
-	LzmaLib.c \
-	LzmaLib.h \
-	Alloc.c \
-	Alloc.h \
-	Threads.c \
-	Threads.h \
-	Types.h \
-	LzHash.h \
-	windows.h \
-	basetyps.h \
-	MyWindows.h \
-	MyGuidDef.h \
-	$(ASM_S) $(ASM_H) 
+	7zCrc.c 	../include/7zCrc.h \
+	../include/7zTypes.h $(C_S) \
+	Alloc.c 	../include/Alloc.h \
+	../include/Compiler.h \
+	LzFind.c 	../include/LzFind.h \
+	LzFindMt.c 	../include/LzFindMt.h \
+	../include/LzHash.h \
+	Lzma2Dec.c 	../include/Lzma2Dec.h \
+	Lzma2DecMt.c 	../include/Lzma2DecMt.h \
+	Lzma2Enc.c 	../include/Lzma2Enc.h \
+	LzmaDec.c 	../include/LzmaDec.h \
+	LzmaEnc.c 	../include/LzmaEnc.h \
+	LzmaLib.c 	../include/LzmaLib.h \
+	MtCoder.c 	../include/MtCoder.h \
+	MtDec.c 	../include/MtDec.h \
+	../include/precomp.h \
+	Threads.c 	../include/Threads.h \
+	$(ASM_S) 	$(ASM_H) \
+	../include/basetyps.h \
+	../include/MyGuidDef.h \
+	../include/MyWindowsDef.h \
+	../include/windows.h
 
 ## hack to force asm compilation and to trick libtool with .lo file
 if USE_ASM 
@@ -60,6 +58,7 @@ liblzma_la_LIBADD = $(ASM_7z).lo
 
 $(ASM_7z).lo: $(ASM_S)
 	$(ASM_PROG) $(ASM_OPT) -o $(ASM_7z).o $(ASM_S)
-	cp $(ASM_7z).o .libs/
+	@cp $(ASM_7z).o .libs/
 	@echo -e "$(7ZIPASMLOFILE)" > $(ASM_7z).lo 
 endif
+

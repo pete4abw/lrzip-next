@@ -405,6 +405,7 @@ struct rzip_control {
 	i64 usable_ram; // the most ram we'll try to use on one activity
 	i64 maxram; // the largest chunk of ram to allocate
 	unsigned char lzma_properties[5]; // lzma properties, encoded
+	unsigned dictSize; // lzma Dictionary size - set in overhead computation
 	i64 window;
 	unsigned long flags;
 	i64 ramsize;

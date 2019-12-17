@@ -23,7 +23,7 @@ m4/ltversion.m4
 
 SUBDIRS = lzma man doc
 
-AM_CFLAGS = -I. -I lzma/C -DNDEBUG
+AM_CFLAGS = -I. -I lzma/include -DNDEBUG
 AM_CXXFLAGS = $(AM_CFLAGS)
 
 lrztardir = $(bindir)
@@ -43,6 +43,7 @@ libtmplrzip_la_SOURCES = \
   stream.h \
   util.c \
   util.h \
+  @topsrc_dir@/lzma/include/7zCrc.h \
   md5.c \
   md5.h \
   aes.c \

@@ -1,3 +1,24 @@
+lrzip-0.650
+
+LZMA SDK 19.00
+
+Incudes code for lzma and lzma2 direct from SDK. Multi Threading still
+dependent on p7zip code with regression to SDK 16.02.
+Multi Threading for decompression is not yet implemented.
+Update decompression output to display every 5 seconds or so.
+Memory and block size computations now favor larger blocks
+and larger dictionary sizes for better pre-processing and to give
+compression backends more to work with.
+Removal of scaling for lzma levels.
+Larger blocks in lrzip files may result in faster compression and
+decompression times and smaller output files.
+Add Dictionary size setting --dictsize.
+Add Dictionary size setting to lrzip.conf.
+Dictionary size now ranging from 2^12 (16384) to 2^30 (1G).
+Dictionary will be set automatically for all levels if not specified.
+Dictionary size will be reduced in some cases where ram overhead
+for LZMA exceeds allotted memory.
+
 lrzip-0.631
 
 Assembler code is back and works with x86_64

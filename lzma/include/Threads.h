@@ -4,7 +4,7 @@
 #ifndef __7Z_THRESDS_H
 #define __7Z_THRESDS_H
 
-#include "Types.h"
+#include "7zTypes.h"
 #include "windows.h"
 
 #ifdef ENV_BEOS
@@ -34,7 +34,9 @@ typedef unsigned THREAD_FUNC_RET_TYPE;
 #define THREAD_FUNC_CALL_TYPE MY_STD_CALL
 #define THREAD_FUNC_DECL THREAD_FUNC_RET_TYPE THREAD_FUNC_CALL_TYPE
 
-WRes Thread_Create(CThread *thread, THREAD_FUNC_RET_TYPE (THREAD_FUNC_CALL_TYPE *startAddress)(void *), LPVOID parameter);
+typedef THREAD_FUNC_RET_TYPE (THREAD_FUNC_CALL_TYPE * THREAD_FUNC_TYPE)(void *);
+
+WRes Thread_Create(CThread *thread, THREAD_FUNC_TYPE startAddress, LPVOID parameter);
 WRes Thread_Wait(CThread *thread);
 WRes Thread_Close(CThread *thread);
 
@@ -85,6 +87,7 @@ typedef struct _CSemaphore
 } CSemaphore;
 
 #define Semaphore_Construct(p) (p)->_created = 0
+#define Semaphore_IsCreated(p) ((CSemaphore *) (p) != NULL) // need for lrzip
 
 WRes Semaphore_Create(CSemaphore *p, UInt32 initiallyCount, UInt32 maxCount);
 WRes Semaphore_ReleaseN(CSemaphore *p, UInt32 num);

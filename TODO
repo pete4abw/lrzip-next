@@ -21,3 +21,9 @@ Consider ncurses version or even GUI one.
 
 Consider using LZMA Filters for processor-optimised
 coding to increase compression.
+
+Consider using LZMA2 which is recommended for programs
+that integrates LZMA in streams.
+
+Update Threading and atomic use for semaphores and
+atomic memory access using GCC.

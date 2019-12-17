@@ -1,3 +1,17 @@
+DECEMBER 2019
+
+This is another update with LZMA SDK 19.00 with some modifications.
+The Threads.c and Threads.h files are from p7ip-16.02. Small header
+modifications made to MtCoder.h and Threads.h for lrzip. In addition,
+lzma2 code has been imported (but not used yet) as well as the
+Multi Thread lzma decoder, which also is not used yet.
+
+Makefile defines are: _REENTRANT, 7ZIP_LARGE_PAGES, and optionally
+7ZIP_ASM if assembly code is used.
+
+This version of the SDK seems to have removed some memory problems
+caused by p7zip-16.02 whose codebase was never inserted.
+
 JANUARY 2009
 
 This is an updated LZMA library wrapper provided with SDK 4.63.
