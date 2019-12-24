@@ -12,6 +12,9 @@ Makefile defines are: _REENTRANT, 7ZIP_LARGE_PAGES, and optionally
 This version of the SDK seems to have removed some memory problems
 caused by p7zip-16.02 whose codebase was never inserted.
 
+In addition, code for branch/call/jump filters has been inserted
+and x86 code filtering has been implemented.
+
 JANUARY 2009
 
 This is an updated LZMA library wrapper provided with SDK 4.63.

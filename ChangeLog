@@ -1,9 +1,10 @@
 lrzip ChangeLog
 
-DECEMBER 2019, version bump 0.650, Peter Hyman
+DECEMBER 2019, version bump 0.700, Peter Hyman
 
 LZMA SDK 19.00
 
+* Add x86 filter. Add one byte to lzma properties.Magic size unchanged.
 * All new codebase. Include lzma2 code but not used.
 * Multi Threading still handled by p7zip SDK 16.02.
 * Add Dictionary Size capability.

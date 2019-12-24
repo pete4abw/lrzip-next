@@ -1,3 +1,14 @@
+lrzip-0.70 update
+
+Version 0.7x files use a slightly different magic header where an extra
+byte is used for lzma properties to indicate whether a filter is used
+prior to lzma compression (See byte 16). Therefore the final two bytes,
+21 and 22 are shifted one to bytes 22 and 23. The size of the magic
+header remain the same. This file format is not backward compatible.
+
+All files created with lrzip 0.7x are not backward compatible with versions
+prior to 0.70. v0.7x can read files generated with earlier versions.
+ 
 lrzip-0.60 update
 
 All files created with lrzip 0.6x are not backward compatible with versions

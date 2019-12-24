@@ -1,7 +1,9 @@
-lrzip-0.650
+lrzip-0.700
 
 LZMA SDK 19.00
 
+Add x86 BCJ Filter. Requires one additional byte for LZMA properties.
+Add code to test for lrzip versions < 0.700.
 Incudes code for lzma and lzma2 direct from SDK. Multi Threading still
 dependent on p7zip code with regression to SDK 16.02.
 Multi Threading for decompression is not yet implemented.

@@ -9,6 +9,7 @@ lzmadoc_DATA = \
   lzma.txt \
   Methods.txt \
   README \
-  README-Alloc
+  README-Alloc \
+  README.threading
 
 EXTRA_DIST = $(lzmadoc_DATA)

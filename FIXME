@@ -1,8 +1,0 @@
-DECEMBER 2019
-
-Attempt to set Dictionary Size from commandline. Problem is
-that setup_overhead() is called before filesize is known.
-Need to determine file size to make sure Dictionary is not
-too large. Similar to reduce_size variable in LzmaEnc.
-So right now, dictSize is not set and remains zero as is
-the current default.

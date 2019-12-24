@@ -21,9 +21,17 @@ Consider ncurses version or even GUI one.
 
 Consider using LZMA Filters for processor-optimised
 coding to increase compression.
+- x86 filter added 12/2019
 
 Consider using LZMA2 which is recommended for programs
 that integrates LZMA in streams.
+(PAH, since lzma properties would only be 2 bytes, and
+it uses lzma anyway, its benefit is in question)
+
+Use Multi-Threading LZMA Decoder.
+
+Try and convert MASM style Assembler for ASM LZMA
+Decoding which is supposed to be 30% faster.
 
 Update Threading and atomic use for semaphores and
 atomic memory access using GCC.

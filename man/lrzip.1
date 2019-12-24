@@ -64,6 +64,7 @@ Options affecting compression:
 Low level options:
  \-L, \-\-level level       Set lzma/bzip2/gzip compression level (1-9, default 7)
  \-\-dictsize = ds         Set Dictionary Size for LZMA ds=12 to 30 expressed as 2^ds
+ \-\-x86                   Use x86 filter (lzma compression only)
  \-N, \-\-nice-level value  Set nice value to value (default 19)
  \-p, \-\-threads value     Set processor count to override number of threads
  \-m, \-\-maxram size       Set maximum available ram in hundreds of MB
@@ -234,7 +235,10 @@ Set Dictionary Size for LZMA from 2^12 (16KB) to 2^30 (1GB). Normally this
 option is not useful since lrzip will set and sometimes change the dictionary
 size depending on the compression level selected and usable ram available.
 .IP
-.IP "\fB-N value\fP"
+.IP "\fB--x86\fP"
+Unconditionally use x86 filter prior to lzma compression.
+.IP
+IP "\fB-N value\fP"
 The default nice value is 19. This option can be used to set the priority
 scheduling for the lrzip backup or decompression. Valid nice values are
 from \-20 to 19. Note this does NOT speed up or slow down compression.

@@ -1,0 +1,13 @@
+LZMA SDK 19.00 Note
+
+Files Threads.c ../include/Threads.h
+are from p7zip SDK 16.02 for POSIX compatibility reasons.
+
+File ../include/MtCoder.h contains an addition for SDK
+19.00 compatibility.
+#define MTCODER__USE_WRITE_THREAD // need for lrzip
+
+File ../include/Threads.h contains an addition for SDK
+19.00 compatibility.
+#define Semaphore_IsCreated(p) ((CSemaphore *) (p) != NULL) // need for lrzip
+

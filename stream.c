@@ -1,7 +1,7 @@
 /*
    Copyright (C) 2006-2016,2018 Con Kolivas
    Copyright (C) 2011 Serge Belyshev
-   Copyright (C) 2011 Peter Hyman
+   Copyright (C) 2011, 2019 Peter Hyman
    Copyright (C) 1998 Andrew Tridgell
 
    This program is free software; you can redistribute it and/or modify
@@ -60,6 +60,8 @@
 #include "util.h"
 #include "lrzip_core.h"
 
+#include "Bra.h"	//x86 Filter
+
 #define STREAM_BUFSIZE (1024 * 1024 * 10)
 
 static struct compress_thread{
@@ -91,6 +93,8 @@ static long output_thread;
 static pthread_mutex_t output_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t output_cond = PTHREAD_COND_INITIALIZER;
 static pthread_t *threads;
+
+unsigned save_threads = 0; // need for multiple chunks to restore thread count
 
 bool init_mutex(rzip_control *control, pthread_mutex_t *mutex)
 {
@@ -300,6 +304,7 @@ static int lzma_compress_buf(rzip_control *control, struct compress_thread *cthr
 	uchar *c_buf;
 	size_t dlen;
 
+
 	if (!lzo_compresses(control, cthread->s_buf, cthread->s_len))
 		return 0;
 
@@ -311,7 +316,13 @@ retry:
 		print_err("Unable to allocate c_buf in lzma_compress_buf\n");
 		return -1;
 	}
-
+	/* x86 Filter */
+	if (control->x86filter) { // x86 filter data prior to compression
+		UInt32 x86State;
+		print_maxverbose("Converting x86 data prior to lzma compression...\n");
+		x86_Convert_Init(x86State);
+		x86_Convert(cthread->s_buf, cthread->s_len, 0, &x86State, 1);
+	}
 	/* pass absolute dictionary size and compression level */
 	lzma_ret = LzmaCompress(c_buf, &dlen, cthread->s_buf,
 		(size_t)cthread->s_len, lzma_properties, &prop_size,
@@ -557,6 +568,13 @@ static int lzma_decompress_buf(rzip_control *control, struct uncomp_thread *ucth
 		ret = -1;
 	} else
 		dealloc(c_buf);
+	/* x86 Filter */
+	if (control->x86filter) { // x86 filter data post decompression
+		UInt32 x86State;
+		print_maxverbose("Converting x86 data post lzma decompression...\n");
+		x86_Convert_Init(x86State);
+		x86_Convert(ucthread->s_buf, dlen, 0, &x86State, 0);
+	}
 out:
 	if (ret == -1) {
 		dealloc(ucthread->s_buf);
@@ -960,15 +978,20 @@ void *open_stream_out(rzip_control *control, int f, unsigned int n, i64 chunk_li
 		testbufs = 2;
 
 	/* Reduce threads one by one and then reduce dictionary size
- 	* by 10% until testsize is within range of estimated allocated
- 	* memory for backend compression. Leave `limit` alone for now.
- 	* First reduce threads, then dictionary size. */
+	* by 10% until testsize is within range of estimated allocated
+	* memory for backend compression. Leave `limit` alone for now.
+	* First reduce threads, then dictionary size. */
 	int dict_or_threads = 0;
-	unsigned DICTSIZEDEFAULT = (1<<24);					// a reasonable minimum dictionary size
+	unsigned DICTSIZEMIN = control->dictSize / 2;			// minimum dictionary size
 	unsigned save_dictSize = control->dictSize;			// save dictionary
-	while(1) {
-		if ((testsize = (limit * testbufs) + (control->overhead * control->threads)) > control->usable_ram) {
-			if (dict_or_threads < 2) {			// reduce thread count
+	if (!save_threads)						// in cases of multiple chunks, need to restore
+		save_threads = control->threads;			// thread count in case it was reduced below
+	else
+		control->threads = save_threads;
+	limit = control->usable_ram/testbufs;				// this is max chunk limit based on ram and compression window
+	while(1) {							// for testing purposes add 10% to test
+		if (limit * 1.1 <= control->overhead * control->threads) {
+			if (dict_or_threads < 2) {			// reduce thread count favoring reducing threads
 				control->threads--;
 				if (control->threads == 0) {
 					control->threads = 1;		// threads are 1, break
@@ -980,13 +1003,14 @@ void *open_stream_out(rzip_control *control, int f, unsigned int n, i64 chunk_li
 				control->dictSize *= 0.90;		// by 10% each iteration
 				if (control->dictSize % 2) 		// if dictionary size is an odd number
 					control->dictSize -= 1;		// round down to even number
+				round_to_page((i64 *) &control->dictSize);// align
 				setup_overhead(control);		// recompute overhead
 				dict_or_threads = 0;
 			}
-			print_maxverbose("Reducing Dictionary Size to %ld and/or Threads to %d to maximize threads and compression block size.\n",
-				control->dictSize, control->threads);
-			if (control->dictSize <= DICTSIZEDEFAULT)	// break on minimum
-				break;					
+			print_maxverbose("Reducing Dictionary Size to %ld and/or Threads to %d to maximize threads and compression block size.\
+L=%ld, T=%ld, O=%ld\n", control->dictSize, control->threads, limit, limit * 1.1, control->overhead);
+			if (control->dictSize <= DICTSIZEMIN)		// break on minimum
+				break;
 			continue;					// test again
 		}
 		break;
@@ -1001,9 +1025,11 @@ void *open_stream_out(rzip_control *control, int f, unsigned int n, i64 chunk_li
 	}
 	/* Use a nominal minimum size should we fail all previous shrinking */
 	limit = MAX(limit, STREAM_BUFSIZE);
-	limit = MIN(limit, chunk_limit);
+	limit = MIN(control->usable_ram/testbufs, chunk_limit);
 retest_malloc:
 	testsize = limit + (control->overhead * control->threads);
+	if (testsize > control->usable_ram)
+		limit = control->usable_ram;
 	testmalloc = malloc(testsize);
 	if (!testmalloc) {
 		limit = limit / 10 * 9;

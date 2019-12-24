@@ -25,13 +25,17 @@ liblzma_la_SOURCES = \
 	7zCrc.c 	../include/7zCrc.h \
 	../include/7zTypes.h $(C_S) \
 	Alloc.c 	../include/Alloc.h \
+	Bra86.c		../include/Bra.h \
 	../include/Compiler.h \
+	../include/CpuArch.h \
 	LzFind.c 	../include/LzFind.h \
 	LzFindMt.c 	../include/LzFindMt.h \
 	../include/LzHash.h \
 	Lzma2Dec.c 	../include/Lzma2Dec.h \
 	Lzma2DecMt.c 	../include/Lzma2DecMt.h \
 	Lzma2Enc.c 	../include/Lzma2Enc.h \
+	Lzma86Dec.c	../include/Lzma86.h \
+	Lzma86Enc.c \
 	LzmaDec.c 	../include/LzmaDec.h \
 	LzmaEnc.c 	../include/LzmaEnc.h \
 	LzmaLib.c 	../include/LzmaLib.h \

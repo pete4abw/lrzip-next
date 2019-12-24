@@ -1,7 +1,7 @@
 /*
    Copyright (C) 2006-2016 Con Kolivas
    Copyright (C) 2011 Serge Belyshev
-   Copyright (C) 2008, 2011 Peter Hyman
+   Copyright (C) 2008, 2011, 2019 Peter Hyman
    Copyright (C) 1998 Andrew Tridgell
 
    This program is free software; you can redistribute it and/or modify
@@ -131,9 +131,6 @@ void setup_overhead(rzip_control *control)
 			}
 		/* LZMA spec shows memory requirements as 6MB, not 4MB and state size
 		 * where default is 16KB */
-		// FIXME, need to check filesize and make sure dictionary is not too large
-		// or larger than maxram also. May also need test for 32 bit or 64 bit
-
 		control->overhead = (control->dictSize * 23 / 2) + (6 * 1024 * 1024) + 16384;
 	} else if (ZPAQ_COMPRESS)
 		control->overhead = 112 * 1024 * 1024;

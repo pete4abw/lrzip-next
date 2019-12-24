@@ -1,3 +1,25 @@
+lrzip-0.7x file format
+December 2019
+Peter Hyman
+LZMA x86 Filter included
+
+Byte	Content
+0-23	Magic
+---
+24+	Rzip Chunk Data (RCD)
+RCD+	Data blocks
+--- repeat
+(end-MD5_DIGEST_SIZE)->(end) md5 hash
+
+Magic data:
+0->3	LRZI
+4	LRZIP Major Version Number
+5	LRZIP Minor Version Number
+6->14	Source File Size or 0 if unknown, or salt in encrypted file
+16->21	LZMA Properties Encoded (x86filter [0,1], lc,lp,pb and dictionary size)
+22	1 = md5sum hash is stored at the end of the archive
+23	1 = data is encrypted with sha512/aes128
+
 lrzip-0.6x file format
 March 2011
 Con Kolivas

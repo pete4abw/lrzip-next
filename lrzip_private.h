@@ -404,6 +404,7 @@ struct rzip_control {
 	i64 overhead; // compressor overhead
 	i64 usable_ram; // the most ram we'll try to use on one activity
 	i64 maxram; // the largest chunk of ram to allocate
+	bool x86filter; // flag for x86 filter use. 0 = no, 1 = yes
 	unsigned char lzma_properties[5]; // lzma properties, encoded
 	unsigned dictSize; // lzma Dictionary size - set in overhead computation
 	i64 window;

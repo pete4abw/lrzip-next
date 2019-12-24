@@ -1,6 +1,6 @@
 /*
    Copyright (C) 2006-2016,2018 Con Kolivas
-   Copyright (C) 2011 Peter Hyman
+   Copyright (C) 2011, 2019 Peter Hyman
    Copyright (C) 1998-2003 Andrew Tridgell
 
    This program is free software; you can redistribute it and/or modify
@@ -158,8 +158,10 @@ bool write_magic(rzip_control *control)
 	if (LZMA_COMPRESS) {
 		int i;
 
+		magic[16] = control->x86filter; // 86 filter flag
+
 		for (i = 0; i < 5; i++)
-			magic[i + 16] = (char)control->lzma_properties[i];
+			magic[i + 17] = (char)control->lzma_properties[i];
 	}
 
 	/* This is a flag that the archive contains an md5 sum at the end
@@ -167,9 +169,9 @@ bool write_magic(rzip_control *control)
 	 * crc is still stored for compatibility with 0.5 versions.
 	 */
 	if (!NO_MD5)
-		magic[21] = 1;
-	if (ENCRYPT)
 		magic[22] = 1;
+	if (ENCRYPT)
+		magic[23] = 1;
 
 	if (unlikely(fdout_seekto(control, 0)))
 		fatal_return(("Failed to seek to BOF to write Magic Header\n"), false);
@@ -187,7 +189,7 @@ static inline i64 enc_loops(uchar b1, uchar b2)
 
 static bool get_magic(rzip_control *control, char *magic)
 {
-	int encrypted, md5, i;
+	int encrypted, md5, i, x86filter_offset=0;
 	i64 expected_size;
 	uint32_t v;
 
@@ -217,20 +219,25 @@ static bool get_magic(rzip_control *control, char *magic)
 		control->eof = 1;
 
 	/* restore LZMA compression flags only if stored */
-	if ((int) magic[16]) {
+	/* offset = 1 if 86 filter is used */
+	if (control->major_version == 0 && control->minor_version == 7) {
+		x86filter_offset = 1;
+		control->x86filter = magic[16];
+	}
+	if ((int) magic[16+x86filter_offset]) {
 		for (i = 0; i < 5; i++)
-			control->lzma_properties[i] = magic[i + 16];
+			control->lzma_properties[i] = magic[i + 16 + x86filter_offset];
 	}
 
 	/* Whether this archive contains md5 data at the end or not */
-	md5 = magic[21];
+	md5 = magic[21+x86filter_offset];
 	if (md5 && MD5_RELIABLE) {
 		if (md5 == 1)
 			control->flags |= FLAG_MD5;
 		else
 			print_verbose("Unknown hash, falling back to CRC\n");
 	}
-	encrypted = magic[22];
+	encrypted = magic[22+x86filter_offset];
 	if (encrypted) {
 		if (encrypted == 1)
 			control->flags |= FLAG_ENCRYPT;
@@ -256,7 +263,7 @@ bool read_magic(rzip_control *control, int fd_in, i64 *expected_size)
 
 	memset(magic, 0, sizeof(magic));
 	/* Initially read only <v0.6x header */
-	if (unlikely(read(fd_in, magic, 24) != 24))
+	if (unlikely(read(fd_in, magic, MAGIC_LEN) != MAGIC_LEN))
 		fatal_return(("Failed to read magic header\n"), false);
 
 	if (unlikely(!get_magic(control, magic)))
@@ -1156,7 +1163,8 @@ done:
 	else if (save_ctype == CTYPE_LZMA) {
 		print_output("rzip + lzma -- ");
 		if (lzma_ret=LzmaProps_Decode(&p, control->lzma_properties, sizeof(control->lzma_properties))==SZ_OK)
-			print_output("lc = %d, lp = %d, pb = %d, Dictionary Size = %d\n", p.lc, p.lp, p.pb, p.dicSize);
+			print_output("lc = %d, lp = %d, pb = %d, Dictionary Size = %d%s\n", p.lc, p.lp, p.pb, p.dicSize,
+					control->x86filter ? ", using x86 filter" : ".");
 		else
 			print_err("Corrupt LZMA Properties\n");
 	}
@@ -1265,7 +1273,7 @@ bool compress_file(rzip_control *control)
 			} else
 				strcpy(control->outfile, tmpinfile);
 			strcat(control->outfile, control->suffix);
-			print_progress("Output filename is: %s\n", control->outfile);
+			print_output("Output filename is: %s\n", control->outfile);
 		}
 
 		fd_out = open(control->outfile, O_RDWR | O_CREAT | O_EXCL, 0666);
@@ -1347,6 +1355,7 @@ bool initialise_control(rzip_control *control)
 	register_outputfile(control, control->msgout);
 	control->flags = FLAG_SHOW_PROGRESS | FLAG_KEEP_FILES | FLAG_THRESHOLD;
 	control->suffix = ".lrz";
+	control->x86filter = false;		/* x86 filter flag */
 	control->compression_level = 0; 	/* 0 because lrzip default level is 5, others 7 */
 	control->dictSize = 0;			/* Dictionary Size for lzma. 0 means program decides */
 	control->ramsize = get_ram(control);
