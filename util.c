@@ -111,7 +111,7 @@ void setup_overhead(rzip_control *control)
 	 * compression back-ends that need a lot of ram
 	 * and set Dictionary size */
 	if (LZMA_COMPRESS) {
-		if (control->dictSize == 0)
+		if (control->dictSize == 0) {
 			switch (control->compression_level) {
 			case 1:
 			case 2:
@@ -129,6 +129,7 @@ void setup_overhead(rzip_control *control)
 			default: control->dictSize = (1 << 24);
 				break; // 16MB -- should never reach here
 			}
+		}
 		/* LZMA spec shows memory requirements as 6MB, not 4MB and state size
 		 * where default is 16KB */
 		control->overhead = (control->dictSize * 23 / 2) + (6 * 1024 * 1024) + 16384;

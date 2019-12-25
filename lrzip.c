@@ -154,12 +154,10 @@ bool write_magic(rzip_control *control)
 		memcpy(&magic[6], &esize, 8);
 	}
 
+	magic[16] = control->x86filter; // 86 filter flag
 	/* save LZMA compression flags */
 	if (LZMA_COMPRESS) {
 		int i;
-
-		magic[16] = control->x86filter; // 86 filter flag
-
 		for (i = 0; i < 5; i++)
 			magic[i + 17] = (char)control->lzma_properties[i];
 	}
@@ -218,12 +216,12 @@ static bool get_magic(rzip_control *control, char *magic)
 	if (control->major_version == 0 && control->minor_version < 6)
 		control->eof = 1;
 
-	/* restore LZMA compression flags only if stored */
-	/* offset = 1 if 86 filter is used */
+	/* offset = 1 if x86 filter is used for all compression modes */
 	if (control->major_version == 0 && control->minor_version == 7) {
 		x86filter_offset = 1;
 		control->x86filter = magic[16];
 	}
+	/* restore LZMA compression flags only if stored */
 	if ((int) magic[16+x86filter_offset]) {
 		for (i = 0; i < 5; i++)
 			control->lzma_properties[i] = magic[i + 16 + x86filter_offset];

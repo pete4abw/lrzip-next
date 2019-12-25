@@ -117,8 +117,8 @@ static void usage(bool compat)
 	}
 	if (!compat)
 		print_output("	-L, --level level	set lzma/bzip2/gzip compression level (1-9, default 7)\n");
-	print_output("	--dictsize		Set Dictionary Size for LZMA ds=12 to 30 expressed as 2^ds\n");
-	print_output("	--x86			Use x86 filter (lzma compression only)\n");
+	print_output("	--dictsize		Set lzma Dictionary Size for LZMA ds=12 to 30 expressed as 2^ds\n");
+	print_output("	--x86			Use x86 filter (for all compression modes)\n");
 	print_output("	-N, --nice-level value	Set nice value to value (default %d)\n", compat ? 0 : 19);
 	print_output("	-p, --threads value	Set processor count to override number of threads\n");
 	print_output("	-m, --maxram size	Set maximum available ram in hundreds of MB\n");
@@ -191,11 +191,8 @@ static void show_summary(void)
 				print_verbose("LZMA. LZO Compressibility testing %s\n", (LZO_TEST? "enabled" : "disabled"));
 			print_verbose("Compression level %d %s\n", control->compression_level,
 				(LZMA_COMPRESS ? (control->compression_level == 5 ? "- Default LZMA level": "" ) : ""));
-			if (LZMA_COMPRESS) {
+			if (LZMA_COMPRESS)
 				print_verbose("Dictionary Size: %ld\n", control->dictSize );
-				if (control->x86filter)
-					print_verbose("LZMA x86 Filter Used\n");
-			}
 			else if (LZO_COMPRESS)
 				print_verbose("LZO\n");
 			else if (BZIP2_COMPRESS)
@@ -206,6 +203,8 @@ static void show_summary(void)
 				print_verbose("ZPAQ. LZO Compressibility testing %s\n", (LZO_TEST? "enabled" : "disabled"));
 			else if (NO_COMPRESS)
 				print_verbose("RZIP pre-processing only\n");
+			if (control->x86filter)
+				print_verbose("x86 Filter Used\n");
 			if (control->window)
 				print_verbose("Compression Window: %lld = %lldMB\n", control->window, control->window * 100ull);
 			/* show heuristically computed window size */
@@ -559,16 +558,12 @@ int main(int argc, char *argv[])
 	/* Because LZMA default compression level is 5, not 7, compression_level is
 	 * initialized as 0, not 7. A check must be made to set it if not otherwise
 	 * specified on command line */
-	if (LZMA_COMPRESS)
+	if (LZMA_COMPRESS) {
 		if (!control->compression_level)
 			control->compression_level = 5; // default LZMA level is 5
-	else {
-		control->compression_level = 7;
-		if (control->x86filter) {
-			print_err("--x86 only applies to lzma compression. Ignored.\n");
-			control->x86filter = false;
-		}
 	}
+	else
+		control->compression_level = 7;
 
 
 	argc -= optind;

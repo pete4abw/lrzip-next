@@ -2,7 +2,7 @@
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 m4_define([v_maj], [0])
 m4_define([v_min], [7])
-m4_define([v_mic], [0])
+m4_define([v_mic], [0beta])
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 m4_define([v_v], m4_join([], v_min, v_mic))
 m4_define([v_ver], [v_maj.v_v])
@@ -126,9 +126,9 @@ LIBS="$PTHREAD_LIBS $LIBS"
 CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
 CXXFLAGS="$CXXFLAGS $PTHREAD_CXXFLAGS"
 
-# final checks for assembler
-# ASM is back for x86_64 by using newer CRC code from p7zip-16.02
-# object files handled in lzma/C/Makefile.am
+## final checks for assembler
+## ASM is back for x86_64 by using newer CRC code from p7zip-16.02
+## object files handled in lzma/C/Makefile.am
 if test x"$ASM" = x"yes"; then
 	ASM_OPT="-I../ASM/x86/"
 	case $host in
@@ -165,11 +165,11 @@ echo
 echo
 echo "Configuration Options Summary:"
 echo
-echo -n "  ASM................:"
+echo -n "  ASM................: "
 if test x"$ASM_PROG" = x"no"; then
-	echo " $ASM"
+	echo "$ASM"
 else
-	echo " $ASM, using $ASM_PROG Assembler"
+	echo "$ASM, using $ASM_PROG Assembler"
 fi
 echo "  Static binary......: $static"
 echo

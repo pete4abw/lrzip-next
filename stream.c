@@ -316,13 +316,6 @@ retry:
 		print_err("Unable to allocate c_buf in lzma_compress_buf\n");
 		return -1;
 	}
-	/* x86 Filter */
-	if (control->x86filter) { // x86 filter data prior to compression
-		UInt32 x86State;
-		print_maxverbose("Converting x86 data prior to lzma compression...\n");
-		x86_Convert_Init(x86State);
-		x86_Convert(cthread->s_buf, cthread->s_len, 0, &x86State, 1);
-	}
 	/* pass absolute dictionary size and compression level */
 	lzma_ret = LzmaCompress(c_buf, &dlen, cthread->s_buf,
 		(size_t)cthread->s_len, lzma_properties, &prop_size,
@@ -568,13 +561,6 @@ static int lzma_decompress_buf(rzip_control *control, struct uncomp_thread *ucth
 		ret = -1;
 	} else
 		dealloc(c_buf);
-	/* x86 Filter */
-	if (control->x86filter) { // x86 filter data post decompression
-		UInt32 x86State;
-		print_maxverbose("Converting x86 data post lzma decompression...\n");
-		x86_Convert_Init(x86State);
-		x86_Convert(ucthread->s_buf, dlen, 0, &x86State, 0);
-	}
 out:
 	if (ret == -1) {
 		dealloc(ucthread->s_buf);
@@ -982,8 +968,8 @@ void *open_stream_out(rzip_control *control, int f, unsigned int n, i64 chunk_li
 	* memory for backend compression. Leave `limit` alone for now.
 	* First reduce threads, then dictionary size. */
 	int dict_or_threads = 0;
-	unsigned DICTSIZEMIN = control->dictSize / 2;			// minimum dictionary size
-	unsigned save_dictSize = control->dictSize;			// save dictionary
+	i64 DICTSIZEMIN = control->dictSize / 2;			// minimum dictionary size
+	i64 save_dictSize = control->dictSize;				// save dictionary
 	if (!save_threads)						// in cases of multiple chunks, need to restore
 		save_threads = control->threads;			// thread count in case it was reduced below
 	else
@@ -1003,12 +989,12 @@ void *open_stream_out(rzip_control *control, int f, unsigned int n, i64 chunk_li
 				control->dictSize *= 0.90;		// by 10% each iteration
 				if (control->dictSize % 2) 		// if dictionary size is an odd number
 					control->dictSize -= 1;		// round down to even number
-				round_to_page((i64 *) &control->dictSize);// align
+				round_to_page(&control->dictSize);// align
 				setup_overhead(control);		// recompute overhead
 				dict_or_threads = 0;
 			}
-			print_maxverbose("Reducing Dictionary Size to %ld and/or Threads to %d to maximize threads and compression block size.\
-L=%ld, T=%ld, O=%ld\n", control->dictSize, control->threads, limit, limit * 1.1, control->overhead);
+			print_maxverbose("Reducing Dictionary Size to %ld and/or Threads to %d to maximize threads and compression block size.\n",
+					control->dictSize, control->threads);
 			if (control->dictSize <= DICTSIZEMIN)		// break on minimum
 				break;
 			continue;					// test again
@@ -1029,7 +1015,7 @@ L=%ld, T=%ld, O=%ld\n", control->dictSize, control->threads, limit, limit * 1.1,
 retest_malloc:
 	testsize = limit + (control->overhead * control->threads);
 	if (testsize > control->usable_ram)
-		limit = control->usable_ram;
+		limit = control->usable_ram/testbufs;
 	testmalloc = malloc(testsize);
 	if (!testmalloc) {
 		limit = limit / 10 * 9;
@@ -1333,6 +1319,13 @@ retry:
 	 * being 31 bytes so don't bother trying to compress anything less
 	 * than 64 bytes. */
 	if (!NO_COMPRESS && cti->c_len >= 64) {
+		/* x86 Filter */
+		if (control->x86filter) { // x86 filter data prior to compression
+			UInt32 x86State;
+			print_maxverbose("Converting x86 data prior to compression for thread %d...\n", i);
+			x86_Convert_Init(x86State);
+			x86_Convert(cti->s_buf, cti->s_len, 0, &x86State, 1);
+		}
 		if (LZMA_COMPRESS)
 			ret = lzma_compress_buf(control, cti);
 		else if (LZO_COMPRESS)
@@ -1374,6 +1367,12 @@ retry:
 	}
 	if (unlikely(ret)) {
 		print_maxverbose("Unable to compress in parallel, waiting for previous thread to complete before trying again\n");
+		if (control->x86filter) { // As unlikely as this is, we have to undo filtering here 
+			UInt32 x86State;
+			print_maxverbose("Reverting x86 data prior to trying again\n");
+			x86_Convert_Init(x86State);
+			x86_Convert(cti->s_buf, cti->s_len, 0, &x86State, 0);
+		}
 		goto retry;
 	}
 
@@ -1580,6 +1579,13 @@ retry:
 			default:
 				failure_return(("Dunno wtf decompression type to use!\n"), NULL);
 				break;
+		}
+		/* x86 Filter */
+		if (control->x86filter) { // x86 filter data post decompression
+			UInt32 x86State;
+			print_maxverbose("Restoring x86 data post deecompression for thread %d...\n", i);
+			x86_Convert_Init(x86State);
+			x86_Convert(uci->s_buf, uci->u_len, 0, &x86State, 0);
 		}
 	}
 
