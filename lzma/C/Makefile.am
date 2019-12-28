@@ -34,8 +34,6 @@ liblzma_la_SOURCES = \
 	Lzma2Dec.c 	../include/Lzma2Dec.h \
 	Lzma2DecMt.c 	../include/Lzma2DecMt.h \
 	Lzma2Enc.c 	../include/Lzma2Enc.h \
-	Lzma86Dec.c	../include/Lzma86.h \
-	Lzma86Enc.c \
 	LzmaDec.c 	../include/LzmaDec.h \
 	LzmaEnc.c 	../include/LzmaEnc.h \
 	LzmaLib.c 	../include/LzmaLib.h \
