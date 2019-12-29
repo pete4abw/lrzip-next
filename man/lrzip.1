@@ -64,7 +64,11 @@ Options affecting compression:
 Low level options:
  \-L, \-\-level level       Set lzma/bzip2/gzip compression level (1-9, default 7)
  \-\-dictsize = ds         Set Dictionary Size for LZMA ds=12 to 30 expressed as 2^ds
- \-\-x86                   Use x86 filter (lzma compression only)
+ \-\-x86                   Use x86 filter
+ \-\-arm                   Use ARM filter
+ \-\-armt                  Use ARMT filter
+ \-\-sparc                 Use SPARC filter
+ \-\-delta                 Use DELTA filter (offset 1 default)
  \-N, \-\-nice-level value  Set nice value to value (default 19)
  \-p, \-\-threads value     Set processor count to override number of threads
  \-m, \-\-maxram size       Set maximum available ram in hundreds of MB
@@ -239,7 +243,27 @@ size depending on the compression level selected and usable ram available.
 Unconditionally use x86 filter prior to compression. Works for all
 compression modes.
 .IP
-IP "\fB-N value\fP"
+.IP "\fB--arm\fP"
+Unconditionally use ARM filter prior to compression. Works for all
+compression modes.
+.IP
+.IP "\fB--armt\fP"
+Unconditionally use ARMT filter prior to compression. Works for all
+compression modes.
+.IP
+.IP "\fB--sparc\fP"
+Unconditionally use SPARC filter prior to compression. Works for all
+compression modes.
+.IP
+.IP "\fB--ia64\fP"
+Unconditionally use IA64 filter prior to compression. Works for all
+compression modes.
+.IP
+.IP "\fB--delta\fP"
+Unconditionally use DELTA filter prior to compression. Works for all
+compression modes. Delta offset 1 default.
+.IP
+.IP "\fB-N value\fP"
 The default nice value is 19. This option can be used to set the priority
 scheduling for the lrzip backup or decompression. Valid nice values are
 from \-20 to 19. Note this does NOT speed up or slow down compression.

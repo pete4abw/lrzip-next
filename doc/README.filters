@@ -1,0 +1,21 @@
+DECEMBER 2019
+lrzip 0.70
+
+This version has implemented the use of filters. These filters
+are executed just prior to compression and just after
+decompression. They include:
+
+- x86. Branch, call, jump (BCJ) conversion for x86 code.
+- arm. "" for ARM code.
+- armt. "" for ARMT code.
+- sparc. "" for SPARC code.
+- ia64. "" for IA64 code.
+- delta. "" delta offset conversion. Default is 1.
+
+Their impact is not known because the first filter applied in
+lrzip is rzip hashing. Becuase of the manner mmap is used, it's
+difficult to apply these filters prior to hashing. Delta
+filtering could have benefits with difficult to compress formats,
+such as audio or video, but it is not possible to predict.
+
+Currently, onnly x86 and Delta are implemented.

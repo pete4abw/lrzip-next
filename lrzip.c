@@ -154,7 +154,7 @@ bool write_magic(rzip_control *control)
 		memcpy(&magic[6], &esize, 8);
 	}
 
-	magic[16] = control->x86filter; // 86 filter flag
+	magic[16] = control->filter_flag;	// filter flag
 	/* save LZMA compression flags */
 	if (LZMA_COMPRESS) {
 		int i;
@@ -187,7 +187,7 @@ static inline i64 enc_loops(uchar b1, uchar b2)
 
 static bool get_magic(rzip_control *control, char *magic)
 {
-	int encrypted, md5, i, x86filter_offset=0;
+	int encrypted, md5, i, filter_offset=0;
 	i64 expected_size;
 	uint32_t v;
 
@@ -216,26 +216,27 @@ static bool get_magic(rzip_control *control, char *magic)
 	if (control->major_version == 0 && control->minor_version < 6)
 		control->eof = 1;
 
-	/* offset = 1 if x86 filter is used for all compression modes */
+	/* offset = 1 if filter is used for all compression modes */
 	if (control->major_version == 0 && control->minor_version == 7) {
-		x86filter_offset = 1;
-		control->x86filter = magic[16];
+		filter_offset = 1;
+		control->filter_flag = magic[16];
+		// placeholder for getting delta offset. 1 for now.
 	}
 	/* restore LZMA compression flags only if stored */
-	if ((int) magic[16+x86filter_offset]) {
+	if ((int) magic[16+filter_offset]) {
 		for (i = 0; i < 5; i++)
-			control->lzma_properties[i] = magic[i + 16 + x86filter_offset];
+			control->lzma_properties[i] = magic[i + 16 + filter_offset];
 	}
 
 	/* Whether this archive contains md5 data at the end or not */
-	md5 = magic[21+x86filter_offset];
+	md5 = magic[21+filter_offset];
 	if (md5 && MD5_RELIABLE) {
 		if (md5 == 1)
 			control->flags |= FLAG_MD5;
 		else
 			print_verbose("Unknown hash, falling back to CRC\n");
 	}
-	encrypted = magic[22+x86filter_offset];
+	encrypted = magic[22+filter_offset];
 	if (encrypted) {
 		if (encrypted == 1)
 			control->flags |= FLAG_ENCRYPT;
@@ -1152,6 +1153,18 @@ done:
 	print_output("%s:\nlrzip version: %d.%d file\n", infilecopy, control->major_version, control->minor_version);
 
 	print_output("Compression: ");
+	if (FILTER_USED) {
+		print_output("%s Filter Used",
+				((control->filter_flag & FILTER_FLAG_X86) ? "x86" :
+				((control->filter_flag & FILTER_FLAG_ARM) ? "ARM" :
+				((control->filter_flag & FILTER_FLAG_ARMT) ? "ARMT" :
+				((control->filter_flag & FILTER_FLAG_SPARC) ? "SPARC" :
+				((control->filter_flag & FILTER_FLAG_IA64) ? "IA64" :
+				((control->filter_flag & FILTER_FLAG_DELTA) ? "Delta" : "wtf?")))))));
+		if (control->filter_flag & FILTER_FLAG_DELTA)
+			print_output(" : Delta offset - %d", control->delta);
+		print_output("\n");
+	}
 	if (save_ctype == CTYPE_NONE)
 		print_output("rzip alone\n");
 	else if (save_ctype == CTYPE_BZIP2)
@@ -1161,8 +1174,7 @@ done:
 	else if (save_ctype == CTYPE_LZMA) {
 		print_output("rzip + lzma -- ");
 		if (lzma_ret=LzmaProps_Decode(&p, control->lzma_properties, sizeof(control->lzma_properties))==SZ_OK)
-			print_output("lc = %d, lp = %d, pb = %d, Dictionary Size = %d%s\n", p.lc, p.lp, p.pb, p.dicSize,
-					control->x86filter ? ", using x86 filter" : ".");
+			print_output("lc = %d, lp = %d, pb = %d, Dictionary Size = %d\n", p.lc, p.lp, p.pb, p.dicSize);
 		else
 			print_err("Corrupt LZMA Properties\n");
 	}
@@ -1353,7 +1365,8 @@ bool initialise_control(rzip_control *control)
 	register_outputfile(control, control->msgout);
 	control->flags = FLAG_SHOW_PROGRESS | FLAG_KEEP_FILES | FLAG_THRESHOLD;
 	control->suffix = ".lrz";
-	control->x86filter = false;		/* x86 filter flag */
+	control->filter_flag = 0;		/* filter flag. Default to none */
+	control->delta = DEFAULT_DELTA;		/* if Delta filter is used, default is 1 */
 	control->compression_level = 0; 	/* 0 because lrzip default level is 5, others 7 */
 	control->dictSize = 0;			/* Dictionary Size for lzma. 0 means program decides */
 	control->ramsize = get_ram(control);

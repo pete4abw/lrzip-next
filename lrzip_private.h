@@ -315,6 +315,24 @@ typedef sem_t cksem_t;
 
 #define IS_FROM_FILE ( !!(control->inFILE) && !STDIN )
 
+/* Filter flags
+ * 0 = none
+ * 1 = x86 filter
+ * 2 = ASM
+ * 4 = ASMT
+ * 8 = SPARC
+ * 16 = IA64
+ * 32 = Delta
+*/
+#define FILTER_FLAG_X86		(1<<0)
+#define FILTER_FLAG_ARM		(1<<1)
+#define FILTER_FLAG_ARMT	(1<<2)
+#define FILTER_FLAG_SPARC	(1<<3)
+#define FILTER_FLAG_IA64	(1<<4)
+#define FILTER_FLAG_DELTA	(1<<5)
+#define DEFAULT_DELTA		1		// delta diff is 1 by default
+#define FILTER_USED		(control->filter_flag & 63) // lazy for OR of the above 0011 1111b
+#define FILTER_NOT_USED		(!FILTER_USED)
 
 /* Structure to save state of computation between the single steps.  */
 struct md5_ctx
@@ -381,39 +399,40 @@ struct rzip_state {
 
 struct rzip_control {
 	char *infile;
-	FILE *inFILE; // if a FILE is being read from
+	FILE *inFILE; 			// if a FILE is being read from
 	char *outname;
 	char *outfile;
-	FILE *outFILE; // if a FILE is being written to
+	FILE *outFILE;			// if a FILE is being written to
 	char *outdir;
-	char *tmpdir; // when stdin, stdout, or test used
-	uchar *tmp_outbuf; // Temporary file storage for stdout
-	i64 out_ofs; // Output offset when tmp_outbuf in use
-	i64 hist_ofs; // History offset
-	i64 out_len; // Total length of tmp_outbuf
-	i64 out_maxlen; // The largest the tmp_outbuf can be used
-	i64 out_relofs; // Relative tmp_outbuf offset when stdout has been flushed
+	char *tmpdir;			// when stdin, stdout, or test used
+	uchar *tmp_outbuf;		// Temporary file storage for stdout
+	i64 out_ofs;			// Output offset when tmp_outbuf in use
+	i64 hist_ofs;			// History offset
+	i64 out_len;			// Total length of tmp_outbuf
+	i64 out_maxlen;			// The largest the tmp_outbuf can be used
+	i64 out_relofs;			// Relative tmp_outbuf offset when stdout has been flushed
 	uchar *tmp_inbuf;
 	i64 in_ofs;
 	i64 in_len;
 	i64 in_maxlen;
-	FILE *msgout; //stream for output messages
-	FILE *msgerr; //stream for output errors
+	FILE *msgout;			//stream for output messages
+	FILE *msgerr;			//stream for output errors
 	char *suffix;
 	uchar compression_level;
-	i64 overhead; // compressor overhead
-	i64 usable_ram; // the most ram we'll try to use on one activity
-	i64 maxram; // the largest chunk of ram to allocate
-	bool x86filter; // flag for x86 filter use. 0 = no, 1 = yes
-	unsigned char lzma_properties[5]; // lzma properties, encoded
-	i64 dictSize; // lzma Dictionary size - set in overhead computation
+	i64 overhead;			// compressor overhead
+	i64 usable_ram;			// the most ram we'll try to use on one activity
+	i64 maxram;			// the largest chunk of ram to allocate
+	unsigned filter_flag;		// flag for filters
+	unsigned delta;			// delta flag offset (default 1)
+	unsigned char lzma_properties[5];	// lzma properties, encoded
+	i64 dictSize;			// lzma Dictionary size - set in overhead computation
 	i64 window;
 	unsigned long flags;
 	i64 ramsize;
 	i64 max_chunk;
 	i64 max_mmap;
 	int threads;
-	char nice_val;		// added for consistency
+	char nice_val;			// added for consistency
 	int current_priority;
 	char major_version;
 	char minor_version;
@@ -424,7 +443,7 @@ struct rzip_control {
 	int fd_hist;
 	i64 encloops;
 	i64 secs;
-	void (*pass_cb)(void *, char *, size_t); /* callback to get password in lib */
+	void (*pass_cb)(void *, char *, size_t);	// callback to get password in lib
 	void *pass_data;
 	uchar salt[SALT_LEN];
 	uchar *salt_pass;
@@ -440,7 +459,7 @@ struct rzip_control {
 	cksem_t cksumsem;
 	md5_ctx ctx;
 	uchar md5_resblock[MD5_DIGEST_SIZE];
-	i64 md5_read; // How far into the file the md5 has done so far
+	i64 md5_read;			// How far into the file the md5 has done so far
 	struct checksum checksum;
 
 	const char *util_infile;

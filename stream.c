@@ -60,7 +60,8 @@
 #include "util.h"
 #include "lrzip_core.h"
 
-#include "Bra.h"	//x86 Filter
+#include "Bra.h"	//Filters
+#include "Delta.h"	//Delta Filter
 
 #define STREAM_BUFSIZE (1024 * 1024 * 10)
 
@@ -1318,14 +1319,34 @@ retry:
 	 * allocatable to a buffer combined with the MINIMUM_MATCH of rzip
 	 * being 31 bytes so don't bother trying to compress anything less
 	 * than 64 bytes. */
-	if (!NO_COMPRESS && cti->c_len >= 64) {
-		/* x86 Filter */
-		if (control->x86filter) { // x86 filter data prior to compression
+	if (FILTER_USED) {
+		if (control->filter_flag & FILTER_FLAG_X86) {
 			UInt32 x86State;
-			print_maxverbose("Converting x86 data prior to compression for thread %d...\n", i);
+			print_maxverbose("Using x86 filter prior to compression for thread %d...\n", i);
 			x86_Convert_Init(x86State);
 			x86_Convert(cti->s_buf, cti->s_len, 0, &x86State, 1);
 		}
+		else if (control->filter_flag & FILTER_FLAG_ARM) {
+			// not used
+		}
+		else if (control->filter_flag & FILTER_FLAG_ARMT) {
+			// not used
+		}
+		else if (control->filter_flag & FILTER_FLAG_SPARC) {
+			// not used
+		}
+		if (control->filter_flag & FILTER_FLAG_IA64) {
+			// not used
+		}
+		if (control->filter_flag & FILTER_FLAG_DELTA) {
+			uchar delta_state[DELTA_STATE_SIZE];
+			print_maxverbose("Using Delta filter prior to compression for thread %d...\n", i);
+			Delta_Init(delta_state);
+			Delta_Encode(delta_state, control->delta, cti->s_buf,  cti->s_len);
+		}
+	}
+	if (!NO_COMPRESS && cti->c_len >= 64) {
+		/* Any Filter */
 		if (LZMA_COMPRESS)
 			ret = lzma_compress_buf(control, cti);
 		else if (LZO_COMPRESS)
@@ -1367,11 +1388,31 @@ retry:
 	}
 	if (unlikely(ret)) {
 		print_maxverbose("Unable to compress in parallel, waiting for previous thread to complete before trying again\n");
-		if (control->x86filter) { // As unlikely as this is, we have to undo filtering here 
-			UInt32 x86State;
-			print_maxverbose("Reverting x86 data prior to trying again\n");
-			x86_Convert_Init(x86State);
-			x86_Convert(cti->s_buf, cti->s_len, 0, &x86State, 0);
+		if (FILTER_USED) { // As unlikely as this is, we have to undo filtering here 
+			if (control->filter_flag & FILTER_FLAG_X86) {
+				UInt32 x86State;
+				print_maxverbose("Reverting x86 filter data prior to trying again...\n");
+				x86_Convert_Init(x86State);
+				x86_Convert(cti->s_buf, cti->s_len, 0, &x86State, 0);
+			}
+			else if (control->filter_flag & FILTER_FLAG_ARM) {
+				// not used
+			}
+			else if (control->filter_flag & FILTER_FLAG_ARMT) {
+				// not used
+			}
+			else if (control->filter_flag & FILTER_FLAG_SPARC) {
+				// not used
+			}
+			else if (control->filter_flag & FILTER_FLAG_IA64) {
+				// not used
+			}
+			else if (control->filter_flag & FILTER_FLAG_DELTA) {
+				uchar delta_state[DELTA_STATE_SIZE];
+				print_maxverbose("Reverting Delta filter data prior to trying again...\n");
+				Delta_Init(delta_state);
+				Delta_Decode(delta_state, control->delta, cti->s_buf,  cti->s_len);
+			}
 		}
 		goto retry;
 	}
@@ -1580,12 +1621,31 @@ retry:
 				failure_return(("Dunno wtf decompression type to use!\n"), NULL);
 				break;
 		}
-		/* x86 Filter */
-		if (control->x86filter) { // x86 filter data post decompression
+	}
+	if (FILTER_USED) { // restore unfiltered data
+		if (control->filter_flag & FILTER_FLAG_X86) {
 			UInt32 x86State;
 			print_maxverbose("Restoring x86 data post deecompression for thread %d...\n", i);
 			x86_Convert_Init(x86State);
 			x86_Convert(uci->s_buf, uci->u_len, 0, &x86State, 0);
+		}
+		else if (control->filter_flag & FILTER_FLAG_ARM) {
+			// not used
+		}
+		else if (control->filter_flag & FILTER_FLAG_ARMT) {
+			// not used
+		}
+		else if (control->filter_flag & FILTER_FLAG_SPARC) {
+			// not used
+		}
+		else if (control->filter_flag & FILTER_FLAG_IA64) {
+			// not used
+		}
+		else if (control->filter_flag & FILTER_FLAG_DELTA) {
+			uchar delta_state[DELTA_STATE_SIZE];
+			print_maxverbose("Restoring Delta filter data post compression for thread %d...\n", i);
+			Delta_Init(delta_state);
+			Delta_Decode(delta_state, control->delta, uci->s_buf,  uci->u_len);
 		}
 	}
 

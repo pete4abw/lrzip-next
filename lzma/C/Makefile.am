@@ -26,8 +26,11 @@ liblzma_la_SOURCES = \
 	../include/7zTypes.h $(C_S) \
 	Alloc.c 	../include/Alloc.h \
 	Bra86.c		../include/Bra.h \
+	Bra.c \
+	BraIA64.c \
 	../include/Compiler.h \
 	../include/CpuArch.h \
+	Delta.c		../include/Delta.h \
 	LzFind.c 	../include/LzFind.h \
 	LzFindMt.c 	../include/LzFindMt.h \
 	../include/LzHash.h \
@@ -39,9 +42,9 @@ liblzma_la_SOURCES = \
 	LzmaLib.c 	../include/LzmaLib.h \
 	MtCoder.c 	../include/MtCoder.h \
 	MtDec.c 	../include/MtDec.h \
-	../include/precomp.h \
 	Threads.c 	../include/Threads.h \
 	$(ASM_S) 	$(ASM_H) \
+	../include/precomp.h \
 	../include/basetyps.h \
 	../include/MyGuidDef.h \
 	../include/MyWindowsDef.h \

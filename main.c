@@ -119,6 +119,11 @@ static void usage(bool compat)
 		print_output("	-L, --level level	set lzma/bzip2/gzip compression level (1-9, default 7)\n");
 	print_output("	--dictsize		Set lzma Dictionary Size for LZMA ds=12 to 30 expressed as 2^ds\n");
 	print_output("	--x86			Use x86 filter (for all compression modes)\n");
+	print_output("	--arm			Use arm filter (for all compression modes)\n");
+	print_output("	--armt			Use armt filter (for all compression modes)\n");
+	print_output("	--sparc			Use sparc filter (for all compression modes)\n");
+	print_output("	--ia64			Use IA64 filter (for all compression modes)\n");
+	print_output("	--delta			Use Delta filter with offset 1 (for all compression modes)\n");
 	print_output("	-N, --nice-level value	Set nice value to value (default %d)\n", compat ? 0 : 19);
 	print_output("	-p, --threads value	Set processor count to override number of threads\n");
 	print_output("	-m, --maxram size	Set maximum available ram in hundreds of MB\n");
@@ -203,8 +208,18 @@ static void show_summary(void)
 				print_verbose("ZPAQ. LZO Compressibility testing %s\n", (LZO_TEST? "enabled" : "disabled"));
 			else if (NO_COMPRESS)
 				print_verbose("RZIP pre-processing only\n");
-			if (control->x86filter)
-				print_verbose("x86 Filter Used\n");
+			if (FILTER_USED) {
+				print_output("%s Filter Used",
+					((control->filter_flag & FILTER_FLAG_X86) ? "x86" :
+					((control->filter_flag & FILTER_FLAG_ARM) ? "ARM" :
+					((control->filter_flag & FILTER_FLAG_ARMT) ? "ARMT" :
+					((control->filter_flag & FILTER_FLAG_SPARC) ? "SPARC" :
+					((control->filter_flag & FILTER_FLAG_IA64) ? "IA64" :
+					((control->filter_flag & FILTER_FLAG_DELTA) ? "Delta" : "wtf?")))))));
+				if (control->filter_flag & FILTER_FLAG_DELTA)
+					print_output(" : Delta offset - %d", control->delta);
+				print_output("\n");
+			}
 			if (control->window)
 				print_verbose("Compression Window: %lld = %lldMB\n", control->window, control->window * 100ull);
 			/* show heuristically computed window size */
@@ -220,16 +235,15 @@ static void show_summary(void)
 			}
 			if (UNLIMITED)
 				print_verbose("Using Unlimited Window size\n");
-		}
-		if (!DECOMPRESS && !TEST_ONLY)
 			print_maxverbose("Storage time in seconds %lld\n", control->secs);
+		}
 		if (ENCRYPT)
 			print_maxverbose("Encryption hash loops %lld\n", control->encloops);
 	}
 }
 
 static struct option long_options[] = {
-	{"bzip2",	no_argument,	0,	'b'}, /* 0 */
+	{"bzip2",	no_argument,	0,	'b'},	/* 0 */
 	{"check",	no_argument,	0,	'c'},
 	{"check",	no_argument,	0,	'C'},
 	{"decompress",	no_argument,	0,	'd'},
@@ -239,7 +253,7 @@ static struct option long_options[] = {
 	{"gzip",	no_argument,	0,	'g'},
 	{"help",	no_argument,	0,	'h'},
 	{"hash",	no_argument,	0,	'H'},
-	{"info",	no_argument,	0,	'i'}, /* 10 */
+	{"info",	no_argument,	0,	'i'},	/* 10 */
 	{"keep-broken",	no_argument,	0,	'k'},
 	{"keep-broken",	no_argument,	0,	'K'},
 	{"lzo",		no_argument,	0,	'l'},
@@ -256,7 +270,7 @@ static struct option long_options[] = {
 	{"quiet",	no_argument,	0,	'q'},
 	{"recursive",	no_argument,	0,	'r'},
 	{"suffix",	required_argument,	0,	'S'},
-	{"test",	no_argument,	0,	't'},  /* 25 */
+	{"test",	no_argument,	0,	't'},	/* 25 */
 	{"threshold",	required_argument,	0,	'T'},
 	{"unlimited",	no_argument,	0,	'U'},
 	{"verbose",	no_argument,	0,	'v'},
@@ -266,7 +280,12 @@ static struct option long_options[] = {
 	{"fast",	no_argument,	0,	'1'},
 	{"best",	no_argument,	0,	'9'},
 	{"dictsize",	required_argument,	0,	'\\'},
-	{"x86",		no_argument,	0,	']'},  /* 35 */
+	{"x86",		no_argument,	0,	']'},	/* 35 */
+	{"arm",		no_argument,	0,	'['},
+	{"armt",	no_argument,	0,	'}'},
+	{"sparc",	no_argument,	0,	'{'},
+	{"ia64",	no_argument,	0,	';'},
+	{"delta",	optional_argument,	0,	':'},	/* 40 */
 	{0,	0,	0,	0},
 };
 
@@ -425,6 +444,27 @@ int main(int argc, char *argv[])
 		case 'f':
 			control->flags |= FLAG_FORCE_REPLACE;
 			break;
+		/* Filtering */
+		case ']':
+			control->filter_flag |= FILTER_FLAG_X86;	// x86
+			break;
+		case '[':
+			control->filter_flag |= FILTER_FLAG_ARM;	// ARM
+			break;
+		case '}':
+			control->filter_flag |= FILTER_FLAG_ARMT;	// ARMT
+			break;
+		case '{':
+			control->filter_flag |= FILTER_FLAG_SPARC;	// SPARC
+			break;
+		case ';':
+			control->filter_flag |= FILTER_FLAG_IA64;	// IA64
+			break;
+		case ':':
+			control->filter_flag |= FILTER_FLAG_DELTA;	// DELTA
+			control->delta = 1;				// 1 is only option for now
+			break;
+
 		case 'h':
 		case '?':
 			usage(compat);
@@ -537,9 +577,6 @@ int main(int argc, char *argv[])
 			control->window = atol(optarg);
 			if (control->window < 1)
 				failure("Window must be positive\n");
-			break;
-		case ']':
-			control->x86filter = true;	// LZMA x86 filter in use
 			break;
 		case '1':
 		case '2':
