@@ -3,6 +3,7 @@ lrzip-0.700
 LZMA SDK 19.00
 
 Add x86 BCJ Filter. Requires one additional byte for LZMA properties.
+Add ARM, ARMT, PPC, SPARC, IA64 and Delta Filters.
 Add code to test for lrzip versions < 0.700.
 Incudes code for lzma and lzma2 direct from SDK. Multi Threading still
 dependent on p7zip code with regression to SDK 16.02.

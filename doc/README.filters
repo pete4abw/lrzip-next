@@ -8,6 +8,7 @@ decompression. They include:
 - x86. Branch, call, jump (BCJ) conversion for x86 code.
 - arm. "" for ARM code.
 - armt. "" for ARMT code.
+- ppc. "" for PPC code.
 - sparc. "" for SPARC code.
 - ia64. "" for IA64 code.
 - delta. "" delta offset conversion. Default is 1.
@@ -17,5 +18,3 @@ lrzip is rzip hashing. Becuase of the manner mmap is used, it's
 difficult to apply these filters prior to hashing. Delta
 filtering could have benefits with difficult to compress formats,
 such as audio or video, but it is not possible to predict.
-
-Currently, onnly x86 and Delta are implemented.

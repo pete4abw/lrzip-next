@@ -2,10 +2,10 @@ lrzip ChangeLog
 
 DECEMBER 2019, verion 0.701beta
 
-* Add ARM, ARMT, SPARC, IA64 hooks and filter code but not used.
+* Add ARM, ARMT, PPC, SPARC, IA64 filter code.
 * Add DELTA filter with default offset 1.
 * Update docs.
-* Update magic header. 1<<0 .. 1<<5 for filter in byte 16.
+* Update magic header. 1<<0 .. 1<<6 for filter in byte 16.
 
 DECEMBER 2019, version bump 0.700, Peter Hyman
 

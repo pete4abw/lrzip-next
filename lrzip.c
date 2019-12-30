@@ -1158,9 +1158,10 @@ done:
 				((control->filter_flag & FILTER_FLAG_X86) ? "x86" :
 				((control->filter_flag & FILTER_FLAG_ARM) ? "ARM" :
 				((control->filter_flag & FILTER_FLAG_ARMT) ? "ARMT" :
+				((control->filter_flag & FILTER_FLAG_PPC) ? "PPC" :
 				((control->filter_flag & FILTER_FLAG_SPARC) ? "SPARC" :
 				((control->filter_flag & FILTER_FLAG_IA64) ? "IA64" :
-				((control->filter_flag & FILTER_FLAG_DELTA) ? "Delta" : "wtf?")))))));
+				((control->filter_flag & FILTER_FLAG_DELTA) ? "Delta" : "wtf?"))))))));
 		if (control->filter_flag & FILTER_FLAG_DELTA)
 			print_output(" : Delta offset - %d", control->delta);
 		print_output("\n");

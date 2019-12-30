@@ -119,9 +119,10 @@ static void usage(bool compat)
 		print_output("	-L, --level level	set lzma/bzip2/gzip compression level (1-9, default 7)\n");
 	print_output("	--dictsize		Set lzma Dictionary Size for LZMA ds=12 to 30 expressed as 2^ds\n");
 	print_output("	--x86			Use x86 filter (for all compression modes)\n");
-	print_output("	--arm			Use arm filter (for all compression modes)\n");
-	print_output("	--armt			Use armt filter (for all compression modes)\n");
-	print_output("	--sparc			Use sparc filter (for all compression modes)\n");
+	print_output("	--arm			Use ARM filter (for all compression modes)\n");
+	print_output("	--armt			Use ARMT filter (for all compression modes)\n");
+	print_output("	--ppc			Use PPC filter (for all compression modes)\n");
+	print_output("	--sparc			Use SPARC filter (for all compression modes)\n");
 	print_output("	--ia64			Use IA64 filter (for all compression modes)\n");
 	print_output("	--delta			Use Delta filter with offset 1 (for all compression modes)\n");
 	print_output("	-N, --nice-level value	Set nice value to value (default %d)\n", compat ? 0 : 19);
@@ -213,9 +214,10 @@ static void show_summary(void)
 					((control->filter_flag & FILTER_FLAG_X86) ? "x86" :
 					((control->filter_flag & FILTER_FLAG_ARM) ? "ARM" :
 					((control->filter_flag & FILTER_FLAG_ARMT) ? "ARMT" :
+					((control->filter_flag & FILTER_FLAG_PPC) ? "PPC" :
 					((control->filter_flag & FILTER_FLAG_SPARC) ? "SPARC" :
 					((control->filter_flag & FILTER_FLAG_IA64) ? "IA64" :
-					((control->filter_flag & FILTER_FLAG_DELTA) ? "Delta" : "wtf?")))))));
+					((control->filter_flag & FILTER_FLAG_DELTA) ? "Delta" : "wtf?"))))))));
 				if (control->filter_flag & FILTER_FLAG_DELTA)
 					print_output(" : Delta offset - %d", control->delta);
 				print_output("\n");
@@ -283,9 +285,10 @@ static struct option long_options[] = {
 	{"x86",		no_argument,	0,	']'},	/* 35 */
 	{"arm",		no_argument,	0,	'['},
 	{"armt",	no_argument,	0,	'}'},
-	{"sparc",	no_argument,	0,	'{'},
-	{"ia64",	no_argument,	0,	';'},
-	{"delta",	optional_argument,	0,	':'},	/* 40 */
+	{"ppc",		no_argument,	0,	'{'},
+	{"sparc",	no_argument,	0,	'\''},
+	{"ia64",	no_argument,	0,	';'},	/* 40 */
+	{"delta",	optional_argument,	0,	':'},
 	{0,	0,	0,	0},
 };
 
@@ -455,6 +458,9 @@ int main(int argc, char *argv[])
 			control->filter_flag |= FILTER_FLAG_ARMT;	// ARMT
 			break;
 		case '{':
+			control->filter_flag |= FILTER_FLAG_PPC;	// PPC
+			break;
+		case '\'':
 			control->filter_flag |= FILTER_FLAG_SPARC;	// SPARC
 			break;
 		case ';':

@@ -320,18 +320,20 @@ typedef sem_t cksem_t;
  * 1 = x86 filter
  * 2 = ASM
  * 4 = ASMT
- * 8 = SPARC
- * 16 = IA64
- * 32 = Delta
+ * 8 = PPC
+ * 16 = SPARC
+ * 32 = IA64
+ * 64 = Delta
 */
 #define FILTER_FLAG_X86		(1<<0)
 #define FILTER_FLAG_ARM		(1<<1)
 #define FILTER_FLAG_ARMT	(1<<2)
-#define FILTER_FLAG_SPARC	(1<<3)
-#define FILTER_FLAG_IA64	(1<<4)
-#define FILTER_FLAG_DELTA	(1<<5)
+#define FILTER_FLAG_PPC		(1<<3)
+#define FILTER_FLAG_SPARC	(1<<4)
+#define FILTER_FLAG_IA64	(1<<5)
+#define FILTER_FLAG_DELTA	(1<<6)
 #define DEFAULT_DELTA		1		// delta diff is 1 by default
-#define FILTER_USED		(control->filter_flag & 63) // lazy for OR of the above 0011 1111b
+#define FILTER_USED		(control->filter_flag & 127) // lazy for OR of the above 0111 1111b
 #define FILTER_NOT_USED		(!FILTER_USED)
 
 /* Structure to save state of computation between the single steps.  */
