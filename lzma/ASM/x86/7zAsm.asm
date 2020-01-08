@@ -1,7 +1,8 @@
 ; 7zAsm.asm -- ASM macros
 ; 2009-12-12 : Igor Pavlov : Public domain
+; 2018-02-03 : Igor Pavlov : Public domain
 ; 2011-10-12 : P7ZIP       : Public domain
-
+; 2020-01-02 : Peter Hyman (integrating 2018 updates)
 %define NOT ~
 
 %macro MY_ASM_START 0
@@ -28,8 +29,10 @@
 
 %ifdef x64
   REG_SIZE equ 8
+  REG_LOGAR_SIZE equ 3
 %else
   REG_SIZE equ 4
+  REG_LOGAR_SIZE equ 2
 %endif
 
   %define x0  EAX
@@ -40,6 +43,15 @@
   %define x5  EBP
   %define x6  ESI
   %define x7  EDI
+
+  %define x0_W AX
+  %define x1_W CX
+  %define x2_W DX
+  %define x3_W BX
+
+  %define x5_W BP
+  %define x6_W SI
+  %define x7_W DI
 
   %define x0_L  AL
   %define x1_L  CL
@@ -52,6 +64,10 @@
   %define x3_H  BH
 
 %ifdef x64
+  %define x5_L BPL
+  %define x6_L SIL
+  %define x7_L DIL
+
   %define r0  RAX
   %define r1  RCX
   %define r2  RDX
@@ -60,6 +76,14 @@
   %define r5  RBP
   %define r6  RSI
   %define r7  RDI
+  %define x8 r8d
+  %define x9 r9d
+  %define x10 r10d
+  %define x11 r11d
+  %define x12 r12d
+  %define x13 r13d
+  %define x14 r14d
+  %define x15 r15d
 %else
   %define r0  x0
   %define r1  x1
@@ -74,27 +98,41 @@
 %macro MY_PUSH_4_REGS 0
     push    r3
     push    r5
-%ifdef x64
-  %ifdef CYGWIN64
     push    r6
     push    r7
-  %endif
-%else
-    push    r6
-    push    r7
-%endif
 %endmacro
 
 %macro MY_POP_4_REGS 0
-%ifdef x64
-  %ifdef CYGWIN64
     pop     r7
     pop     r6
-  %endif
-%else
-    pop     r7
-    pop     r6
-%endif
     pop     r5
     pop     r3
 %endmacro
+
+; Needed for ASM LZMA Decompress
+%ifdef x64
+
+%define REG_PARAM_0  r1
+%define REG_PARAM_1  r2
+%define REG_PARAM_2  r8
+%define REG_PARAM_3  r9
+
+%macro MY_PUSH_PRESERVED_REGS 0
+    MY_PUSH_4_REGS
+    push    r12
+    push    r13
+    push    r14
+    push    r15
+%endmacro
+
+
+%macro MY_POP_PRESERVED_REGS 0
+    pop     r15
+    pop     r14
+    pop     r13
+    pop     r12
+    MY_POP_4_REGS
+%endmacro
+
+%endif
+

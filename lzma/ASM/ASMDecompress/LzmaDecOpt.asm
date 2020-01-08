@@ -1,5 +1,6 @@
 ; LzmaDecOpt.asm -- ASM version of LzmaDec_DecodeReal_3() function
 ; 2018-02-06: Igor Pavlov : Public domain
+; 2020-01-02: Peter Hyman (convert MASM to NASM)
 ;
 ; 3 - is the code compatibility version of LzmaDec_DecodeReal_*()
 ; function for check at link time.
@@ -8,59 +9,59 @@
 ; CLzmaDec structure, (probs) array layout, input and output of
 ; LzmaDec_DecodeReal_*() must be equal in both versions (C / ASM).
 
-ifndef x64
+%ifndef x64
 ; x64=1
-; .err <x64_IS_REQUIRED>
-endif
+  %error "x64_IS_REQUIRED"
+%endif
 
-include 7zAsm.asm
+%include "../x86/7zAsm.asm"
 
 MY_ASM_START
 
-_TEXT$LZMADECOPT SEGMENT ALIGN(64) 'CODE'
+%macro MY_ALIGN 1 ;num:req
+        align  %1
+%endmacro
 
-MY_ALIGN macro num:req
-        align  num
-endm
-
-MY_ALIGN_16 macro
+%macro MY_ALIGN_16 0
         MY_ALIGN 16
-endm
+%endmacro
 
-MY_ALIGN_32 macro
+%macro MY_ALIGN_32 0
         MY_ALIGN 32
-endm
+%endmacro
 
-MY_ALIGN_64 macro
+%macro MY_ALIGN_64 0 ; macro
         MY_ALIGN 64
-endm
+%endmacro
 
+%define SHL << ; for ease of reading
+%define SHR >>
 
 ; _LZMA_SIZE_OPT  equ 1
 
 ; _LZMA_PROB32 equ 1
 
-ifdef _LZMA_PROB32
-        PSHIFT  equ 2
-        PLOAD macro dest, mem
-                mov     dest, dword ptr [mem]
-        endm
-        PSTORE  macro src, mem
-                mov     dword ptr [mem], src
-        endm
-else
-        PSHIFT  equ 1
-        PLOAD macro dest, mem
-                movzx   dest, word ptr [mem]
-        endm
-        PSTORE macro src, mem
-                mov     word ptr [mem], @CatStr(src, _W)
-        endm
-endif
+%ifdef _LZMA_PROB32
+        %define PSHIFT 2
+        %macro PLOAD 2 ;dest, mem
+                mov     %1, DWORD [%2] ; dword ptr [mem]
+        %endmacro
+        %macro PSTORE 2 ;src, mem
+                mov     DWORD [%2], %1 ; dword ptr
+        %endmacro
+%else
+        %define PSHIFT 1
+        %macro PLOAD  2 ;dest, mem
+                movzx   %1, WORD [%2] ;dest, word ptr [mem]
+        %endmacro
+        %macro PSTORE 2 ;src, mem
+                mov     %2, %1 ; @CatStr(src, _W)
+        %endmacro
+%endif
 
-PMULT           equ (1 SHL PSHIFT)
-PMULT_HALF      equ (1 SHL (PSHIFT - 1))
-PMULT_2         equ (1 SHL (PSHIFT + 1))
+%define PMULT (1 SHL PSHIFT)
+%define PMULT_HALF equ (1 SHL (PSHIFT - 1))
+%define PMULT_2  (1 SHL (PSHIFT + 1))
 
 
 ;       x0      range
@@ -81,183 +82,182 @@ PMULT_2         equ (1 SHL (PSHIFT + 1))
 ;       r15     buf
 
 
-cod     equ x5
-cod_L   equ x5_L
-range   equ x0
-state   equ x8
-state_R equ r8
-buf     equ r15
-processedPos equ x13
-kBitModelTotal_reg equ x10
+%define cod    x5
+%define cod_L  x5_L
+%define range  x0
+%define state  x8
+%define state_Rr8
+%define buf    r15
+%define processedPosx 13
+%define kBitModelTotal_regx 10
 
-probBranch   equ x2
-probBranch_R equ r2
-probBranch_W equ x2_W
+%define probBranch  x2
+%define probBranch_R r2
+%define probBranch_W x2_W
 
-pbPos   equ x1
-pbPos_R equ r1
+%define pbPos  x1
+%define pbPos_Rr1
 
-cnt     equ x2
-cnt_R   equ r2
+%define cnt    x2
+%define cnt_R  r2
 
-lpMask_reg equ x9
-dicPos  equ r14
+%define lpMask_reg x9
+%define dicPos r14
 
-sym     equ x3
-sym_R   equ r3
-sym_L   equ x3_L
+%define sym    x3
+%define sym_R  r3
+%define sym_L  x3_L
 
-probs   equ r11
-dic     equ r12
+%define probs  r11
+%define dic    r12
 
-t0      equ x7
-t0_W    equ x7_W
-t0_R    equ r7
+%define t0     x7
+%define t0_W   x7_W
+%define t0_R   r7
 
-prob2   equ t0
-prob2_W equ t0_W
+%define prob2  t0
+%define prob2_W t0_W
 
-t1      equ x6
-t1_R    equ r6
+%define t1     x6
+%define t1_R   r6
 
-probs_state     equ t1
-probs_state_R   equ t1_R
+%define probs_state    t1
+%define probs_state_R  t1_R
 
-prm     equ r2
-match   equ x9
-match_R equ r9
-offs    equ x12
-offs_R  equ r12
-bit     equ x14
-bit_R   equ r14
+%define prm    r2
+%define match  x9
+%define match_R r9
+%define offs   x12
+%define offs_R r12
+%define bit    x14
+%define bit_R  r14
 
-sym2    equ x9
-sym2_R  equ r9
+%define sym2   x9
+%define sym2_R r9
 
-len_temp equ x12
+%define len_temp x12
 
-dist    equ sym
-dist2   equ x9
+%define dist   sym
+%define dist2  x9
 
 
+%define kNumBitModelTotalBits  11
+%define kBitModelTotal         (1 SHL kNumBitModelTotalBits)
+%define kNumMoveBits           5
+%define kBitModelOffset        ((1 SHL kNumMoveBits) - 1)
+%define kTopValue              (1 SHL 24)
 
-kNumBitModelTotalBits   equ 11
-kBitModelTotal          equ (1 SHL kNumBitModelTotalBits)
-kNumMoveBits            equ 5
-kBitModelOffset         equ ((1 SHL kNumMoveBits) - 1)
-kTopValue               equ (1 SHL 24)
-
-NORM_2 macro
+%macro NORM_2 0 ; macro
         ; movzx   t0, BYTE PTR [buf]
         shl     cod, 8
-        mov     cod_L, BYTE PTR [buf]
+        mov     cod_L, BYTE [buf]
         shl     range, 8
         ; or      cod, t0
         inc     buf
-endm
+%endmacro
 
 
-NORM macro
+%macro NORM 0 ; macro
         cmp     range, kTopValue
-        jae     SHORT @F
+        jae     %%outnorm ; SHORT @F
         NORM_2
-@@:
-endm
+  %%outnorm: ; @@:
+%endmacro
 
 
 ; ---------- Branch MACROS ----------
 
-UPDATE_0 macro probsArray:req, probOffset:req, probDisp:req
+%macro UPDATE_0 3 ; macro probsArray:req, probOffset:req, probDisp:req
         mov     prob2, kBitModelTotal_reg
         sub     prob2, probBranch
         shr     prob2, kNumMoveBits
         add     probBranch, prob2
-        PSTORE  probBranch, probOffset * 1 + probsArray + probDisp * PMULT
-endm
+        PSTORE  probBranch, %2 * 1 + %1 + %3 * PMULT ; probOffset * 1 + probsArray + probDisp * PMULT
+%endmacro
 
 
-UPDATE_1 macro probsArray:req, probOffset:req, probDisp:req
+%macro UPDATE_1 3 ; macro probsArray:req, probOffset:req, probDisp:req
         sub     prob2, range
         sub     cod, range
         mov     range, prob2
         mov     prob2, probBranch
         shr     probBranch, kNumMoveBits
         sub     prob2, probBranch
-        PSTORE  prob2, probOffset * 1 + probsArray + probDisp * PMULT
-endm
+        PSTORE  prob2,  %2 * 1 + %1 + %3 * PMULT ; probOffset * 1 + probsArray + probDisp * PMULT
+%endmacro
 
 
-CMP_COD macro probsArray:req, probOffset:req, probDisp:req
-        PLOAD   probBranch, probOffset * 1 + probsArray + probDisp * PMULT
+%macro CMP_COD 3 ; macro probsArray:req, probOffset:req, probDisp:req
+        PLOAD   probBranch,  %2 * 1 + %1 + %3 * PMULT ; probOffset * 1 + probsArray + probDisp * PMULT
         NORM
         mov     prob2, range
         shr     range, kNumBitModelTotalBits
         imul    range, probBranch
         cmp     cod, range
-endm
+%endmacro
 
 
-IF_BIT_1_NOUP macro probsArray:req, probOffset:req, probDisp:req, toLabel:req
-        CMP_COD probsArray, probOffset, probDisp
-        jae     toLabel
-endm
+%macro IF_BIT_1_NOUP 4 ; macro probsArray:req, probOffset:req, probDisp:req, toLabel:req
+        CMP_COD %1, %2, %3 ; probsArray, probOffset, probDisp
+        jae     %4 ; toLabel
+%endmacro
 
 
-IF_BIT_1 macro probsArray:req, probOffset:req, probDisp:req, toLabel:req
-        IF_BIT_1_NOUP probsArray, probOffset, probDisp, toLabel
-        UPDATE_0 probsArray, probOffset, probDisp
-endm
+%macro IF_BIT_1 4 ; macro probsArray:req, probOffset:req, probDisp:req, toLabel:req
+        IF_BIT_1_NOUP %1, %2, %3, %4  ; probsArray, probOffset, probDisp, toLabel
+        UPDATE_0 %1, %2, %3 ; probsArray, probOffset, probDisp
+%endmacro
 
 
-IF_BIT_0_NOUP macro probsArray:req, probOffset:req, probDisp:req, toLabel:req
-        CMP_COD probsArray, probOffset, probDisp
-        jb      toLabel
-endm
+%macro IF_BIT_0_NOUP 4 ; macro probsArray:req, probOffset:req, probDisp:req, toLabel:req
+        CMP_COD %1, %2, %3 ; probsArray, probOffset, probDisp
+        jb      %4 ; toLabel
+%endmacro
 
 
 ; ---------- CMOV MACROS ----------
 
-NORM_CALC macro prob:req
+%macro NORM_CALC 1 ; macro prob:req
         NORM
         mov     t0, range
         shr     range, kNumBitModelTotalBits
-        imul    range, prob
+        imul    range, %1 ; prob
         sub     t0, range
         mov     t1, cod
         sub     cod, range
-endm
+%endmacro
 
 
-PUP macro prob:req, probPtr:req
-        sub     t0, prob
+%macro PUP 2 ; macro prob:req, probPtr:req
+        sub     t0, %1 ; prob
        ; only sar works for both 16/32 bit prob modes
         sar     t0, kNumMoveBits
-        add     t0, prob
-        PSTORE  t0, probPtr
-endm
+        add     t0, %1 ; prob
+        PSTORE  t0, %2 ; probPtr
+%endmacro
 
 
-PUP_SUB macro prob:req, probPtr:req, symSub:req
-        sbb     sym, symSub
-        PUP prob, probPtr
-endm
+%macro PUP_SUB 3 ; macro prob:req, probPtr:req, symSub:req
+        sbb     sym, %3 ; symSub
+        PUP %1, %2 ; prob, probPtr
+%endmacro
 
 
-PUP_COD macro prob:req, probPtr:req, symSub:req
+%macro PUP_COD 3 ; macro prob:req, probPtr:req, symSub:req
         mov     t0, kBitModelOffset
         cmovb   cod, t1
         mov     t1, sym
         cmovb   t0, kBitModelTotal_reg
-        PUP_SUB prob, probPtr, symSub
-endm
+        PUP_SUB %1, %2, %3 ; prob, probPtr, symSub
+%endmacro
 
 
-BIT_0 macro prob:req, probNext:req
-        PLOAD   prob, probs + 1 * PMULT
-        PLOAD   probNext, probs + 1 * PMULT_2
+%macro BIT_0 2 ; macro prob:req, probNext:req
+        PLOAD   %1, probs + 1 * PMULT ; prob, probs + 1 * PMULT
+        PLOAD   %2, probs + 1 * PMULT_2 ; probNext, probs + 1 * PMULT_2
 
-        NORM_CALC prob
-        
+        NORM_CALC %1 ; prob
+
         cmovae  range, t0
         PLOAD   t0, probs + 1 * PMULT_2 + PMULT
         cmovae  probNext, t0
@@ -265,36 +265,36 @@ BIT_0 macro prob:req, probNext:req
         cmovb   cod, t1
         cmovb   t0, kBitModelTotal_reg
         mov     sym, 2
-        PUP_SUB prob, probs + 1 * PMULT, 0 - 1
-endm
+        PUP_SUB %1, probs + 1 * PMULT, 0 - 1 ; prob, probs + 1 * PMULT, 0 - 1
+%endmacro
 
 
-BIT_1 macro prob:req, probNext:req
-        PLOAD   probNext, probs + sym_R * PMULT_2
+%macro BIT_1 2 ; macro prob:req, probNext:req
+        PLOAD   %2, probs + sym_R * PMULT_2 ; probNext, probs + sym_R * PMULT_2
         add     sym, sym
-        
-        NORM_CALC prob
-        
+
+        NORM_CALC %1 ; prob
+
         cmovae  range, t0
         PLOAD   t0, probs + sym_R * PMULT + PMULT
-        cmovae  probNext, t0
-        PUP_COD prob, probs + t1_R * PMULT_HALF, 0 - 1
-endm
+        cmovae  %2, t0 ; probNext, t0
+        PUP_COD %1, probs + t1_R * PMULT_HALF, 0 - 1 ; prob, probs + t1_R * PMULT_HALF, 0 - 1
+%endmacro
 
 
-BIT_2 macro prob:req, symSub:req
+%macro BIT_2 2 ; macro prob:req, symSub:req
         add     sym, sym
 
-        NORM_CALC prob
-        
+        NORM_CALC %1 ; prob
+
         cmovae  range, t0
-        PUP_COD prob, probs + t1_R * PMULT_HALF, symSub
-endm
+        PUP_COD %1, probs + t1_R * PMULT_HALF, %2 ; prob, probs + t1_R * PMULT_HALF, symSub
+%endmacro
 
 
 ; ---------- MATCHED LITERAL ----------
 
-LITM_0 macro
+%macro LITM_0 0
         mov     offs, 256 * PMULT
         shl     match, (PSHIFT + 1)
         mov     bit, offs
@@ -316,10 +316,10 @@ LITM_0 macro
         cmovb   t0, kBitModelTotal_reg
         mov     sym, 0
         PUP_SUB x1, prm, -2-1
-endm
+%endmacro
 
 
-LITM macro
+%macro LITM 0
         and     bit, offs
         lea     prm, [probs + offs_R * 1]
         add     prm, bit_R
@@ -334,10 +334,10 @@ LITM macro
         mov     bit, match
         cmovae  range, t0
         PUP_COD x1, prm + t1_R * PMULT_HALF, - 1
-endm
+%endmacro
 
 
-LITM_2 macro
+%macro LITM_2 0
         and     bit, offs
         lea     prm, [probs + offs_R * 1]
         add     prm, bit_R
@@ -348,72 +348,72 @@ LITM_2 macro
 
         cmovae  range, t0
         PUP_COD x1, prm + t1_R * PMULT_HALF, 256 - 1
-endm
+%endmacro
 
 
 ; ---------- REVERSE BITS ----------
 
-REV_0 macro prob:req, probNext:req
+%macro REV_0 2 ; macro prob:req, probNext:req
         ; PLOAD   prob, probs + 1 * PMULT
         ; lea     sym2_R, [probs + 2 * PMULT]
         ; PLOAD   probNext, probs + 2 * PMULT
-        PLOAD   probNext, sym2_R
+        PLOAD   %2, sym2_R ; probNext, sym2_R
 
-        NORM_CALC prob
+        NORM_CALC %1 ; prob
 
         cmovae  range, t0
         PLOAD   t0, probs + 3 * PMULT
-        cmovae  probNext, t0
+        cmovae  %2, t0 ; probNext, t0
         cmovb   cod, t1
         mov     t0, kBitModelOffset
         cmovb   t0, kBitModelTotal_reg
         lea     t1_R, [probs + 3 * PMULT]
         cmovae  sym2_R, t1_R
-        PUP prob, probs + 1 * PMULT
-endm
+        PUP %1, probs + 1 * PMULT ; prob, probs + 1 * PMULT
+%endmacro
 
 
-REV_1 macro prob:req, probNext:req, step:req
+%macro REV_1 3 ; macro prob:req, probNext:req, step:req
         add     sym2_R, step * PMULT
-        PLOAD   probNext, sym2_R
+        PLOAD   %2, sym2_R ; probNext, sym2_R
 
-        NORM_CALC prob
+        NORM_CALC %1 ; prob
 
         cmovae  range, t0
-        PLOAD   t0, sym2_R + step * PMULT
-        cmovae  probNext, t0
+        PLOAD   t0, sym2_R + %3 * PMULT ; sym2_R + step * PMULT
+        cmovae  %2, t0 ; probNext, sym2_R
         cmovb   cod, t1
         mov     t0, kBitModelOffset
         cmovb   t0, kBitModelTotal_reg
-        lea     t1_R, [sym2_R + step * PMULT]
+        lea     t1_R, [sym2_R + %3 * PMULT] ; sym2_R + step * PMULT
         cmovae  sym2_R, t1_R
-        PUP prob, t1_R - step * PMULT_2
-endm
+        PUP %1, t1_R - %3 * PMULT_2 ; prob, t1_R - step * PMULT_2
+%endmacro
 
 
-REV_2 macro prob:req, step:req
+%macro REV_2 2 ; macro prob:req, step:req
         sub     sym2_R, probs
         shr     sym2, PSHIFT
         or      sym, sym2
 
-        NORM_CALC prob
+        NORM_CALC %1 ; prob
 
         cmovae  range, t0
-        lea     t0, [sym - step]
+        lea     t0, [sym - %2] ; [sym - step]
         cmovb   sym, t0
         cmovb   cod, t1
         mov     t0, kBitModelOffset
         cmovb   t0, kBitModelTotal_reg
-        PUP prob, probs + sym2_R * PMULT
-endm
+        PUP %1, probs + sym2_R * PMULT ; prob, probs + sym2_R * PMULT
+%endmacro
 
 
-REV_1_VAR macro prob:req
-        PLOAD   prob, sym_R
+%macro REV_1_VAR 1 ; macro prob:req
+        PLOAD   %1, sym_R ; prob, sym_R
         mov     probs, sym_R
         add     sym_R, sym2_R
 
-        NORM_CALC prob
+        NORM_CALC %1 ; prob
 
         cmovae  range, t0
         lea     t0_R, [sym_R + sym2_R]
@@ -424,284 +424,282 @@ REV_1_VAR macro prob:req
         ; cmovb   t0, t1
         cmovb   t0, kBitModelTotal_reg
         add     sym2, sym2
-        PUP prob, probs
-endm
+        PUP %1, probs ; prob, probs
+%endmacro
 
 
 
 
-LIT_PROBS macro lpMaskParam:req
-        ; prob += (UInt32)3 * ((((processedPos << 8) + dic[(dicPos == 0 ? dicBufSize : dicPos) - 1]) & lpMask) << lc);
+%macro LIT_PROBS 1 ; macro lpMaskParam:req
+        ; prob += (UInt32)3 * ((((processedPos SHL 8) + dic[(dicPos == 0 ? dicBufSize : dicPos) - 1]) & lpMask) << lc);
         mov     t0, processedPos
         shl     t0, 8
         add     sym, t0
-        and     sym, lpMaskParam
+        and     sym, %1 ; lpMaskParam
         add     probs_state_R, pbPos_R
-        mov     x1, LOC lc2
-        lea     sym, dword ptr[sym_R + 2 * sym_R]
+        mov     x1, LOC(lc2)
+        lea     sym, dword [sym_R + 2 * sym_R]
         add     probs, Literal * PMULT
         shl     sym, x1_L
         add     probs, sym_R
         UPDATE_0 probs_state_R, 0, IsMatch
         inc     processedPos
-endm
+%endmacro
 
 
 
-kNumPosBitsMax          equ 4
-kNumPosStatesMax        equ (1 SHL kNumPosBitsMax)
+%define kNumPosBitsMax  4
+%define kNumPosStatesMax        (1 SHL kNumPosBitsMax)
 
-kLenNumLowBits          equ 3
-kLenNumLowSymbols       equ (1 SHL kLenNumLowBits)
-kLenNumHighBits         equ 8
-kLenNumHighSymbols      equ (1 SHL kLenNumHighBits)
-kNumLenProbs            equ (2 * kLenNumLowSymbols * kNumPosStatesMax + kLenNumHighSymbols)
+%define kLenNumLowBits          3
+%define kLenNumLowSymbols       (1 SHL kLenNumLowBits)
+%define kLenNumHighBits         8
+%define kLenNumHighSymbols      (1 SHL kLenNumHighBits)
+%define kNumLenProbs            (2 * kLenNumLowSymbols * kNumPosStatesMax + kLenNumHighSymbols)
 
-LenLow                  equ 0
-LenChoice               equ LenLow
-LenChoice2              equ (LenLow + kLenNumLowSymbols)
-LenHigh                 equ (LenLow + 2 * kLenNumLowSymbols * kNumPosStatesMax)
+%define LenLow                  0
+%define LenChoice               LenLow
+%define LenChoice2              (LenLow + kLenNumLowSymbols)
+%define LenHigh                 (LenLow + 2 * kLenNumLowSymbols * kNumPosStatesMax)
 
-kNumStates              equ 12
-kNumStates2             equ 16
-kNumLitStates           equ 7
+%define kNumStates              12
+%define kNumStates2             16
+%define kNumLitStates           7
 
-kStartPosModelIndex     equ 4
-kEndPosModelIndex       equ 14
-kNumFullDistances       equ (1 SHL (kEndPosModelIndex SHR 1))
+%define kStartPosModelIndex     4
+%define kEndPosModelIndex       14
+%define kNumFullDistances       (1 SHL (kEndPosModelIndex SHR 1))
 
-kNumPosSlotBits         equ 6
-kNumLenToPosStates      equ 4
+%define kNumPosSlotBits         6
+%define kNumLenToPosStates      4
 
-kNumAlignBits           equ 4
-kAlignTableSize         equ (1 SHL kNumAlignBits)
+%define kNumAlignBits           4
+%define kAlignTableSize         (1 SHL kNumAlignBits)
 
-kMatchMinLen            equ 2
-kMatchSpecLenStart      equ (kMatchMinLen + kLenNumLowSymbols * 2 + kLenNumHighSymbols)
+%define kMatchMinLen            2
+%define kMatchSpecLenStart      (kMatchMinLen + kLenNumLowSymbols * 2 + kLenNumHighSymbols)
 
-kStartOffset    equ 1664
-SpecPos         equ (-kStartOffset)
-IsRep0Long      equ (SpecPos + kNumFullDistances)
-RepLenCoder     equ (IsRep0Long + (kNumStates2 SHL kNumPosBitsMax))
-LenCoder        equ (RepLenCoder + kNumLenProbs)
-IsMatch         equ (LenCoder + kNumLenProbs)
-kAlign          equ (IsMatch + (kNumStates2 SHL kNumPosBitsMax))
-IsRep           equ (kAlign + kAlignTableSize)
-IsRepG0         equ (IsRep + kNumStates)
-IsRepG1         equ (IsRepG0 + kNumStates)
-IsRepG2         equ (IsRepG1 + kNumStates)
-PosSlot         equ (IsRepG2 + kNumStates)
-Literal         equ (PosSlot + (kNumLenToPosStates SHL kNumPosSlotBits))
-NUM_BASE_PROBS  equ (Literal + kStartOffset)
+%define kStartOffset    1664
+%define SpecPos         (-kStartOffset)
+%define IsRep0Long      (SpecPos + kNumFullDistances)
+%define RepLenCoder     (IsRep0Long + (kNumStates2 SHL kNumPosBitsMax))
+%define LenCoder        (RepLenCoder + kNumLenProbs)
+%define IsMatch         (LenCoder + kNumLenProbs)
+%define kAlign          (IsMatch + (kNumStates2 SHL kNumPosBitsMax))
+%define IsRep           (kAlign + kAlignTableSize)
+%define IsRepG0         (IsRep + kNumStates)
+%define IsRepG1         (IsRepG0 + kNumStates)
+%define IsRepG2         (IsRepG1 + kNumStates)
+%define PosSlot         (IsRepG2 + kNumStates)
+%define Literal         (PosSlot + (kNumLenToPosStates SHL kNumPosSlotBits))
+%define NUM_BASE_PROBS  (Literal + kStartOffset)
 
-if kAlign ne 0
-  .err <Stop_Compiling_Bad_LZMA_kAlign>
-endif
+%if kAlign != 0
+  %error "Stop_Compiling_Bad_LZMA_kAlign"
+%endif
 
-if NUM_BASE_PROBS ne 1984
-  .err <Stop_Compiling_Bad_LZMA_PROBS>
-endif
-
-
-PTR_FIELD equ dq ?
-
-CLzmaDec_Asm struct
-        lc      db ?
-        lp      db ?
-        pb      db ?
-        _pad_   db ?
-        dicSize dd ?
-
-        probs_Spec      PTR_FIELD
-        probs_1664      PTR_FIELD
-        dic_Spec        PTR_FIELD
-        dicBufSize      PTR_FIELD
-        dicPos_Spec     PTR_FIELD
-        buf_Spec        PTR_FIELD
-
-        range_Spec      dd ?
-        code_Spec       dd ?
-        processedPos_Spec  dd ?
-        checkDicSize    dd ?
-        rep0    dd ?
-        rep1    dd ?
-        rep2    dd ?
-        rep3    dd ?
-        state_Spec      dd ?
-        remainLen dd ?
-CLzmaDec_Asm ends
+%if NUM_BASE_PROBS != 1984
+  %error "Stop_Compiling_Bad_LZMA_PROBS"
+%endif
 
 
-CLzmaDec_Asm_Loc struct
-        OLD_RSP    PTR_FIELD
-        lzmaPtr    PTR_FIELD
-        _pad0_     PTR_FIELD
-        _pad1_     PTR_FIELD
-        _pad2_     PTR_FIELD
-        dicBufSize PTR_FIELD
-        probs_Spec PTR_FIELD
-        dic_Spec   PTR_FIELD
-        
-        limit      PTR_FIELD
-        bufLimit   PTR_FIELD
-        lc2       dd ?
-        lpMask    dd ?
-        pbMask    dd ?
-        checkDicSize   dd ?
+%define PTR_FIELD resq 1 ; dq ?
 
-        _pad_     dd ?
-        remainLen dd ?
-        dicPos_Spec     PTR_FIELD
-        rep0      dd ?
-        rep1      dd ?
-        rep2      dd ?
-        rep3      dd ?
-CLzmaDec_Asm_Loc ends
+struc CLzmaDec_Asm ; struct
+        lc:     resb 1 ; db ?
+        lp:     resb 1 ; db ?
+        pb:     resb 1 ; db ?
+        _pad:   resb 1 ; db ?
+        dicSize: resd 1 ; dd ?
 
+        probs_Spec:      PTR_FIELD
+        probs_1664:      PTR_FIELD
+        dic_Spec:        PTR_FIELD
+        dicBufSize:      PTR_FIELD
+        dicPos_Spec:     PTR_FIELD
+        buf_Spec:        PTR_FIELD
 
-GLOB_2  equ [sym_R].CLzmaDec_Asm.
-GLOB    equ [r1].CLzmaDec_Asm.
-LOC_0   equ [r0].CLzmaDec_Asm_Loc.
-LOC     equ [RSP].CLzmaDec_Asm_Loc.
+        range_Spec:      resd 1 ; dd ?
+        code_Spec:       resd 1 ; dd ?
+        processedPos_Spec:  resd 1 ; dd ?
+        checkDicSize:    resd 1 ;dd ?
+        rep0:    resd 1 ; dd ?
+        rep1:    resd 1 ; dd ?
+        rep2:    resd 1 ; dd ?
+        rep3:    resd 1 ; dd ?
+        state_Spec:      resd 1 ; dd ?
+        remainLen: resd 1 ; dd ?
+endstruc ; CLzmaDec_Asm ; ends
 
 
-COPY_VAR macro name
-        mov     t0, GLOB_2 name
-        mov     LOC_0 name, t0
-endm
+struc CLzmaDec_Asm_Loc ; struct
+        _OLD_RSP:    PTR_FIELD
+        _lzmaPtr:    PTR_FIELD
+        __pad0_:     PTR_FIELD
+        __pad1_:     PTR_FIELD
+        __pad2_:     PTR_FIELD
+        _dicBufSize: PTR_FIELD
+        _probs_Spec: PTR_FIELD
+        _dic_Spec:   PTR_FIELD
+
+        _limit:      PTR_FIELD
+        _bufLimit:   PTR_FIELD
+        _lc2:       resd 1 ; dd ?
+        _lpMask:    resd 1 ; dd ?
+        _pbMask:    resd 1 ; dd ?
+        _checkDicSize:   resd 1 ; dd ?
+
+        __pad_:     resd 1 ; dd ?
+        _remainLen: resd 1 ; dd ?
+        _dicPos_Spec:     PTR_FIELD
+        _rep0:      resd 1 ; dd ?
+        _rep1:      resd 1 ; dd ?
+        _rep2:      resd 1 ; dd ?
+        _rep3:      resd 1 ; dd ?
+endstruc ; CLzmaDec_Asm_Loc ; ends
 
 
-RESTORE_VAR macro name
-        mov     t0, LOC name
-        mov     GLOB name, t0
-endm
+%define GLOB_2(x)  [sym_R + CLzmaDec_Asm. %+ x]
+%define GLOB(x)    [r1 + CLzmaDec_Asm. %+ x]
+%define LOC_0(x)   [r0 + CLzmaDec_Asm_Loc. %+ _x]
+%define LOC(x)     [RSP + CLzmaDec_Asm_Loc. %+ _x]
 
 
+%macro COPY_VAR 1 ; macro name
+        mov     t0, GLOB_2(%1) ; name
+        mov     LOC_0(%1), t0 ; name, t0
+%endmacro
 
-IsMatchBranch_Pre macro reg
-        ; prob = probs + IsMatch + (state << kNumPosBitsMax) + posState;
-        mov     pbPos, LOC pbMask
+
+%macro RESTORE_VAR 1 ; macro name
+        mov     t0, LOC(%1) ; name
+        mov     GLOB(%1), t0 ; name, t0
+%endmacro
+
+%macro IsMatchBranch_Pre  0; macro reg
+        ; prob = probs + IsMatch + (state SHL kNumPosBitsMax) + posState;
+        mov     pbPos, LOC(pbMask)
         and     pbPos, processedPos
         shl     pbPos, (kLenNumLowBits + 1 + PSHIFT)
         lea     probs_state_R, [probs + state_R]
-endm
+%endmacro
 
 
-IsMatchBranch macro reg
+%macro IsMatchBranch 0 ; macro reg
         IsMatchBranch_Pre
         IF_BIT_1 probs_state_R, pbPos_R, IsMatch, IsMatch_label
-endm
-        
+%endmacro
 
-CheckLimits macro reg
-        cmp     buf, LOC bufLimit
+
+%macro CheckLimits 0 ; macro reg
+        cmp     buf, LOC(bufLimit)
         jae     fin_OK
-        cmp     dicPos, LOC limit
+        cmp     dicPos, LOC(limit)
         jae     fin_OK
-endm
+%endmacro
 
 
 
 ; RSP is (16x + 8) bytes aligned in WIN64-x64
-; LocalSize equ ((((SIZEOF CLzmaDec_Asm_Loc) + 7) / 16 * 16) + 8)
+; LocalSize equ ((((sizeof CLzmaDec_Asm_Loc) + 7) / 16 * 16) + 8)
 
-PARAM_lzma      equ REG_PARAM_0
-PARAM_limit     equ REG_PARAM_1
-PARAM_bufLimit  equ REG_PARAM_2
+%define PARAM_lzma      REG_PARAM_0
+%define PARAM_limit     REG_PARAM_1
+%define PARAM_bufLimit  REG_PARAM_2
 
 ; MY_ALIGN_64
 MY_PROC LzmaDec_DecodeReal_3, 3
 MY_PUSH_PRESERVED_REGS
 
-        lea     r0, [RSP - (SIZEOF CLzmaDec_Asm_Loc)]
+        lea     r0, [RSP - CLzmaDec_Asm_Loc_size] ; replace sizeof macro from masm
         and     r0, -128
         mov     r5, RSP
         mov     RSP, r0
-        mov     LOC_0 Old_RSP, r5
-        mov     LOC_0 lzmaPtr, PARAM_lzma
-        
-        mov     LOC_0 remainLen, 0  ; remainLen must be ZERO
+        mov     LOC_0(Old_RSP), r5
+        mov     LOC_0(lzmaPtr), PARAM_lzma
 
-        mov     LOC_0 bufLimit, PARAM_bufLimit
+        mov     LOC_0(remainLen), 0  ; remainLen must be ZERO
+
+        mov     LOC_0(bufLimit), PARAM_bufLimit
         mov     sym_R, PARAM_lzma  ;  CLzmaDec_Asm_Loc pointer for GLOB_2
-        mov     dic, GLOB_2 dic_Spec
+        mov     dic, GLOB_2(dic_Spec)
         add     PARAM_limit, dic
-        mov     LOC_0 limit, PARAM_limit
+        mov     LOC_0(limit), PARAM_limit
 
-        COPY_VAR(rep0)
-        COPY_VAR(rep1)
-        COPY_VAR(rep2)
-        COPY_VAR(rep3)
-        
-        mov     dicPos, GLOB_2 dicPos_Spec
+        COPY_VAR rep0
+        COPY_VAR rep1
+        COPY_VAR rep2
+        COPY_VAR rep3
+
+        mov     dicPos, GLOB_2(dicPos_Spec)
         add     dicPos, dic
-        mov     LOC_0 dicPos_Spec, dicPos
-        mov     LOC_0 dic_Spec, dic
-        
-        mov     x1_L, GLOB_2 pb
+        mov     LOC_0(dicPos_Spec), dicPos
+        mov     LOC_0(dic_Spec), dic
+
+        mov     x1_L, GLOB_2(pb)
         mov     t0, 1
         shl     t0, x1_L
         dec     t0
-        mov     LOC_0 pbMask, t0
+        mov     LOC_0(pbMask), t0
 
-        ; unsigned pbMask = ((unsigned)1 << (p->prop.pb)) - 1;
+        ; unsigned pbMask = ((unsigned)1 SHL (p->prop.pb)) - 1;
         ; unsigned lc = p->prop.lc;
-        ; unsigned lpMask = ((unsigned)0x100 << p->prop.lp) - ((unsigned)0x100 >> lc);
+        ; unsigned lpMask = ((unsigned)0x100 SHL p->prop.lp) - ((unsigned)0x100 >> lc);
 
-        mov     x1_L, GLOB_2 lc
+        mov     x1_L, GLOB_2(lc)
         mov     x2, 100h
         mov     t0, x2
         shr     x2, x1_L
         ; inc     x1
         add     x1_L, PSHIFT
-        mov     LOC_0 lc2, x1
-        mov     x1_L, GLOB_2 lp
+        mov     LOC_0(lc2), x1
+        mov     x1_L, GLOB_2(lp)
         shl     t0, x1_L
         sub     t0, x2
-        mov     LOC_0 lpMask, t0
+        mov     LOC_0(lpMask), t0
         mov     lpMask_reg, t0
-        
+
         ; mov     probs, GLOB_2 probs_Spec
         ; add     probs, kStartOffset SHL PSHIFT
-        mov     probs, GLOB_2 probs_1664
-        mov     LOC_0 probs_Spec, probs
+        mov     probs, GLOB_2(probs_1664)
+        mov     LOC_0(probs_Spec), probs
 
-        mov     t0_R, GLOB_2 dicBufSize
-        mov     LOC_0 dicBufSize, t0_R
-       
-        mov     x1, GLOB_2 checkDicSize
-        mov     LOC_0 checkDicSize, x1
+        mov     t0_R, GLOB_2 (icBufSize)
+        mov     LOC_0(dicBufSize), t0_R
 
-        mov     processedPos, GLOB_2 processedPos_Spec
+        mov     x1, GLOB_2(checkDicSize)
+        mov     LOC_0(checkDicSize), x1
 
-        mov     state, GLOB_2 state_Spec
+        mov     processedPos, GLOB_2(processedPos_Spec)
+
+        mov     state, GLOB_2(state_Spec)
         shl     state, PSHIFT
 
-        mov     buf,   GLOB_2 buf_Spec
-        mov     range, GLOB_2 range_Spec
-        mov     cod,   GLOB_2 code_Spec
+        mov     buf,   GLOB_2(buf_Spec)
+        mov     range, GLOB_2(range_Spec)
+        mov     cod,   GLOB_2(code_Spec)
         mov     kBitModelTotal_reg, kBitModelTotal
         xor     sym, sym
 
         ; if (processedPos != 0 || checkDicSize != 0)
         or      x1, processedPos
-        jz      @f
-        
+        jz      .out ; @f
+
         add     t0_R, dic
         cmp     dicPos, dic
         cmovnz  t0_R, dicPos
-        movzx   sym, byte ptr[t0_R - 1]
+        movzx   sym, byte [t0_R - 1]
 
-@@:
+.out: ;@@:
         IsMatchBranch_Pre
         cmp     state, 4 * PMULT
         jb      lit_end
         cmp     state, kNumLitStates * PMULT
         jb      lit_matched_end
         jmp     lz_end
-        
 
-        
+
+
 
 ; ---------- LITERAL ----------
 MY_ALIGN_64
@@ -710,7 +708,7 @@ lit_start:
 lit_start_2:
         LIT_PROBS lpMask_reg
 
-    ifdef _LZMA_SIZE_OPT
+    %ifdef _LZMA_SIZE_OPT
 
         PLOAD   x1, probs + 1 * PMULT
         mov     sym, 1
@@ -720,9 +718,9 @@ lit_loop:
         mov     x1, x2
         cmp     sym, 127
         jbe     lit_loop
-        
-    else
-        
+
+    %else
+
         BIT_0   x1, x2
         BIT_1   x2, x1
         BIT_1   x1, x2
@@ -730,23 +728,23 @@ lit_loop:
         BIT_1   x1, x2
         BIT_1   x2, x1
         BIT_1   x1, x2
-        
-    endif
+
+    %endif
 
         BIT_2   x2, 256 - 1
-        
+
         ; mov     dic, LOC dic_Spec
         mov     probs, LOC probs_Spec
         IsMatchBranch_Pre
         mov     byte ptr[dicPos], sym_L
         inc     dicPos
-                
+
         CheckLimits
 lit_end:
         IF_BIT_0_NOUP probs_state_R, pbPos_R, IsMatch, lit_start
 
         ; jmp     IsMatch_label
-        
+
 ; ---------- MATCHES ----------
 ; MY_ALIGN_32
 IsMatch_label:
@@ -775,10 +773,10 @@ len8_loop:
         mov     x1, x2
         cmp     sym, 64
         jb      len8_loop
-        
+
         mov     len_temp, (kLenNumHighSymbols - kLenNumLowSymbols * 2) - 1 - kMatchMinLen
         jmp     len_mid_2
-        
+
 MY_ALIGN_32
 len_mid_0:
         UPDATE_0 probs, 0, 0
@@ -790,10 +788,10 @@ len_mid_2:
         mov     probs, LOC probs_Spec
         cmp     state, kNumStates * PMULT
         jb      copy_match
-        
+
 
 ; ---------- DECODE DISTANCE ----------
-        ; probs + PosSlot + ((len < kNumLenToPosStates ? len : kNumLenToPosStates - 1) << kNumPosSlotBits);
+        ; probs + PosSlot + ((len < kNumLenToPosStates ? len : kNumLenToPosStates - 1) SHL kNumPosSlotBits);
 
         mov     t0, 3 + kMatchMinLen
         cmp     sym, 3 + kMatchMinLen
@@ -801,12 +799,12 @@ len_mid_2:
         add     probs, PosSlot * PMULT - (kMatchMinLen SHL (kNumPosSlotBits + PSHIFT))
         shl     t0, (kNumPosSlotBits + PSHIFT)
         add     probs, t0_R
-        
+
         ; sym = Len
         ; mov     LOC remainLen, sym
         mov     len_temp, sym
 
-    ifdef _LZMA_SIZE_OPT
+    %ifdef _LZMA_SIZE_OPT
 
         PLOAD   x1, probs + 1 * PMULT
         mov     sym, 1
@@ -816,17 +814,17 @@ slot_loop:
         mov     x1, x2
         cmp     sym, 32
         jb      slot_loop
-        
-    else
-        
+
+    %else
+
         BIT_0   x1, x2
         BIT_1   x2, x1
         BIT_1   x1, x2
         BIT_1   x2, x1
         BIT_1   x1, x2
-        
-    endif
-        
+
+    %endif
+
         mov     x1, sym
         BIT_2   x2, 64-1
 
@@ -842,12 +840,12 @@ slot_loop:
         PLOAD   x2, probs + 1 * PMULT
         shl     sym, kNumAlignBits + 1
         lea     sym2_R, [probs + 2 * PMULT]
-        
+
         jmp     direct_norm
         ; lea     t1, [sym_R + (1 SHL kNumAlignBits)]
         ; cmp     range, kTopValue
         ; jb      direct_norm
-        
+
 ; ---------- DIRECT DISTANCE ----------
 MY_ALIGN_32
 direct_loop:
@@ -856,7 +854,7 @@ direct_loop:
         sub     cod, range
         cmovs   cod, t0
         cmovns  sym, t1
-        
+
         comment ~
         sub     cod, range
         mov     x2, cod
@@ -880,7 +878,7 @@ direct_norm:
 MY_ALIGN_32
 direct_end:
         ;  prob =  + kAlign;
-        ;  distance <<= kNumAlignBits;
+        ;  distance SHL= kNumAlignBits;
         REV_0   x2, x1
         REV_1   x1, x2, 2
         REV_1   x2, x1, 4
@@ -895,7 +893,7 @@ decode_dist_end:
         cmove   t0, processedPos
         cmp     sym, t0
         jae     end_of_payload
-        
+
         ; rep3 = rep2;
         ; rep2 = rep1;
         ; rep1 = rep0;
@@ -911,14 +909,14 @@ decode_dist_end:
         mov     LOC rep1, t0
         mov     LOC rep2, t1
         mov     LOC rep3, x1
-        
+
         ; state = (state < kNumStates + kNumLitStates) ? kNumLitStates : kNumLitStates + 3;
         cmp     state, (kNumStates + kNumLitStates) * PMULT
         mov     state, kNumLitStates * PMULT
         mov     t0, (kNumLitStates + 3) * PMULT
         cmovae  state, t0
 
-        
+
 ; ---------- COPY MATCH ----------
 copy_match:
 
@@ -951,17 +949,17 @@ copy_match:
         mov     LOC remainLen, sym
 
         sub     t0_R, dic
-        
+
         ; pos = dicPos - rep0 + (dicPos < rep0 ? dicBufSize : 0);
         sub     t0_R, r1
-        jae     @f
+        jae     .out ; @f
 
         mov     r1, LOC dicBufSize
         add     t0_R, r1
         sub     r1, t0_R
         cmp     cnt_R, r1
         ja      copy_match_cross
-@@:
+.out: ; @@:
         ; if (curLen <= dicBufSize - pos)
 
 ; ---------- COPY MATCH FAST ----------
@@ -990,17 +988,17 @@ copy_common:
         inc     cnt_R
         jz      copy_end
 MY_ALIGN_16
-@@:
+.outb: ; @@:
         mov     byte ptr[cnt_R * 1 + dicPos], sym_L
         movzx   sym, byte ptr[cnt_R * 1 + t0_R]
         inc     cnt_R
-        jnz     @b
+        jnz     .outb ; @b
 
 copy_end:
 lz_end_match:
         mov     byte ptr[dicPos], sym_L
         inc     dicPos
-  
+
         ; IsMatchBranch_Pre
         CheckLimits
 lz_end:
@@ -1009,20 +1007,20 @@ lz_end:
 
 
 ; ---------- LITERAL MATCHED ----------
-                
+
         LIT_PROBS LOC lpMask
-        
+
         ; matchByte = dic[dicPos - rep0 + (dicPos < rep0 ? dicBufSize : 0)];
         mov     x1, LOC rep0
         ; mov     dic, LOC dic_Spec
         mov     LOC dicPos_Spec, dicPos
-        
+
         ; state -= (state < 10) ? 3 : 6;
         lea     t0, [state_R - 6 * PMULT]
         sub     state, 3 * PMULT
         cmp     state, 7 * PMULT
         cmovae  state, t0
-        
+
         sub     dicPos, dic
         sub     dicPos, r1
         jae     @f
@@ -1033,10 +1031,10 @@ lz_end:
         sub     dicPos, r1
         cmovb   t0_R, LOC dicBufSize
         ~
-        
+
         movzx   match, byte ptr[dic + dicPos * 1]
 
-    ifdef _LZMA_SIZE_OPT
+    %ifdef _LZMA_SIZE_OPT
 
         mov     offs, 256 * PMULT
         shl     match, (PSHIFT + 1)
@@ -1048,9 +1046,9 @@ litm_loop:
         cmp     sym, 256
         jb      litm_loop
         sub     sym, 256
-        
-    else
-        
+
+    %else
+
         LITM_0
         LITM
         LITM
@@ -1059,16 +1057,16 @@ litm_loop:
         LITM
         LITM
         LITM_2
-        
-    endif
-        
+
+    %endif
+
         mov     probs, LOC probs_Spec
         IsMatchBranch_Pre
         ; mov     dic, LOC dic_Spec
         mov     dicPos, LOC dicPos_Spec
         mov     byte ptr[dicPos], sym_L
         inc     dicPos
-        
+
         CheckLimits
 lit_matched_end:
         IF_BIT_1_NOUP probs_state_R, pbPos_R, IsMatch, IsMatch_label
@@ -1076,7 +1074,7 @@ lit_matched_end:
         mov     lpMask_reg, LOC lpMask
         sub     state, 3 * PMULT
         jmp     lit_start_2
-        
+
 
 
 ; ---------- REP 0 LITERAL ----------
@@ -1089,28 +1087,28 @@ IsRep0Short_label:
         mov     t0_R, dicPos
         mov     probBranch, LOC rep0
         sub     t0_R, dic
-        
+
         sub     probs, RepLenCoder * PMULT
         inc     processedPos
         ; state = state < kNumLitStates ? 9 : 11;
         or      state, 1 * PMULT
         IsMatchBranch_Pre
-       
+
         sub     t0_R, probBranch_R
         jae     @f
         add     t0_R, LOC dicBufSize
 @@:
         movzx   sym, byte ptr[dic + t0_R * 1]
         jmp     lz_end_match
-  
-        
+
+
 MY_ALIGN_32
 IsRep_label:
         UPDATE_1 probs_state_R, 0, IsRep
 
         ; The (checkDicSize == 0 && processedPos == 0) case was checked before in LzmaDec.c with kBadRepCode.
         ; So we don't check it here.
-        
+
         ; mov     t0, processedPos
         ; or      t0, LOC checkDicSize
         ; jz      fin_ERROR_2
@@ -1123,7 +1121,7 @@ IsRep_label:
 
         ; prob = probs + RepLenCoder;
         add     probs, RepLenCoder * PMULT
-        
+
         IF_BIT_1 probs_state_R, 0, IsRepG0, IsRepG0_label
         IF_BIT_0_NOUP probs_state_R, pbPos_R, IsRep0Long, IsRep0Short_label
         UPDATE_1 probs_state_R, pbPos_R, IsRep0Long
@@ -1135,17 +1133,17 @@ IsRepG0_label:
         mov     dist2, LOC rep0
         mov     dist, LOC rep1
         mov     LOC rep1, dist2
-        
+
         IF_BIT_1 probs_state_R, 0, IsRepG1, IsRepG1_label
         mov     LOC rep0, dist
         jmp     len_decode
-        
+
 ; MY_ALIGN_32
 IsRepG1_label:
         UPDATE_1 probs_state_R, 0, IsRepG1
         mov     dist2, LOC rep2
         mov     LOC rep2, dist
-        
+
         IF_BIT_1 probs_state_R, 0, IsRepG2, IsRepG2_label
         mov     LOC rep0, dist2
         jmp     len_decode
@@ -1158,7 +1156,7 @@ IsRepG2_label:
         mov     LOC rep0, dist
         jmp     len_decode
 
-        
+
 
 ; ---------- SPEC SHORT DISTANCE ----------
 
@@ -1181,7 +1179,7 @@ spec_loop:
         sub     sym, SpecPos * PMULT
         sub     sym_R, probs
         shr     sym, PSHIFT
-        
+
         jmp     decode_dist_end
 
 
@@ -1202,7 +1200,7 @@ copy_match_cross:
         inc     cnt_R
         cmp     t1_R, r1
         jne     @b
-        
+
         movzx   sym, byte ptr[t0_R]
         sub     t0_R, cnt_R
         jmp     copy_common
@@ -1247,7 +1245,7 @@ fin:
         RESTORE_VAR(rep3)
 
         mov     x0, sym
-        
+
         mov     RSP, LOC Old_RSP
 
 MY_POP_PRESERVED_REGS
