@@ -605,7 +605,7 @@ int main(int argc, char *argv[])
 		if (!control->compression_level)
 			control->compression_level = 5; // default LZMA level is 5
 	}
-	else
+	else if (!control->compression_level)
 		control->compression_level = 7;
 
 
