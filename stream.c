@@ -990,7 +990,7 @@ void *open_stream_out(rzip_control *control, int f, unsigned int n, i64 chunk_li
 				control->dictSize *= 0.90;		// by 10% each iteration
 				if (control->dictSize % 2) 		// if dictionary size is an odd number
 					control->dictSize -= 1;		// round down to even number
-				round_to_page(&control->dictSize);// align
+				round_to_page(&control->dictSize);	// align
 				setup_overhead(control);		// recompute overhead
 				dict_or_threads = 0;
 			}
@@ -1315,11 +1315,8 @@ static void *compthread(void *data)
 	 * of succeeding in allocating more ram */
 	fsync(ctis->fd);
 retry:
-	/* Very small buffers have issues to do with minimum amounts of ram
-	 * allocatable to a buffer combined with the MINIMUM_MATCH of rzip
-	 * being 31 bytes so don't bother trying to compress anything less
-	 * than 64 bytes. */
-	if (FILTER_USED) {
+	/* Filters are used ragrdless of compression type */
+	if (FILTER_USED && cti->streamno == 1) {	// stream 0 is for matches, stream 1+ is for literals
 		print_maxverbose("Using %s filter prior to compression for thread %d...\n",
 				((control->filter_flag & FILTER_FLAG_X86) ? "x86" :
 				((control->filter_flag & FILTER_FLAG_ARM) ? "ARM" :
@@ -1354,6 +1351,10 @@ retry:
 			Delta_Encode(delta_state, control->delta, cti->s_buf,  cti->s_len);
 		}
 	}
+	/* Very small buffers have issues to do with minimum amounts of ram
+	 * allocatable to a buffer combined with the MINIMUM_MATCH of rzip
+	 * being 31 bytes so don't bother trying to compress anything less
+	 * than 64 bytes. */
 	if (!NO_COMPRESS && cti->c_len >= 64) {
 		/* Any Filter */
 		if (LZMA_COMPRESS)
@@ -1397,7 +1398,7 @@ retry:
 	}
 	if (unlikely(ret)) {
 		print_maxverbose("Unable to compress in parallel, waiting for previous thread to complete before trying again\n");
-		if (FILTER_USED) { // As unlikely as this is, we have to undo filtering here 
+		if (FILTER_USED && cti->streamno == 1 ) {	// As unlikely as this is, we have to undo filtering here
 			print_maxverbose("Reverting filtering...\n");
 			if (control->filter_flag & FILTER_FLAG_X86) {
 				UInt32 x86State;
@@ -1634,7 +1635,7 @@ retry:
 				break;
 		}
 	}
-	if (FILTER_USED) { // restore unfiltered data
+	if (FILTER_USED && uci->streamno == 1) { // restore unfiltered data, literals only
 		print_maxverbose("Restoring %s filter data post decompression for thread %d...\n",
 				((control->filter_flag & FILTER_FLAG_X86) ? "x86" :
 				((control->filter_flag & FILTER_FLAG_ARM) ? "ARM" :
@@ -2011,7 +2012,6 @@ static int lzo_compresses(rzip_control *control, uchar *s_buf, i64 s_len)
 	unsigned long buftest_size = (test_len > 5 * STREAM_BUFSIZE ? STREAM_BUFSIZE : STREAM_BUFSIZE / 4096);
 	int ret = 0;
 	int workcounter = 0;	/* count # of passes */
-	lzo_uint best_dlen = UINT_MAX; /* save best compression estimate */
 
 	if (!LZO_TEST)
 		return 1;
@@ -2034,9 +2034,6 @@ static int lzo_compresses(rzip_control *control, uchar *s_buf, i64 s_len)
 		workcounter++;
 		lzo1x_1_compress(test_buf, in_len, (uchar *)c_buf, &dlen, wrkmem);
 
-		if (dlen < best_dlen)
-			best_dlen = dlen;	/* save best value */
-
 		if (dlen < in_len) {
 			ret = 1;
 			break;
@@ -2052,7 +2049,7 @@ static int lzo_compresses(rzip_control *control, uchar *s_buf, i64 s_len)
 	}
 	print_maxverbose("lzo testing %s for chunk %ld. Compressed size = %5.2F%% of chunk, %d Passes\n",
 			(ret == 0? "FAILED" : "OK"), save_len,
-			100 * ((double) best_dlen / (double) in_len), workcounter);
+			100 * ((double) dlen / (double) in_len), workcounter);
 
 	dealloc(wrkmem);
 	dealloc(c_buf);

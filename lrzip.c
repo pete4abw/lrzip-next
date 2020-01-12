@@ -541,7 +541,7 @@ static bool open_tmpoutbuf(rzip_control *control)
 	control->out_maxlen = maxlen - control->page_size;
 	control->tmp_outbuf = buf;
 	if (!DECOMPRESS && !TEST_ONLY)
-		control->out_ofs = control->out_len = MAGIC_LEN;\
+		control->out_ofs = control->out_len = MAGIC_LEN;
 	return true;
 }
 
@@ -955,7 +955,7 @@ static double percentage(i64 num, i64 den)
 
 bool get_fileinfo(rzip_control *control)
 {
-	i64 u_len, c_len, second_last, last_head, utotal = 0, ctotal = 0, ofs = 25, stream_head[2];
+	i64 u_len, c_len, second_last, last_head, utotal = 0, ctotal = 0, ofs, stream_head[2];
 	i64 expected_size, infile_size, chunk_size = 0, chunk_total = 0;
 	int header_length, stream = 0, chunk = 0;
 	char *tmp, *infilecopy = NULL;
@@ -1153,19 +1153,6 @@ done:
 	print_output("%s:\nlrzip version: %d.%d file\n", infilecopy, control->major_version, control->minor_version);
 
 	print_output("Compression: ");
-	if (FILTER_USED) {
-		print_output("%s Filter Used",
-				((control->filter_flag & FILTER_FLAG_X86) ? "x86" :
-				((control->filter_flag & FILTER_FLAG_ARM) ? "ARM" :
-				((control->filter_flag & FILTER_FLAG_ARMT) ? "ARMT" :
-				((control->filter_flag & FILTER_FLAG_PPC) ? "PPC" :
-				((control->filter_flag & FILTER_FLAG_SPARC) ? "SPARC" :
-				((control->filter_flag & FILTER_FLAG_IA64) ? "IA64" :
-				((control->filter_flag & FILTER_FLAG_DELTA) ? "Delta" : "wtf?"))))))));
-		if (control->filter_flag & FILTER_FLAG_DELTA)
-			print_output(" : Delta offset - %d", control->delta);
-		print_output("\n");
-	}
 	if (save_ctype == CTYPE_NONE)
 		print_output("rzip alone\n");
 	else if (save_ctype == CTYPE_BZIP2)
@@ -1185,6 +1172,22 @@ done:
 		print_output("rzip + zpaq\n");
 	else
 		print_output("Dunno wtf\n");
+
+	/* show filter used */
+	if (FILTER_USED) {
+		print_output("Filter Used: %s",
+				((control->filter_flag & FILTER_FLAG_X86) ? "x86" :
+				((control->filter_flag & FILTER_FLAG_ARM) ? "ARM" :
+				((control->filter_flag & FILTER_FLAG_ARMT) ? "ARMT" :
+				((control->filter_flag & FILTER_FLAG_PPC) ? "PPC" :
+				((control->filter_flag & FILTER_FLAG_SPARC) ? "SPARC" :
+				((control->filter_flag & FILTER_FLAG_IA64) ? "IA64" :
+				((control->filter_flag & FILTER_FLAG_DELTA) ? "Delta" : "wtf?"))))))));
+		if (control->filter_flag & FILTER_FLAG_DELTA)
+			print_output(", offset - %d", DEFAULT_DELTA);
+		print_output("\n");
+	}
+
 	print_output("Decompressed file size: %llu\n", expected_size);
 	print_output("Compressed file size: %llu\n", infile_size);
 	print_output("Compression ratio: %.3Lf\n", cratio);
@@ -1367,7 +1370,6 @@ bool initialise_control(rzip_control *control)
 	control->flags = FLAG_SHOW_PROGRESS | FLAG_KEEP_FILES | FLAG_THRESHOLD;
 	control->suffix = ".lrz";
 	control->filter_flag = 0;		/* filter flag. Default to none */
-	control->delta = DEFAULT_DELTA;		/* if Delta filter is used, default is 1 */
 	control->compression_level = 0; 	/* 0 because lrzip default level is 5, others 7 */
 	control->dictSize = 0;			/* Dictionary Size for lzma. 0 means program decides */
 	control->ramsize = get_ram(control);

@@ -1,13 +1,21 @@
 lrzip ChangeLog
 
-DECEMBER 2019, verion 0.701beta
+JANUARY 2020, version 0.703beta, Peter Hyman, pete@peterhyman.com
+
+* Apply filters only to stream 1 literrals.
+* remove unused best_dlen variable in get_fileinfo.
+* Disable threshold testing when using filters.
+* Set default Delta offset at 1. No alternative.
+* update filters doc.
+
+DECEMBER 2019, verion 0.701beta, Peter Hyman, pete@peterhyman.com
 
 * Add ARM, ARMT, PPC, SPARC, IA64 filter code.
 * Add DELTA filter with default offset 1.
 * Update docs.
 * Update magic header. 1<<0 .. 1<<6 for filter in byte 16.
 
-DECEMBER 2019, version bump 0.700, Peter Hyman
+DECEMBER 2019, version bump 0.700, Peter Hyman pete@peterhyman.com
 
 LZMA SDK 19.00
 

@@ -13,8 +13,8 @@ decompression. They include:
 - ia64. "" for IA64 code.
 - delta. "" delta offset conversion. Default is 1.
 
-Their impact is not known because the first filter applied in
-lrzip is rzip hashing. Becuase of the manner mmap is used, it's
-difficult to apply these filters prior to hashing. Delta
-filtering could have benefits with difficult to compress formats,
-such as audio or video, but it is not possible to predict.
+Filters are only applied to literal values after rzip
+compression. Their impact is not possible to predict and
+could result in larger compressed files than non-filtered.
+Delta compression is best for media files, such as
+uncompressed audio. WAV and PCM files show good results.

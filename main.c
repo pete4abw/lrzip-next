@@ -210,7 +210,7 @@ static void show_summary(void)
 			else if (NO_COMPRESS)
 				print_verbose("RZIP pre-processing only\n");
 			if (FILTER_USED) {
-				print_output("%s Filter Used",
+				print_output("Filter Used: %s",
 					((control->filter_flag & FILTER_FLAG_X86) ? "x86" :
 					((control->filter_flag & FILTER_FLAG_ARM) ? "ARM" :
 					((control->filter_flag & FILTER_FLAG_ARMT) ? "ARMT" :
@@ -219,7 +219,7 @@ static void show_summary(void)
 					((control->filter_flag & FILTER_FLAG_IA64) ? "IA64" :
 					((control->filter_flag & FILTER_FLAG_DELTA) ? "Delta" : "wtf?"))))))));
 				if (control->filter_flag & FILTER_FLAG_DELTA)
-					print_output(" : Delta offset - %d", control->delta);
+					print_output(", offset - %d", control->delta);
 				print_output("\n");
 			}
 			if (control->window)
@@ -288,7 +288,7 @@ static struct option long_options[] = {
 	{"ppc",		no_argument,	0,	'{'},
 	{"sparc",	no_argument,	0,	'\''},
 	{"ia64",	no_argument,	0,	';'},	/* 40 */
-	{"delta",	optional_argument,	0,	':'},
+	{"delta",	optional_argument,	0,	':'},	// unused for now, ignored.
 	{0,	0,	0,	0},
 };
 
@@ -468,7 +468,7 @@ int main(int argc, char *argv[])
 			break;
 		case ':':
 			control->filter_flag |= FILTER_FLAG_DELTA;	// DELTA
-			control->delta = 1;				// 1 is only option for now
+			control->delta = DEFAULT_DELTA;			// 1 is only option for now
 			break;
 
 		case 'h':
@@ -636,6 +636,10 @@ int main(int argc, char *argv[])
 		print_err("Cannot have -U and stdin, unlimited mode disabled.\n");
 		control->flags &= ~FLAG_UNLIMITED;
 	}
+
+	/* if any filter used, disable LZO testing */
+	if (FILTER_USED)
+		control->flags &= ~FLAG_THRESHOLD;
 
 	setup_overhead(control);
 
