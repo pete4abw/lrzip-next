@@ -95,7 +95,9 @@ static pthread_mutex_t output_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t output_cond = PTHREAD_COND_INITIALIZER;
 static pthread_t *threads;
 
-unsigned save_threads = 0; // need for multiple chunks to restore thread count
+static unsigned save_threads = 0;	// need for multiple chunks to restore thread count
+static i64 limit = 0;			// save for open_stream_out
+static i64 stream_bufsize = 0;		// save for open_stream_out
 
 bool init_mutex(rzip_control *control, pthread_mutex_t *mutex)
 {
@@ -933,7 +935,7 @@ bool close_streamout_threads(rzip_control *control)
 void *open_stream_out(rzip_control *control, int f, unsigned int n, i64 chunk_limit, char cbytes)
 {
 	struct stream_info *sinfo;
-	i64 testsize, limit;
+	i64 testsize;	// limit made static to prevent recurring tests of memory;
 	uchar *testmalloc;
 	unsigned int i, testbufs;
 
@@ -967,85 +969,89 @@ void *open_stream_out(rzip_control *control, int f, unsigned int n, i64 chunk_li
 	/* Reduce threads one by one and then reduce dictionary size
 	* by 10% until testsize is within range of estimated allocated
 	* memory for backend compression. Leave `limit` alone for now.
-	* First reduce threads, then dictionary size. */
-	int dict_or_threads = 0;
-	i64 DICTSIZEMIN = control->dictSize / 2;			// minimum dictionary size
-	i64 save_dictSize = control->dictSize;				// save dictionary
-	if (!save_threads)						// in cases of multiple chunks, need to restore
-		save_threads = control->threads;			// thread count in case it was reduced below
-	else
-		control->threads = save_threads;
-	limit = control->usable_ram/testbufs;				// this is max chunk limit based on ram and compression window
-	while(1) {							// for testing purposes add 10% to test
-		if (limit * 1.1 <= control->overhead * control->threads) {
-			if (dict_or_threads < 2) {			// reduce thread count favoring reducing threads
-				control->threads--;
-				if (control->threads == 0) {
-					control->threads = 1;		// threads are 1, break
+	* First reduce threads, then dictionary size.
+	* This block only has to be done once since memory never
+	* changes, chunk sizes are the same. */
+
+	if (save_threads == 0) {
+		save_threads = control->threads;		// save threads for loops
+		i64 save_dictSize = control->dictSize;		// save dictionary
+		i64 DICTSIZEMIN = control->dictSize / 2;	// minimum dictionary size
+		limit = control->usable_ram/testbufs;		// this is max chunk limit based on ram and compression window
+		bool overhead_set = false;
+		for (control->dictSize = save_dictSize; control->dictSize > DICTSIZEMIN && overhead_set == false; control->dictSize *= .90) {
+			for (control->threads = save_threads; control->threads > 0; control->threads--) {
+				if (limit <= control->overhead * control->threads) {
+					// make dictionary LZMA friendly (from LzmaEnc)
+					if (control->dictSize >= ((UInt32)1 << 22)) {
+						UInt32 kDictMask = ((UInt32)1 << 20) - 1;
+						if (control->dictSize < (UInt32)0xFFFFFFFF - kDictMask)
+							control->dictSize = (control->dictSize + kDictMask) & ~kDictMask;
+					}
+					else {
+						for (i = 11; i <= 30; i++) {
+							if (control->dictSize <= ((UInt32)2 << i)) { control->dictSize = (2 << i); break; }
+							if (control->dictSize <= ((UInt32)3 << i)) { control->dictSize = (3 << i); break; }
+						}
+					}
+					round_to_page(&control->dictSize);	// align
+					setup_overhead(control);		// recompute overhead
+				} else {
+					overhead_set = true;			// got it!
 					break;
 				}
-				dict_or_threads++;
-			}
-			else {						// reduce computed dictionary size
-				control->dictSize *= 0.90;		// by 10% each iteration
-				if (control->dictSize % 2) 		// if dictionary size is an odd number
-					control->dictSize -= 1;		// round down to even number
-				round_to_page(&control->dictSize);	// align
-				setup_overhead(control);		// recompute overhead
-				dict_or_threads = 0;
-			}
-			print_maxverbose("Reducing Dictionary Size to %ld and/or Threads to %d to maximize threads and compression block size.\n",
-					control->dictSize, control->threads);
-			if (control->dictSize <= DICTSIZEMIN)		// break on minimum
-				break;
-			continue;					// test again
+			}	// thread loop
+		}		// dictionary size loop
+
+		if (control->dictSize != save_dictSize)
+			print_verbose("Dictionary Size reduced to %d\n", control->dictSize);
+		if (control->threads != save_threads)
+			print_verbose("Threads reduced to %d\n", control->threads);
+
+		save_threads = control->threads;			// preserve thread count. Important
+
+		if (BITS32) {
+			limit = MIN(limit, one_g);
+			if (limit + (control->overhead * control->threads) > one_g)
+				limit = one_g - (control->overhead * control->threads);
 		}
-		break;
-	}
-	if (control->dictSize != save_dictSize)
-		print_verbose("Dictionary Size reduced to %d\n", control->dictSize);
-
-	if (BITS32) {
-		limit = MIN(limit, one_g);
-		if (limit + (control->overhead * control->threads) > one_g)
-			limit = one_g - (control->overhead * control->threads);
-	}
-	/* Use a nominal minimum size should we fail all previous shrinking */
-	limit = MAX(limit, STREAM_BUFSIZE);
-	limit = MIN(control->usable_ram/testbufs, chunk_limit);
+		/* Use a nominal minimum size should we fail all previous shrinking */
+		limit = MAX(limit, STREAM_BUFSIZE);
+		limit = MIN(control->usable_ram/testbufs, chunk_limit);
 retest_malloc:
-	testsize = limit + (control->overhead * control->threads);
-	if (testsize > control->usable_ram)
-		limit = control->usable_ram/testbufs;
-	testmalloc = malloc(testsize);
-	if (!testmalloc) {
-		limit = limit / 10 * 9;
-		goto retest_malloc;
-	}
-	if (!NO_COMPRESS) {
-		char *testmalloc2 = malloc(limit);
-
-		if (!testmalloc2) {
-			dealloc(testmalloc);
+		testsize = limit + (control->overhead * control->threads);
+		testmalloc = malloc(testsize);
+		if (!testmalloc) {
 			limit = limit / 10 * 9;
 			goto retest_malloc;
 		}
-		dealloc(testmalloc2);
-	}
-	dealloc(testmalloc);
-	print_maxverbose("Succeeded in testing %lld sized malloc for back end compression\n", testsize);
+		if (!NO_COMPRESS) {
+			char *testmalloc2 = malloc(limit);
+
+			if (!testmalloc2) {
+				dealloc(testmalloc);
+				limit = limit / 10 * 9;
+				goto retest_malloc;
+			}
+			dealloc(testmalloc2);
+		}
+		dealloc(testmalloc);
+		print_maxverbose("Succeeded in testing %lld sized malloc for back end compression\n", testsize);
+		stream_bufsize = MIN(limit, MAX((limit + control->threads - 1) / control->threads,
+					STREAM_BUFSIZE));
+		if (control->threads > 1)
+			print_maxverbose("Using up to %d threads to compress up to %lld bytes each.\n",
+				control->threads, stream_bufsize);
+		else
+			print_maxverbose("Using only 1 thread to compress up to %lld bytes\n",
+				stream_bufsize);
+	} // end -- determine limit
+
+	control->threads = save_threads;				// restore threads. This is important!
 
 	/* Make the bufsize no smaller than STREAM_BUFSIZE. Round up the
 	 * bufsize to fit X threads into it */
-	sinfo->bufsize = MIN(limit, MAX((limit + control->threads - 1) / control->threads,
-					STREAM_BUFSIZE));
-
-	if (control->threads > 1)
-		print_maxverbose("Using up to %d threads to compress up to %lld bytes each.\n",
-			control->threads, sinfo->bufsize);
-	else
-		print_maxverbose("Using only 1 thread to compress up to %lld bytes\n",
-			sinfo->bufsize);
+	sinfo->bufsize = stream_bufsize;
 
 	for (i = 0; i < n; i++) {
 		sinfo->s[i].buf = calloc(sinfo->bufsize , 1);
