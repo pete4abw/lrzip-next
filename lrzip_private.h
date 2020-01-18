@@ -548,7 +548,11 @@ static inline void print_err(const rzip_control *control, unsigned int line, con
 	}
 }
 
-#define print_stuff(level, ...) do {\
+#define print_stuff(level, ...) do {		\
+	if (progress_flag && level != 2) {	\
+		print_stuff(control,level, __LINE__, __FILE__, __func__, "\n");	\
+		progress_flag = false;		\
+	}					\
 	print_stuff(control, level, __LINE__, __FILE__, __func__, __VA_ARGS__); \
 } while (0)
 
@@ -566,20 +570,12 @@ static inline void print_err(const rzip_control *control, unsigned int line, con
 
 #define print_verbose(...)	do {		\
 	if (VERBOSE) {				\
-		if (progress_flag) {		\
-			print_stuff(3, "\n");	\
-			progress_flag = false;	\
-		}				\
 		print_stuff(3, __VA_ARGS__);	\
 	}					\
 } while (0)
 
 #define print_maxverbose(...)	do {		\
 	if (MAX_VERBOSE) {			\
-		if (progress_flag) {		\
-			print_stuff(4, "\n");	\
-			progress_flag = false;	\
-		}				\
 		print_stuff(4, __VA_ARGS__);	\
 	}					\
 } while (0)
