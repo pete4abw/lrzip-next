@@ -976,32 +976,32 @@ void *open_stream_out(rzip_control *control, int f, unsigned int n, i64 chunk_li
 	if (save_threads == 0) {
 		save_threads = control->threads;		// save threads for loops
 		i64 save_dictSize = control->dictSize;		// save dictionary
-		i64 DICTSIZEMIN = control->dictSize / 2;	// minimum dictionary size
+		i64 DICTSIZEMIN = (1 << 24);			// minimum dictionary size (16MB)
 		limit = control->usable_ram/testbufs;		// this is max chunk limit based on ram and compression window
 		bool overhead_set = false;
-		for (control->dictSize = save_dictSize; control->dictSize > DICTSIZEMIN && overhead_set == false; control->dictSize *= .90) {
+		for (control->dictSize = save_dictSize; control->dictSize > DICTSIZEMIN; control->dictSize *= .90) {
+			// make dictionary LZMA friendly (from LzmaEnc)
+			if (control->dictSize >= ((UInt32)1 << 22)) {
+				UInt32 kDictMask = ((UInt32)1 << 20) - 1;
+				if (control->dictSize < (UInt32)0xFFFFFFFF - kDictMask)
+					control->dictSize = (control->dictSize + kDictMask) & ~kDictMask;
+			} else {
+				for (i = 11; i <= 30; i++) {
+					if (control->dictSize <= ((UInt32)2 << i)) { control->dictSize = (2 << i); break; }
+					if (control->dictSize <= ((UInt32)3 << i)) { control->dictSize = (3 << i); break; }
+				}
+			}
+			round_to_page(&control->dictSize);	// align
+			setup_overhead(control);		// recompute overhead
 			for (control->threads = save_threads; control->threads > 0; control->threads--) {
-				if (limit <= control->overhead * control->threads) {
-					// make dictionary LZMA friendly (from LzmaEnc)
-					if (control->dictSize >= ((UInt32)1 << 22)) {
-						UInt32 kDictMask = ((UInt32)1 << 20) - 1;
-						if (control->dictSize < (UInt32)0xFFFFFFFF - kDictMask)
-							control->dictSize = (control->dictSize + kDictMask) & ~kDictMask;
-					}
-					else {
-						for (i = 11; i <= 30; i++) {
-							if (control->dictSize <= ((UInt32)2 << i)) { control->dictSize = (2 << i); break; }
-							if (control->dictSize <= ((UInt32)3 << i)) { control->dictSize = (3 << i); break; }
-						}
-					}
-					round_to_page(&control->dictSize);	// align
-					setup_overhead(control);		// recompute overhead
-				} else {
+				if (limit >= control->overhead * control->threads) {
 					overhead_set = true;			// got it!
 					break;
 				}
 			}	// thread loop
-		}		// dictionary size loop
+			if (overhead_set == true)
+				break;
+		}	// dictionary size loop
 
 		if (control->dictSize != save_dictSize)
 			print_verbose("Dictionary Size reduced to %d\n", control->dictSize);
