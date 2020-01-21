@@ -221,6 +221,7 @@ static bool get_magic(rzip_control *control, char *magic)
 		filter_offset = 1;
 		control->filter_flag = magic[16];
 		// placeholder for getting delta offset. 1 for now.
+		control->delta = DEFAULT_DELTA;
 	}
 	/* restore LZMA compression flags only if stored */
 	if ((int) magic[16+filter_offset]) {
