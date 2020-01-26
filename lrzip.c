@@ -139,7 +139,7 @@ i64 nloops(i64 seconds, uchar *b1, uchar *b2)
 
 bool write_magic(rzip_control *control)
 {
-	char magic[MAGIC_LEN] = {
+	unsigned char magic[MAGIC_LEN] = {
 		'L', 'R', 'Z', 'I', LRZIP_MAJOR_VERSION, LRZIP_MINOR_VERSION
 	};
 
@@ -154,7 +154,13 @@ bool write_magic(rzip_control *control)
 		memcpy(&magic[6], &esize, 8);
 	}
 
-	magic[16] = control->filter_flag;	// filter flag
+	if (FILTER_USED)
+		// high order 5 bits for delta offset - 1, 0-255. Low order 3 bits for filter type 1-7
+		// offset bytes will be incremented on decompression
+		magic[16] = ((control->delta <= 17 ? ((control->delta-1) << 3) : 
+				((control->delta / 16) + 16 -1) << 3) + control->filter_flag);	// filter flag with delta offset
+	else
+		magic[16] = 0;
 	/* save LZMA compression flags */
 	if (LZMA_COMPRESS) {
 		int i;
@@ -185,7 +191,7 @@ static inline i64 enc_loops(uchar b1, uchar b2)
 	return (i64)b2 << (i64)b1;
 }
 
-static bool get_magic(rzip_control *control, char *magic)
+static bool get_magic(rzip_control *control, unsigned char *magic)
 {
 	int encrypted, md5, i, filter_offset=0;
 	i64 expected_size;
@@ -216,12 +222,17 @@ static bool get_magic(rzip_control *control, char *magic)
 	if (control->major_version == 0 && control->minor_version < 6)
 		control->eof = 1;
 
-	/* offset = 1 if filter is used for all compression modes */
+	/* offset = 1 for all compression modes in version 0.7* */
 	if (control->major_version == 0 && control->minor_version == 7) {
 		filter_offset = 1;
-		control->filter_flag = magic[16];
-		// placeholder for getting delta offset. 1 for now.
-		control->delta = DEFAULT_DELTA;
+		if (magic[16]) {							// any value means filter used
+			int i;
+			control->filter_flag = magic[16] & FILTER_MASK;			// Filter flag
+			if (control->filter_flag == FILTER_FLAG_DELTA) {		// Get Delta Offset if needed
+				i = (magic[16] & DELTA_OFFSET_MASK) >> 3;		// delta offset stored as value-1
+				control->delta = (i <= 16 ? i + 1 : (i-16 + 1) * 16);	// need to restore actual value+1
+			}
+		}
 	}
 	/* restore LZMA compression flags only if stored */
 	if ((int) magic[16+filter_offset]) {
@@ -259,7 +270,7 @@ static bool get_magic(rzip_control *control, char *magic)
 
 bool read_magic(rzip_control *control, int fd_in, i64 *expected_size)
 {
-	char magic[MAGIC_LEN];
+	unsigned char magic[MAGIC_LEN];
 
 	memset(magic, 0, sizeof(magic));
 	/* Initially read only <v0.6x header */
@@ -1177,15 +1188,15 @@ done:
 	/* show filter used */
 	if (FILTER_USED) {
 		print_output("Filter Used: %s",
-				((control->filter_flag & FILTER_FLAG_X86) ? "x86" :
-				((control->filter_flag & FILTER_FLAG_ARM) ? "ARM" :
-				((control->filter_flag & FILTER_FLAG_ARMT) ? "ARMT" :
-				((control->filter_flag & FILTER_FLAG_PPC) ? "PPC" :
-				((control->filter_flag & FILTER_FLAG_SPARC) ? "SPARC" :
-				((control->filter_flag & FILTER_FLAG_IA64) ? "IA64" :
-				((control->filter_flag & FILTER_FLAG_DELTA) ? "Delta" : "wtf?"))))))));
-		if (control->filter_flag & FILTER_FLAG_DELTA)
-			print_output(", offset - %d", DEFAULT_DELTA);
+				((control->filter_flag == FILTER_FLAG_X86) ? "x86" :
+				((control->filter_flag == FILTER_FLAG_ARM) ? "ARM" :
+				((control->filter_flag == FILTER_FLAG_ARMT) ? "ARMT" :
+				((control->filter_flag == FILTER_FLAG_PPC) ? "PPC" :
+				((control->filter_flag == FILTER_FLAG_SPARC) ? "SPARC" :
+				((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
+				((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf?"))))))));
+		if (control->filter_flag == FILTER_FLAG_DELTA)
+			print_output(", offset - %d", control->delta);
 		print_output("\n");
 	}
 

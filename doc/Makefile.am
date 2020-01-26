@@ -5,6 +5,7 @@ dist_doc_DATA = \
   README.benchmarks \
   README.filters \
   README.lzo_compresses.test.txt \
+  README.SDK19_COMPARISON.md \
   magic.header.txt \
   lrzip.conf.example
 

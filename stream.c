@@ -1324,34 +1324,34 @@ retry:
 	/* Filters are used ragrdless of compression type */
 	if (FILTER_USED && cti->streamno == 1) {	// stream 0 is for matches, stream 1+ is for literals
 		print_maxverbose("Using %s filter prior to compression for thread %d...\n",
-				((control->filter_flag & FILTER_FLAG_X86) ? "x86" :
-				((control->filter_flag & FILTER_FLAG_ARM) ? "ARM" :
-				((control->filter_flag & FILTER_FLAG_ARMT) ? "ARMT" :
-				((control->filter_flag & FILTER_FLAG_PPC) ? "PPC" :
-				((control->filter_flag & FILTER_FLAG_SPARC) ? "SPARC" :
-				((control->filter_flag & FILTER_FLAG_IA64) ? "IA64" :
-				((control->filter_flag & FILTER_FLAG_DELTA) ? "Delta" : "wtf"))))))), i);
-		if (control->filter_flag & FILTER_FLAG_X86) {
+				((control->filter_flag == FILTER_FLAG_X86) ? "x86" :
+				((control->filter_flag == FILTER_FLAG_ARM) ? "ARM" :
+				((control->filter_flag == FILTER_FLAG_ARMT) ? "ARMT" :
+				((control->filter_flag == FILTER_FLAG_PPC) ? "PPC" :
+				((control->filter_flag == FILTER_FLAG_SPARC) ? "SPARC" :
+				((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
+				((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf"))))))), i);
+		if (control->filter_flag == FILTER_FLAG_X86) {
 			UInt32 x86State;
 			x86_Convert_Init(x86State);
 			x86_Convert(cti->s_buf, cti->s_len, 0, &x86State, 1);
 		}
-		else if (control->filter_flag & FILTER_FLAG_ARM) {
+		else if (control->filter_flag == FILTER_FLAG_ARM) {
 			ARM_Convert(cti->s_buf, cti->s_len, 0, 1);
 		}
-		else if (control->filter_flag & FILTER_FLAG_ARMT) {
+		else if (control->filter_flag == FILTER_FLAG_ARMT) {
 			ARMT_Convert(cti->s_buf, cti->s_len, 0, 1);
 		}
-		else if (control->filter_flag & FILTER_FLAG_PPC) {
+		else if (control->filter_flag == FILTER_FLAG_PPC) {
 			PPC_Convert(cti->s_buf, cti->s_len, 0, 1);
 		}
-		else if (control->filter_flag & FILTER_FLAG_SPARC) {
+		else if (control->filter_flag == FILTER_FLAG_SPARC) {
 			SPARC_Convert(cti->s_buf, cti->s_len, 0, 1);
 		}
-		if (control->filter_flag & FILTER_FLAG_IA64) {
+		if (control->filter_flag == FILTER_FLAG_IA64) {
 			IA64_Convert(cti->s_buf, cti->s_len, 0, 1);
 		}
-		if (control->filter_flag & FILTER_FLAG_DELTA) {
+		if (control->filter_flag == FILTER_FLAG_DELTA) {
 			uchar delta_state[DELTA_STATE_SIZE];
 			Delta_Init(delta_state);
 			Delta_Encode(delta_state, control->delta, cti->s_buf,  cti->s_len);
@@ -1406,27 +1406,27 @@ retry:
 		print_maxverbose("Unable to compress in parallel, waiting for previous thread to complete before trying again\n");
 		if (FILTER_USED && cti->streamno == 1 ) {	// As unlikely as this is, we have to undo filtering here
 			print_maxverbose("Reverting filtering...\n");
-			if (control->filter_flag & FILTER_FLAG_X86) {
+			if (control->filter_flag == FILTER_FLAG_X86) {
 				UInt32 x86State;
 				x86_Convert_Init(x86State);
 				x86_Convert(cti->s_buf, cti->s_len, 0, &x86State, 0);
 			}
-			else if (control->filter_flag & FILTER_FLAG_ARM) {
+			else if (control->filter_flag == FILTER_FLAG_ARM) {
 				ARM_Convert(cti->s_buf, cti->s_len, 0, 0);
 			}
-			else if (control->filter_flag & FILTER_FLAG_ARMT) {
+			else if (control->filter_flag == FILTER_FLAG_ARMT) {
 				ARMT_Convert(cti->s_buf, cti->s_len, 0, 0);
 			}
-			else if (control->filter_flag & FILTER_FLAG_PPC) {
+			else if (control->filter_flag == FILTER_FLAG_PPC) {
 				PPC_Convert(cti->s_buf, cti->s_len, 0, 0);
 			}
-			else if (control->filter_flag & FILTER_FLAG_SPARC) {
+			else if (control->filter_flag == FILTER_FLAG_SPARC) {
 				SPARC_Convert(cti->s_buf, cti->s_len, 0, 0);
 			}
-			else if (control->filter_flag & FILTER_FLAG_IA64) {
+			else if (control->filter_flag == FILTER_FLAG_IA64) {
 				IA64_Convert(cti->s_buf, cti->s_len, 0, 0);
 			}
-			else if (control->filter_flag & FILTER_FLAG_DELTA) {
+			else if (control->filter_flag == FILTER_FLAG_DELTA) {
 				uchar delta_state[DELTA_STATE_SIZE];
 				print_maxverbose("Reverting Delta filter data prior to trying again...\n");
 				Delta_Init(delta_state);
@@ -1643,34 +1643,34 @@ retry:
 	}
 	if (FILTER_USED && uci->streamno == 1) { // restore unfiltered data, literals only
 		print_maxverbose("Restoring %s filter data post decompression for thread %d...\n",
-				((control->filter_flag & FILTER_FLAG_X86) ? "x86" :
-				((control->filter_flag & FILTER_FLAG_ARM) ? "ARM" :
-				((control->filter_flag & FILTER_FLAG_ARMT) ? "ARMT" :
-				((control->filter_flag & FILTER_FLAG_PPC) ? "PPC" :
-				((control->filter_flag & FILTER_FLAG_SPARC) ? "SPARC" :
-				((control->filter_flag & FILTER_FLAG_IA64) ? "IA64" :
-				((control->filter_flag & FILTER_FLAG_DELTA) ? "Delta" : "wtf"))))))), i);
-		if (control->filter_flag & FILTER_FLAG_X86) {
+				((control->filter_flag == FILTER_FLAG_X86) ? "x86" :
+				((control->filter_flag == FILTER_FLAG_ARM) ? "ARM" :
+				((control->filter_flag == FILTER_FLAG_ARMT) ? "ARMT" :
+				((control->filter_flag == FILTER_FLAG_PPC) ? "PPC" :
+				((control->filter_flag == FILTER_FLAG_SPARC) ? "SPARC" :
+				((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
+				((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf"))))))), i);
+		if (control->filter_flag == FILTER_FLAG_X86) {
 			UInt32 x86State;
 			x86_Convert_Init(x86State);
 			x86_Convert(uci->s_buf, uci->u_len, 0, &x86State, 0);
 		}
-		else if (control->filter_flag & FILTER_FLAG_ARM) {
+		else if (control->filter_flag == FILTER_FLAG_ARM) {
 			ARM_Convert(uci->s_buf, uci->u_len, 0, 0);
 		}
-		else if (control->filter_flag & FILTER_FLAG_ARMT) {
+		else if (control->filter_flag == FILTER_FLAG_ARMT) {
 			ARMT_Convert(uci->s_buf, uci->u_len, 0, 0);
 		}
-		else if (control->filter_flag & FILTER_FLAG_PPC) {
+		else if (control->filter_flag == FILTER_FLAG_PPC) {
 			PPC_Convert(uci->s_buf, uci->u_len, 0, 0);
 		}
-		else if (control->filter_flag & FILTER_FLAG_SPARC) {
+		else if (control->filter_flag == FILTER_FLAG_SPARC) {
 			SPARC_Convert(uci->s_buf, uci->u_len, 0, 0);
 		}
-		if (control->filter_flag & FILTER_FLAG_IA64) {
+		if (control->filter_flag == FILTER_FLAG_IA64) {
 			IA64_Convert(uci->s_buf, uci->u_len, 0, 0);
 		}
-		if (control->filter_flag & FILTER_FLAG_DELTA) {
+		if (control->filter_flag == FILTER_FLAG_DELTA) {
 			uchar delta_state[DELTA_STATE_SIZE];
 			Delta_Init(delta_state);
 			Delta_Decode(delta_state, control->delta, uci->s_buf,  uci->u_len);

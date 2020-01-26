@@ -124,7 +124,7 @@ static void usage(bool compat)
 	print_output("	--ppc			Use PPC filter (for all compression modes)\n");
 	print_output("	--sparc			Use SPARC filter (for all compression modes)\n");
 	print_output("	--ia64			Use IA64 filter (for all compression modes)\n");
-	print_output("	--delta			Use Delta filter with offset 1 (for all compression modes)\n");
+	print_output("	--delta	[1..32]		Use Delta filter (for all compression modes) (1 (default) -17, then multiples of 16 to 256)\n");
 	print_output("	-N, --nice-level value	Set nice value to value (default %d)\n", compat ? 0 : 19);
 	print_output("	-p, --threads value	Set processor count to override number of threads\n");
 	print_output("	-m, --maxram size	Set maximum available ram in hundreds of MB\n");
@@ -211,14 +211,14 @@ static void show_summary(void)
 				print_verbose("RZIP pre-processing only\n");
 			if (FILTER_USED) {
 				print_output("Filter Used: %s",
-					((control->filter_flag & FILTER_FLAG_X86) ? "x86" :
-					((control->filter_flag & FILTER_FLAG_ARM) ? "ARM" :
-					((control->filter_flag & FILTER_FLAG_ARMT) ? "ARMT" :
-					((control->filter_flag & FILTER_FLAG_PPC) ? "PPC" :
-					((control->filter_flag & FILTER_FLAG_SPARC) ? "SPARC" :
-					((control->filter_flag & FILTER_FLAG_IA64) ? "IA64" :
-					((control->filter_flag & FILTER_FLAG_DELTA) ? "Delta" : "wtf?"))))))));
-				if (control->filter_flag & FILTER_FLAG_DELTA)
+					((control->filter_flag == FILTER_FLAG_X86) ? "x86" :
+					((control->filter_flag == FILTER_FLAG_ARM) ? "ARM" :
+					((control->filter_flag == FILTER_FLAG_ARMT) ? "ARMT" :
+					((control->filter_flag == FILTER_FLAG_PPC) ? "PPC" :
+					((control->filter_flag == FILTER_FLAG_SPARC) ? "SPARC" :
+					((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
+					((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf?"))))))));
+				if (control->filter_flag == FILTER_FLAG_DELTA)
 					print_output(", offset - %d", control->delta);
 				print_output("\n");
 			}
@@ -288,7 +288,7 @@ static struct option long_options[] = {
 	{"ppc",		no_argument,	0,	'{'},
 	{"sparc",	no_argument,	0,	'\''},
 	{"ia64",	no_argument,	0,	';'},	/* 40 */
-	{"delta",	optional_argument,	0,	':'},	// unused for now, ignored.
+	{"delta",	optional_argument,	0,	':'},
 	{0,	0,	0,	0},
 };
 
@@ -449,26 +449,33 @@ int main(int argc, char *argv[])
 			break;
 		/* Filtering */
 		case ']':
-			control->filter_flag |= FILTER_FLAG_X86;	// x86
+			control->filter_flag = FILTER_FLAG_X86;		// x86
 			break;
 		case '[':
-			control->filter_flag |= FILTER_FLAG_ARM;	// ARM
+			control->filter_flag = FILTER_FLAG_ARM;		// ARM
 			break;
 		case '}':
-			control->filter_flag |= FILTER_FLAG_ARMT;	// ARMT
+			control->filter_flag = FILTER_FLAG_ARMT;	// ARMT
 			break;
 		case '{':
-			control->filter_flag |= FILTER_FLAG_PPC;	// PPC
+			control->filter_flag = FILTER_FLAG_PPC;		// PPC
 			break;
 		case '\'':
-			control->filter_flag |= FILTER_FLAG_SPARC;	// SPARC
+			control->filter_flag = FILTER_FLAG_SPARC;	// SPARC
 			break;
 		case ';':
-			control->filter_flag |= FILTER_FLAG_IA64;	// IA64
+			control->filter_flag = FILTER_FLAG_IA64;	// IA64
 			break;
 		case ':':
-			control->filter_flag |= FILTER_FLAG_DELTA;	// DELTA
-			control->delta = DEFAULT_DELTA;			// 1 is only option for now
+			control->filter_flag = FILTER_FLAG_DELTA;	// DELTA
+			/* Delta Values are 1-16, then multiples of 16 to 256 */
+			if (optarg) {
+				i=atoi(optarg);
+				if (i < 1 || i > 32)
+					failure("Delta offset value must be between 1 and 32\n");
+				control->delta = ( i <= 17 ? i : (i-16) * 16 );
+			} else
+				control->delta = DEFAULT_DELTA;			// 1 is default
 			break;
 
 		case 'h':

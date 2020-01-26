@@ -319,22 +319,24 @@ typedef sem_t cksem_t;
  * 0 = none
  * 1 = x86 filter
  * 2 = ASM
- * 4 = ASMT
- * 8 = PPC
- * 16 = SPARC
- * 32 = IA64
- * 64 = Delta
+ * 3 = ASMT
+ * 4 = PPC
+ * 5 = SPARC
+ * 6 = IA64
+ * 7 = Delta
 */
-#define FILTER_FLAG_X86		(1<<0)
-#define FILTER_FLAG_ARM		(1<<1)
-#define FILTER_FLAG_ARMT	(1<<2)
-#define FILTER_FLAG_PPC		(1<<3)
-#define FILTER_FLAG_SPARC	(1<<4)
-#define FILTER_FLAG_IA64	(1<<5)
-#define FILTER_FLAG_DELTA	(1<<6)
-#define DEFAULT_DELTA		1		// delta diff is 1 by default
-#define FILTER_USED		(control->filter_flag & 127) // lazy for OR of the above 0111 1111b
+#define FILTER_FLAG_X86		1
+#define FILTER_FLAG_ARM		2
+#define FILTER_FLAG_ARMT	3
+#define FILTER_FLAG_PPC		4
+#define FILTER_FLAG_SPARC	5
+#define FILTER_FLAG_IA64	6
+#define FILTER_FLAG_DELTA	7
+#define DEFAULT_DELTA		1				// delta diff is 1 by default
+#define FILTER_USED		(control->filter_flag & 7) 	// lazy for OR of the above 0111b
 #define FILTER_NOT_USED		(!FILTER_USED)
+#define FILTER_MASK		0b00000111			// decode magic
+#define DELTA_OFFSET_MASK	0b11111000
 
 /* Structure to save state of computation between the single steps.  */
 struct md5_ctx

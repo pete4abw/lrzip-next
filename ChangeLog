@@ -1,5 +1,14 @@
 lrzip ChangeLog
 
+JANUARY 2020, version 0.704beta, Peter Hyman, pete@peterhyman.com
+
+* Rework Delta Offset algorithm and FILTER_FLAGS.
+* FLAG values now range from 1-7, not 1<<0 to 1<<6.
+  Offset values are 1-32 on program execution. these are expanded
+  as follows:
+  1..17,32,48,64,80,96,112,128,144,160,176,192,208,224,240,256.
+  These are stored in magic header as 0-31.
+
 JANUARY 2020, version 0.703beta, Peter Hyman, pete@peterhyman.com
 
 * Apply filters only to stream 1 literrals.

@@ -11,10 +11,26 @@ decompression. They include:
 - ppc. "" for PPC code.
 - sparc. "" for SPARC code.
 - ia64. "" for IA64 code.
-- delta. "" delta offset conversion. Default is 1.
+- delta. delta offset conversion. Default is 1.
 
 Filters are only applied to literal values after rzip
 compression. Their impact is not possible to predict and
 could result in larger compressed files than non-filtered.
 Delta compression is best for media files, such as
 uncompressed audio. WAV and PCM files show good results.
+
+Delta Filters --delta parameter has an optional argument
+of 1-32. The offset is applied as follows:
+
+1-17 is offset as entered. (Default is 1 if no argument)
+18-32 is applied as (offset-16) * 16.
+
+Delta offset values will be:
+1..17,32,48,64,80,96,112,128,144,160,176.192.208,224,240, and
+256.
+
+When written to magic, the delta offset parameter is written as 0
+to 31.
+
+Truthfully, offset 1 is all that is needed. Anything else that
+may provide results will be happenstance!

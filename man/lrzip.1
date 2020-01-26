@@ -68,7 +68,7 @@ Low level options:
  \-\-arm                   Use ARM filter
  \-\-armt                  Use ARMT filter
  \-\-sparc                 Use SPARC filter
- \-\-delta                 Use DELTA filter (offset 1 default)
+ \-\-delta [=offset]       Use DELTA filter (offset 1..32. 1 default)
  \-N, \-\-nice-level value  Set nice value to value (default 19)
  \-p, \-\-threads value     Set processor count to override number of threads
  \-m, \-\-maxram size       Set maximum available ram in hundreds of MB
@@ -263,9 +263,11 @@ compression modes.
 Unconditionally use IA64 filter prior to compression. Works for all
 compression modes.
 .IP
-.IP "\fB--delta\fP"
+.IP "\fB--delta [=1\&.\&.32]\fP"
 Unconditionally use DELTA filter prior to compression. Works for all
-compression modes. Delta offset 1 default.
+compression modes. Delta offset 1 default. Delta offset is set as
+1-17, then 32..256 in multiples of 16. e.g. An offset of 18 would be
+32, 19:48, 20:64...32:256.
 .IP
 .IP "\fB-N value\fP"
 The default nice value is 19. This option can be used to set the priority
