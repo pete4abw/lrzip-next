@@ -154,13 +154,16 @@ bool write_magic(rzip_control *control)
 		memcpy(&magic[6], &esize, 8);
 	}
 
-	if (FILTER_USED)
+	magic[16] = 0;
+	if (FILTER_USED) {
 		// high order 5 bits for delta offset - 1, 0-255. Low order 3 bits for filter type 1-7
 		// offset bytes will be incremented on decompression
-		magic[16] = ((control->delta <= 17 ? ((control->delta-1) << 3) : 
-				((control->delta / 16) + 16 -1) << 3) + control->filter_flag);	// filter flag with delta offset
-	else
-		magic[16] = 0;
+		if (control->delta > 1)					// only need to do if offset > 1
+			magic[16] = ((control->delta <= 17 ? ((control->delta-1) << 3) :
+				((control->delta / 16) + 16 -1) << 3));	// delta offset-1, if applicable
+		magic[16] += control->filter_flag;			// filter flag
+	}
+
 	/* save LZMA compression flags */
 	if (LZMA_COMPRESS) {
 		int i;

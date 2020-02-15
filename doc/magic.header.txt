@@ -1,7 +1,7 @@
 lrzip-0.7x file format
 December 2019
 Peter Hyman
-LZMA x86 Filter included
+Filtering included, for all compression types
 
 Byte	Content
 0-23	Magic
@@ -16,7 +16,7 @@ Magic data:
 4	LRZIP Major Version Number
 5	LRZIP Minor Version Number
 6->14	Source File Size or 0 if unknown, or salt in encrypted file
-16	Filtering. x86, ARM, ARMT, PPC, SPARC, IA64, DELTA (1..7)
+16	Filtering. 0=none, x86, ARM, ARMT, PPC, SPARC, IA64, DELTA (1..7)
 	high order 5 bits will contain delta offset, 0..31
 17->21	LZMA Properties Encoded (lc,lp,pb and dictionary size)
 22	1 = md5sum hash is stored at the end of the archive
