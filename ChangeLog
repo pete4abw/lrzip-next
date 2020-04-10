@@ -1,5 +1,10 @@
 lrzip ChangeLog
 
+APRIL 2020, version 0.710beta, Peter Hyman, pete@peterhyman.com
+
+* zpaq 7.15 integration
+* -v will show zpaq settings
+
 JANUARY 2020, version 0.704beta, Peter Hyman, pete@peterhyman.com
 
 * Rework Delta Offset algorithm and FILTER_FLAGS.

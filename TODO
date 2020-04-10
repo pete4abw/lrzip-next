@@ -35,3 +35,6 @@ Decoding which is supposed to be 30% faster.
 
 Update Threading and atomic use for semaphores and
 atomic memory access using GCC.
+
+ZPAQ progress does not work in 7.15. show_progress
+function not called properly.

@@ -59,6 +59,7 @@
 
 #include "util.h"
 #include "lrzip_core.h"
+#include <math.h>
 
 #include "Bra.h"	//Filters
 #include "Delta.h"	//Delta Filter
@@ -175,8 +176,10 @@ static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthr
 {
 	i64 c_len, c_size;
 	uchar *c_buf;
+	int zpaq_level, zpaq_bs, zpaq_ease, zpaq_type, compressibility;
+	char method[10]; /* level, block size, ease of compression, type */
 
-	if (!lzo_compresses(control, cthread->s_buf, cthread->s_len))
+	if (!(compressibility=lzo_compresses(control, cthread->s_buf, cthread->s_len)))
 		return 0;
 
 	c_size = round_up_page(control, cthread->s_len + 10000);
@@ -187,9 +190,24 @@ static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthr
 	}
 
 	c_len = 0;
+        /* Compression level can be 1 to 5, zpaq version 7.15 */
+	/* Levels 1 and 2 produce worse results and are omitted */
+	zpaq_level = control->compression_level / 4 + 3;	/* levels 3,4, and 5 only */
+	/* block size is >= buffer size expressed as 2^bs MB */
+	zpaq_bs = 1+log2(c_size/(1024*1024));
+	if (zpaq_bs > 11) zpaq_bs=11;
+	else if (zpaq_bs < 1) zpaq_bs = 1;
+	zpaq_ease = 255-(compressibility * 2.55);	/* 0, hard, 255, easy. Inverse of lzo_compresses */	
+	if (zpaq_ease < 25) zpaq_ease = 25;		/* too low a value fails */
+	zpaq_type = 0;					/* default, binary data */
 
-	zpaq_compress(c_buf, &c_len, cthread->s_buf, cthread->s_len, control->compression_level / 4 + 1,
-		      control->msgout, SHOW_PROGRESS ? true: false, thread);
+	sprintf(method,"%d%d,%d,%d",zpaq_level,zpaq_bs,zpaq_ease,zpaq_type);
+
+	print_verbose("ZPAQ: Method selected: %s: level=%d, bs=%d, easy=%d, type=%d\n",
+		       method, zpaq_level, zpaq_bs, zpaq_ease, zpaq_type);	
+
+        zpaq_compress(c_buf, &c_len, cthread->s_buf, cthread->s_len, &method[0],
+			control->msgout, SHOW_PROGRESS ? true: false, thread);
 
 	if (unlikely(c_len >= cthread->c_len)) {
 		print_maxverbose("Incompressible block\n");
@@ -2016,7 +2034,7 @@ static int lzo_compresses(rzip_control *control, uchar *s_buf, i64 s_len)
 	uchar *c_buf = NULL, *test_buf = s_buf;
 	/* set minimum buffer test size based on the length of the test stream */
 	unsigned long buftest_size = (test_len > 5 * STREAM_BUFSIZE ? STREAM_BUFSIZE : STREAM_BUFSIZE / 4096);
-	int ret = 0;
+	double ret = 0;
 	int workcounter = 0;	/* count # of passes */
 
 	if (!LZO_TEST)
@@ -2041,7 +2059,7 @@ static int lzo_compresses(rzip_control *control, uchar *s_buf, i64 s_len)
 		lzo1x_1_compress(test_buf, in_len, (uchar *)c_buf, &dlen, wrkmem);
 
 		if (dlen < in_len) {
-			ret = 1;
+			ret = 100 * ((double) dlen / (double) in_len);
 			break;
 		}
 		/* expand and move buffer */
@@ -2055,10 +2073,10 @@ static int lzo_compresses(rzip_control *control, uchar *s_buf, i64 s_len)
 	}
 	print_maxverbose("lzo testing %s for chunk %ld. Compressed size = %5.2F%% of chunk, %d Passes\n",
 			(ret == 0? "FAILED" : "OK"), save_len,
-			100 * ((double) dlen / (double) in_len), workcounter);
+			ret, workcounter);
 
 	dealloc(wrkmem);
 	dealloc(c_buf);
 
-	return ret;
+	return (int) ret;
 }

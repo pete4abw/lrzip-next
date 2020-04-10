@@ -2,7 +2,7 @@
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 m4_define([v_maj], [0])
 m4_define([v_min], [7])
-m4_define([v_mic], [05beta])
+m4_define([v_mic], [10beta])
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 m4_define([v_v], m4_join([], v_min, v_mic))
 m4_define([v_ver], [v_maj.v_v])
@@ -124,7 +124,7 @@ AC_CHECK_FUNCS(getopt_long)
 AX_PTHREAD
 LIBS="$PTHREAD_LIBS $LIBS"
 CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
-CXXFLAGS="$CXXFLAGS $PTHREAD_CXXFLAGS"
+CXXFLAGS="$CXXFLAGS $PTHREAD_CFLAGS"
 
 ## final checks for assembler
 ## ASM is back for x86_64 by using newer CRC code from p7zip-16.02
@@ -141,6 +141,16 @@ if test x"$ASM" = x"yes"; then
 else
 	ASM_OPT=
 fi
+
+## test for ARM or other non x86 processor
+## must use -DNOJIT for compiling zpaq
+case $host in
+	*86*)
+		;;
+	*)
+		CXXFLAGS+="-DNOJIT" ;;
+esac
+
 AM_CONDITIONAL([USE_ASM], [test x"$ASM" = x"yes"])
 AC_SUBST([ASM_OPT])
 EFL_CHECK_DOXYGEN([build_doc="yes"], [build_doc="no"])
@@ -172,6 +182,8 @@ else
 	echo "$ASM, using $ASM_PROG Assembler"
 fi
 echo "  Static binary......: $static"
+echo "  Host system........: $host"
+echo "  Build system.......: $build"
 echo
 echo "Documentation..........: ${build_doc}"
 echo
