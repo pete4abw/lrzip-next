@@ -69,7 +69,7 @@ AC_ARG_ENABLE(
              )
 
 if test x"$ASM" = x"yes"; then
-	AC_CHECK_PROGS( ASM_PROG, nasm yasm, no ) # Allow test for multiple Assemblers.
+	AC_CHECK_PROGS( ASM_PROG, nasm yasm, no,  ) # Allow test for multiple Assemblers.
 	if test x"$ASM_PROG" = x"no"; then
 		ASM=no
 	fi

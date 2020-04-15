@@ -1,6 +1,8 @@
 /* 7zCrcOpt.c -- CRC32 calculation
 2017-04-03 : Igor Pavlov : Public domain */
 
+// This program will only be used if no assembler is found
+
 // need for lrzip: remove references to unused CRC functions, T1 and T4
 
 #include "Precomp.h"
@@ -8,6 +10,10 @@
 // #include "CpuArch.h"
 
 // we use autoconf, so don't need CpuArch.h
+// just 7zTypes for typedefs
+
+#include "7zTypes.h"
+
 #ifndef WORDS_BIGENDIAN
 #define MY_CPU_LE 1
 #else
