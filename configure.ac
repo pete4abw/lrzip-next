@@ -148,7 +148,9 @@ case $host in
 	*86*)
 		;;
 	*)
-		CXXFLAGS+=" -DNOJIT" ;;
+		CXXFLAGS+=" -DNOJIT"
+		ASM=no
+		ASM_PROG=no ;;
 esac
 
 AM_CONDITIONAL([USE_ASM], [test x"$ASM" = x"yes"])
