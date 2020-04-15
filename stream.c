@@ -176,7 +176,7 @@ static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthr
 {
 	i64 c_len, c_size;
 	uchar *c_buf;
-	int zpaq_level, zpaq_bs, zpaq_ease, zpaq_type, compressibility;
+	int zpaq_level, zpaq_bs=control->zpaq_bs, zpaq_ease, zpaq_type, compressibility;
 	char method[10]; /* level, block size, ease of compression, type */
 
 	if (!(compressibility=lzo_compresses(control, cthread->s_buf, cthread->s_len)))
@@ -194,9 +194,11 @@ static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthr
 	/* Levels 1 and 2 produce worse results and are omitted */
 	zpaq_level = control->compression_level / 4 + 3;	/* levels 3,4, and 5 only */
 	/* block size is >= buffer size expressed as 2^bs MB */
+	/* use control->zpaq_bs for now
 	zpaq_bs = 1+log2(c_size/(1024*1024));
-	if (zpaq_bs > 11) zpaq_bs=11;
+	if (zpaq_bs > 11) zpaq_bs = 11;
 	else if (zpaq_bs < 1) zpaq_bs = 1;
+	*/
 	zpaq_ease = 255-(compressibility * 2.55);	/* 0, hard, 255, easy. Inverse of lzo_compresses */	
 	if (zpaq_ease < 25) zpaq_ease = 25;		/* too low a value fails */
 	zpaq_type = 0;					/* default, binary data */
@@ -993,36 +995,82 @@ void *open_stream_out(rzip_control *control, int f, unsigned int n, i64 chunk_li
 
 	if (save_threads == 0) {
 		save_threads = control->threads;		// save threads for loops
-		i64 save_dictSize = control->dictSize;		// save dictionary
-		i64 DICTSIZEMIN = (1 << 24);			// minimum dictionary size (16MB)
 		limit = control->usable_ram/testbufs;		// this is max chunk limit based on ram and compression window
 		bool overhead_set = false;
-		for (control->dictSize = save_dictSize; control->dictSize > DICTSIZEMIN; control->dictSize *= .90) {
-			// make dictionary LZMA friendly (from LzmaEnc)
-			if (control->dictSize >= ((UInt32)1 << 22)) {
-				UInt32 kDictMask = ((UInt32)1 << 20) - 1;
-				if (control->dictSize < (UInt32)0xFFFFFFFF - kDictMask)
-					control->dictSize = (control->dictSize + kDictMask) & ~kDictMask;
-			} else {
-				for (i = 11; i <= 30; i++) {
-					if (control->dictSize <= ((UInt32)2 << i)) { control->dictSize = (2 << i); break; }
-					if (control->dictSize <= ((UInt32)3 << i)) { control->dictSize = (3 << i); break; }
+		int thread_limit;				// control thread loop
+		if (LZMA_COMPRESS) {
+			i64 save_dictSize = control->dictSize;		// save dictionary
+			i64 DICTSIZEMIN = (1 << 24);			// minimum dictionary size (16MB)
+			thread_limit = (control->threads > 1 ? 2 : control->threads);
+retry_lzma:
+			for (control->dictSize = save_dictSize; control->dictSize > DICTSIZEMIN; control->dictSize *= .90) {
+				// make dictionary LZMA friendly (from LzmaEnc)
+				if (control->dictSize >= ((UInt32)1 << 22)) {
+					UInt32 kDictMask = ((UInt32)1 << 20) - 1;
+					if (control->dictSize < (UInt32)0xFFFFFFFF - kDictMask)
+						control->dictSize = (control->dictSize + kDictMask) & ~kDictMask;
+				} else {
+					for (i = 11; i <= 30; i++) {
+						if (control->dictSize <= ((UInt32)2 << i)) { control->dictSize = (2 << i); break; }
+						if (control->dictSize <= ((UInt32)3 << i)) { control->dictSize = (3 << i); break; }
+					}
 				}
-			}
-			round_to_page(&control->dictSize);	// align
-			setup_overhead(control);		// recompute overhead
-			for (control->threads = save_threads; control->threads > 0; control->threads--) {
-				if (limit >= control->overhead * control->threads) {
-					overhead_set = true;			// got it!
+				round_to_page(&control->dictSize);	// align
+				setup_overhead(control);		// recompute overhead
+				for (control->threads = save_threads; control->threads > thread_limit; control->threads--) {
+					if (limit >= control->overhead * control->threads) {
+						overhead_set = true;			// got it!
+						break;
+					}
+				}	// thread loop
+				if (overhead_set == true)
 					break;
-				}
+			}	// dictionary size loop
+			if (!overhead_set && thread_limit > 1) {			// try again and lower thread_limit
+				thread_limit--;
+				goto retry_lzma;
+			}
+			if (control->dictSize != save_dictSize)
+				print_verbose("Dictionary Size reduced to %d\n", control->dictSize);
+		} else if (ZPAQ_COMPRESS) {
+			/* compute max possible block size */
+			thread_limit = (control->threads > 3 ? 4 : control->threads);
+retry_zpaq:
+			for (control->zpaq_bs = 11; control->zpaq_bs > 4; control->zpaq_bs--) {
+				control->overhead = (i64) (1 << control->zpaq_bs) * 1024 * 1024;
+				for (control->threads = save_threads; control->threads > thread_limit; control->threads--) {
+					if (limit >= control->overhead * control->threads) {
+						overhead_set = true;
+						break;
+					}
+				}	// thread loop
+				if (overhead_set == true)
+					break;
+			}	// block size loop
+			if (!overhead_set && thread_limit > 1) {			// try again and lower thread_limit
+				thread_limit--;
+				goto retry_zpaq;
+			}
+			if (control->zpaq_bs != 11)
+				print_verbose("ZPAQ Block Size reduced to %d\n", control->zpaq_bs);
+			// or for max possible threads
+			/*
+			for (control->threads = save_threads; control->threads > 0; control->threads--) {
+				for (control->zpaq_bs = 11; control->zpaq_bs > 4; control->zpaq_bs--) {
+					control->overhead = (i64) (1 << control->zpaq_bs) * 1024 * 1024;
+					if (limit >= control->overhead * control->threads) {
+						overhead_set = true;
+						break;
+					}
+				}	// block size loop
+				if (overhead_set == true)
+					break;
 			}	// thread loop
-			if (overhead_set == true)
-				break;
-		}	// dictionary size loop
+			if (control->zpaq_bs != 11)
+				print_verbose("ZPAQ Block Size reduced to %d\n", control->zpaq_bs);
+			*/
+		}
 
-		if (control->dictSize != save_dictSize)
-			print_verbose("Dictionary Size reduced to %d\n", control->dictSize);
 		if (control->threads != save_threads)
 			print_verbose("Threads reduced to %d\n", control->threads);
 

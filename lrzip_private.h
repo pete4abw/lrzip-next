@@ -430,6 +430,7 @@ struct rzip_control {
 	unsigned delta;			// delta flag offset (default 1)
 	unsigned char lzma_properties[5];	// lzma properties, encoded
 	i64 dictSize;			// lzma Dictionary size - set in overhead computation
+	unsigned zpaq_bs;		// zpaq default block size
 	i64 window;
 	unsigned long flags;
 	i64 ramsize;

@@ -4,6 +4,10 @@ APRIL 2020, version 0.710beta, Peter Hyman, pete@peterhyman.com
 
 * zpaq 7.15 integration
 * -v will show zpaq settings
+* rework logic for open_stream_out to balance threads and
+  max buffer size for lzma and add zpaq.
+* zpaq ARM flags added to prevent JIT compilation that
+  is not supported on that platform.
 
 JANUARY 2020, version 0.704beta, Peter Hyman, pete@peterhyman.com
 

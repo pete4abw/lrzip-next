@@ -133,8 +133,8 @@ void setup_overhead(rzip_control *control)
 		/* LZMA spec shows memory requirements as 6MB, not 4MB and state size
 		 * where default is 16KB */
 		control->overhead = (control->dictSize * 23 / 2) + (6 * 1024 * 1024) + 16384;
-	} else if (ZPAQ_COMPRESS)
-		control->overhead = 112 * 1024 * 1024;
+	}
+	/* no need for zpaq computation here. do in open_stream_out() */
 }
 
 void setup_ram(rzip_control *control)
