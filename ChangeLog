@@ -8,6 +8,8 @@ APRIL 2020, version 0.710beta, Peter Hyman, pete@peterhyman.com
   max buffer size for lzma and add zpaq.
 * zpaq ARM flags added to prevent JIT compilation that
   is not supported on that platform.
+* fix --enable-static-bin because some lzo2 libraries don't
+  include a static one. Add minilzo to source tree.
 
 JANUARY 2020, version 0.704beta, Peter Hyman, pete@peterhyman.com
 

@@ -2,7 +2,7 @@
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 m4_define([v_maj], [0])
 m4_define([v_min], [7])
-m4_define([v_mic], [10beta])
+m4_define([v_mic], [11beta])
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 m4_define([v_v], m4_join([], v_min, v_mic))
 m4_define([v_ver], [v_maj.v_v])
@@ -115,8 +115,6 @@ AC_CHECK_LIB(z, compress2, ,
 	AC_MSG_ERROR([Could not find zlib library - please install zlib-dev]))
 AC_CHECK_LIB(bz2, BZ2_bzBuffToBuffCompress, ,
 	AC_MSG_ERROR([Could not find bz2 library - please install libbz2-dev]))
-AC_CHECK_LIB(lzo2, lzo1x_1_compress, ,
-	AC_MSG_ERROR([Could not find lzo2 library - please install liblzo2-dev]))
 
 AC_CHECK_FUNCS(mmap strerror)
 AC_CHECK_FUNCS(getopt_long)

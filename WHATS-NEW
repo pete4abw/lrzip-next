@@ -22,6 +22,7 @@ Dictionary will be set automatically for all levels if not specified.
 Dictionary size will be reduced in some cases where ram overhead
 for LZMA exceeds allotted memory.
 Update ZPAQ to 7.15.
+Add minilzo to source tree.
 
 lrzip-0.631
 
