@@ -69,30 +69,37 @@ static void usage(bool compat)
 {
 	print_output("lrz%s version %s\n", compat ? "" : "ip", PACKAGE_VERSION);
 	print_output("Copyright (C) Con Kolivas 2006-2016\n");
+	print_output("Copyright (C) Peter Hyman 2007-2020\n");
 	print_output("Based on rzip ");
 	print_output("Copyright (C) Andrew Tridgell 1998-2003\n\n");
 	print_output("Usage: lrz%s [options] <file...>\n", compat ? "" : "ip");
-	print_output("General options:\n");
+	print_output("Compression Options:\n--------------------\n");
+	print_output("	--lzma			lzma compression (default)\n");
+	print_output("	-b, --bzip2		bzip2 compression\n");
+	print_output("	-g, --gzip		gzip compression using zlib\n");
+	print_output("	-l, --lzo		lzo compression (ultra fast)\n");
+	print_output("	-n, --no-compress	no backend compression - prepare for other compressor\n");
+	print_output("	-z, --zpaq		zpaq compression (best, extreme compression, extremely slow)\n");
 	if (compat) {
+		print_output("	-1 .. -9		set lzma/bzip2/gzip compression level (1-9, default 7)\n");
+		print_output("	--fast			alias for -1\n");
+		print_output("	--best			alias for -9\n");
+	}
+	if (!compat)
+		print_output("	-L, --level level	set lzma/bzip2/gzip compression level (1-9, default 7)\n");
+	print_output("	--dictsize		Set lzma Dictionary Size for LZMA ds=12 to 30 expressed as 2^ds\n");
+	print_output("Filtering Options:\n");
+	print_output("	--x86			Use x86 filter (for all compression modes)\n");
+	print_output("	--arm			Use ARM filter (for all compression modes)\n");
+	print_output("	--armt			Use ARMT filter (for all compression modes)\n");
+	print_output("	--ppc			Use PPC filter (for all compression modes)\n");
+	print_output("	--sparc			Use SPARC filter (for all compression modes)\n");
+	print_output("	--ia64			Use IA64 filter (for all compression modes)\n");
+	print_output("	--delta	[1..32]		Use Delta filter (for all compression modes) (1 (default) -17, then multiples of 16 to 256)\n");
+	print_output("Additional Compression Options:\n");
+	if (compat)
 		print_output("	-c, --stdout		output to STDOUT\n");
-		print_output("	-C, --check		check integrity of file written on decompression\n");
-	} else
-		print_output("	-c, -C, --check		check integrity of file written on decompression\n");
-	print_output("	-d, --decompress	decompress\n");
 	print_output("	-e, --encrypt[=password] password protected sha512/aes128 encryption on compression\n");
-	print_output("	-h, -?, --help		show help\n");
-	print_output("	-H, --hash		display md5 hash integrity information\n");
-	print_output("	-i, --info		show compressed file information\n");
-	if (compat) {
-		print_output("	-L, --license		display software version and license\n");
-		print_output("	-P, --progress		show compression progress\n");
-	} else
-		print_output("	-q, --quiet		don't show compression progress\n");
-	print_output("	-r, --recursive		operate recursively on directories\n");
-	print_output("	-t, --test		test compressed file integrity\n");
-	print_output("	-v[v%s], --verbose	Increase verbosity\n", compat ? "v" : "");
-	print_output("	-V, --version		show version\n");
-	print_output("Options affecting output:\n");
 	if (!compat)
 		print_output("	-D, --delete		delete existing files\n");
 	print_output("	-f, --force		force overwrite of any existing files\n");
@@ -102,37 +109,34 @@ static void usage(bool compat)
 	print_output("	-o, --outfile filename	specify the output file name and/or path\n");
 	print_output("	-O, --outdir directory	specify the output directory when -o is not used\n");
 	print_output("	-S, --suffix suffix	specify compressed suffix (default '.lrz')\n");
-	print_output("Options affecting compression:\n");
-	print_output("	--lzma			lzma compression (default)\n");
-	print_output("	-b, --bzip2		bzip2 compression\n");
-	print_output("	-g, --gzip		gzip compression using zlib\n");
-	print_output("	-l, --lzo		lzo compression (ultra fast)\n");
-	print_output("	-n, --no-compress	no backend compression - prepare for other compressor\n");
-	print_output("	-z, --zpaq		zpaq compression (best, extreme compression, extremely slow)\n");
-	print_output("Low level options:\n");
-	if (compat) {
-		print_output("	-1 .. -9		set lzma/bzip2/gzip compression level (1-9, default 7)\n");
-		print_output("	--fast			alias for -1\n");
-		print_output("	--best			alias for -9\n");
-	}
-	if (!compat)
-		print_output("	-L, --level level	set lzma/bzip2/gzip compression level (1-9, default 7)\n");
-	print_output("	--dictsize		Set lzma Dictionary Size for LZMA ds=12 to 30 expressed as 2^ds\n");
-	print_output("	--x86			Use x86 filter (for all compression modes)\n");
-	print_output("	--arm			Use ARM filter (for all compression modes)\n");
-	print_output("	--armt			Use ARMT filter (for all compression modes)\n");
-	print_output("	--ppc			Use PPC filter (for all compression modes)\n");
-	print_output("	--sparc			Use SPARC filter (for all compression modes)\n");
-	print_output("	--ia64			Use IA64 filter (for all compression modes)\n");
-	print_output("	--delta	[1..32]		Use Delta filter (for all compression modes) (1 (default) -17, then multiples of 16 to 256)\n");
+	print_output("Low level Compression Options:\n");
 	print_output("	-N, --nice-level value	Set nice value to value (default %d)\n", compat ? 0 : 19);
-	print_output("	-p, --threads value	Set processor count to override number of threads\n");
 	print_output("	-m, --maxram size	Set maximum available ram in hundreds of MB\n");
 	print_output("				overrides detected amount of available ram\n");
 	print_output("	-T, --threshold		Disable LZO compressibility testing\n");
 	print_output("	-U, --unlimited		Use unlimited window size beyond ramsize (potentially much slower)\n");
 	print_output("	-w, --window size	maximum compression window in hundreds of MB\n");
 	print_output("				default chosen by heuristic dependent on ram and chosen compression\n");
+	print_output("Decompression Options:\n----------------------\n");
+	print_output("	-d, --decompress	decompress\n");
+	print_output("	-t, --test		test compressed file integrity\n");
+	if (compat)
+		print_output("	-C, --check		check integrity of file written on decompression\n");
+	else
+		print_output("	-c, -C, --check		check integrity of file written on decompression\n");
+	print_output("General Options:\n----------------\n");
+	print_output("	-h, -?, --help		show help\n");
+	print_output("	-H, --hash		display md5 hash integrity information\n");
+	print_output("	-i, --info		show compressed file information\n");
+	if (compat) {
+		print_output("	-L, --license		display software version and license\n");
+		print_output("	-P, --progress		show compression progress\n");
+	} else
+		print_output("	-q, --quiet		don't show compression progress\n");
+	print_output("	-p, --threads value	Set processor count to override number of threads\n");
+	print_output("	-r, --recursive		operate recursively on directories\n");
+	print_output("	-v[v%s], --verbose	Increase verbosity\n", compat ? "v" : "");
+	print_output("	-V, --version		show version\n");
 	print_output("\nLRZIP=NOCONFIG environment variable setting can be used to bypass lrzip.conf.\n");
 	print_output("TMP environment variable will be used for storage of temporary files when needed.\n");
 	print_output("TMPDIR may also be stored in lrzip.conf file.\n");
@@ -192,23 +196,22 @@ static void show_summary(void)
 
 		/* show compression options */
 		if (!DECOMPRESS && !TEST_ONLY) {
-			print_verbose("Compression mode is: ");
-			if (LZMA_COMPRESS)
-				print_verbose("LZMA. LZO Compressibility testing %s\n", (LZO_TEST? "enabled" : "disabled"));
+			print_verbose("Compression mode is: %s",
+					(LZMA_COMPRESS ? "LZMA" :
+					(LZO_COMPRESS ? "LZO\n" :	// No Threshold testing
+					(BZIP2_COMPRESS ? "BZIP2" :
+					(ZLIB_COMPRESS ? "GZIP\n" :	// No Threshold testing
+					(ZPAQ_COMPRESS ? "ZPAQ" :
+					(NO_COMPRESS ? "RZIP pre-processing only" : "wtf")))))));
+			if (!LZO_COMPRESS && !ZLIB_COMPRESS)
+				print_verbose(". LZO Compressibility testing %s\n", (LZO_TEST? "enabled" : "disabled"));
 			print_verbose("Compression level %d %s\n", control->compression_level,
 				(LZMA_COMPRESS ? (control->compression_level == 5 ? "- Default LZMA level": "" ) : ""));
 			if (LZMA_COMPRESS)
-				print_verbose("Dictionary Size: %ld\n", control->dictSize );
-			else if (LZO_COMPRESS)
-				print_verbose("LZO\n");
-			else if (BZIP2_COMPRESS)
-				print_verbose("BZIP2. LZO Compressibility testing %s\n", (LZO_TEST? "enabled" : "disabled"));
-			else if (ZLIB_COMPRESS)
-				print_verbose("GZIP\n");
-			else if (ZPAQ_COMPRESS)
-				print_verbose("ZPAQ. LZO Compressibility testing %s\n", (LZO_TEST? "enabled" : "disabled"));
-			else if (NO_COMPRESS)
-				print_verbose("RZIP pre-processing only\n");
+				print_verbose("Initial LZMA Dictionary Size: %ld\n", control->dictSize );
+			if (ZPAQ_COMPRESS)
+				print_verbose("ZPAQ Compression Level: %d, ZPAQ initial Block Size: %d\n",
+					       control->compression_level/4+3, 11);
 			if (FILTER_USED) {
 				print_output("Filter Used: %s",
 					((control->filter_flag == FILTER_FLAG_X86) ? "x86" :
@@ -644,9 +647,11 @@ int main(int argc, char *argv[])
 		control->flags &= ~FLAG_UNLIMITED;
 	}
 
-	/* if any filter used, disable LZO testing */
-	if (FILTER_USED)
+	/* if any filter used, disable LZO testing or certain compression modes */
+	if ((control->flags & FLAG_THRESHOLD) && (FILTER_USED || ZLIB_COMPRESS || LZO_COMPRESS || NO_COMPRESS)) {
+		print_output("LZO Threshold testing disabled due to Filtering and/or Compression type (gzip, lzo, rzip).\n");
 		control->flags &= ~FLAG_THRESHOLD;
+	}
 
 	setup_overhead(control);
 
