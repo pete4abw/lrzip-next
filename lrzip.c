@@ -1,6 +1,6 @@
 /*
    Copyright (C) 2006-2016,2018 Con Kolivas
-   Copyright (C) 2011, 2019 Peter Hyman
+   Copyright (C) 2011, 2020 Peter Hyman
    Copyright (C) 1998-2003 Andrew Tridgell
 
    This program is free software; you can redistribute it and/or modify
@@ -75,51 +75,44 @@ static i64 fdout_seekto(rzip_control *control, i64 pos)
 	return lseek(control->fd_out, pos, SEEK_SET);
 }
 
+i64 get_ram(rzip_control *control)
 #ifdef __APPLE__
 # include <sys/sysctl.h>
-i64 get_ram(rzip_control *control)
 {
 	int mib[2];
 	size_t len;
-	i64 *p, ramsize;
+	i64 ramsize;
 
 	mib[0] = CTL_HW;
 	mib[1] = HW_MEMSIZE;
-	sysctl(mib, 2, NULL, &len, NULL, 0);
-	p = malloc(len);
-	sysctl(mib, 2, p, &len, NULL, 0);
-	ramsize = *p;
-
-	return ramsize;
-}
+	sysctl(mib, 2, &ramsize, &len, NULL, 0);
 #else /* __APPLE__ */
-i64 get_ram(rzip_control *control)
 {
 	i64 ramsize;
 	FILE *meminfo;
 	char aux[256];
 
 	ramsize = (i64)sysconf(_SC_PHYS_PAGES) * PAGE_SIZE;
-	if (ramsize > 0)
-		return ramsize;
+	if (ramsize <= 0) {
+		/* Workaround for uclibc which doesn't properly support sysconf */
+		if(!(meminfo = fopen("/proc/meminfo", "r")))
+			fatal_return(("Failed to open /proc/meminfo\n"), -1);
 
-	/* Workaround for uclibc which doesn't properly support sysconf */
-	if(!(meminfo = fopen("/proc/meminfo", "r")))
-		fatal_return(("fopen\n"), -1);
-
-	while(!feof(meminfo) && !fscanf(meminfo, "MemTotal: %"PRId64" kB", &ramsize)) {
-		if (unlikely(fgets(aux, sizeof(aux), meminfo) == NULL)) {
-			fclose(meminfo);
-			fatal_return(("Failed to fgets in get_ram\n"), -1);
+		while(!feof(meminfo) && !fscanf(meminfo, "MemTotal: %"PRId64" kB", &ramsize)) {
+			if (unlikely(fgets(aux, sizeof(aux), meminfo) == NULL)) {
+				fclose(meminfo);
+				fatal_return(("Failed to fgets in get_ram\n"), -1);
+			}
 		}
+		if (fclose(meminfo) == -1)
+			fatal_return(("Failed to close /proc/meminfo"), -1);
+		ramsize *= 1024;
 	}
-	if (fclose(meminfo) == -1)
-		fatal_return(("fclose"), -1);
-	ramsize *= 1000;
-
+#endif
+	if (ramsize <= 0)
+		fatal_return(("No memory or can't determine ram? Can't continue.\n"), -1);
 	return ramsize;
 }
-#endif
 
 i64 nloops(i64 seconds, uchar *b1, uchar *b2)
 {
@@ -1387,9 +1380,7 @@ bool initialise_control(rzip_control *control)
 	control->filter_flag = 0;		/* filter flag. Default to none */
 	control->compression_level = 0; 	/* 0 because lrzip default level is 5, others 7 */
 	control->dictSize = 0;			/* Dictionary Size for lzma. 0 means program decides */
-	control->ramsize = get_ram(control);
-	if (unlikely(control->ramsize == -1))
-		return false;
+	control->ramsize = get_ram(control);	/* if something goes wrong, exit from get_ram */
 	/* for testing single CPU */
 	control->threads = PROCESSORS;		/* get CPUs for LZMA */
 	control->page_size = PAGE_SIZE;
