@@ -34,14 +34,9 @@ liblzma_la_SOURCES = \
 	LzFind.c 	../include/LzFind.h \
 	LzFindMt.c 	../include/LzFindMt.h \
 	../include/LzHash.h \
-	Lzma2Dec.c 	../include/Lzma2Dec.h \
-	Lzma2DecMt.c 	../include/Lzma2DecMt.h \
-	Lzma2Enc.c 	../include/Lzma2Enc.h \
 	LzmaDec.c 	../include/LzmaDec.h \
 	LzmaEnc.c 	../include/LzmaEnc.h \
 	LzmaLib.c 	../include/LzmaLib.h \
-	MtCoder.c 	../include/MtCoder.h \
-	MtDec.c 	../include/MtDec.h \
 	Threads.c 	../include/Threads.h \
 	$(ASM_S) 	$(ASM_H) \
 	../include/precomp.h \
