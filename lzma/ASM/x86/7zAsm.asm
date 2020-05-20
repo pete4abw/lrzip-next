@@ -28,11 +28,11 @@
 %endmacro
 
 %ifdef x64
-  REG_SIZE equ 8
-  REG_LOGAR_SIZE equ 3
+  %define REG_SIZE 8
+  %define REG_LOGAR_SIZE 3
 %else
-  REG_SIZE equ 4
-  REG_LOGAR_SIZE equ 2
+  %define REG_SIZE 4
+  %define REG_LOGAR_SIZE 2
 %endif
 
   %define x0  EAX
@@ -112,13 +112,14 @@
 ; Needed for ASM LZMA Decompress
 %ifdef x64
 
-%define REG_PARAM_0  r1
-%define REG_PARAM_1  r2
-%define REG_PARAM_2  r8
-%define REG_PARAM_3  r9
+%define REG_PARAM_0  r7
+%define REG_PARAM_1  r6
+%define REG_PARAM_2  r2
+%define REG_PARAM_3  r1
 
 %macro MY_PUSH_PRESERVED_REGS 0
-    MY_PUSH_4_REGS
+    push    r3
+    push    r5
     push    r12
     push    r13
     push    r14
@@ -131,7 +132,8 @@
     pop     r14
     pop     r13
     pop     r12
-    MY_POP_4_REGS
+    pop     r5
+    pop     r3
 %endmacro
 
 %endif
