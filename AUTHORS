@@ -7,7 +7,7 @@ SDK updating, and autoconf improvements.
 Thanks to:
 Andrew Tridgell for rzip
 Markus Oberhumer for lzo
-Igor Pavlov for lzma and CRC Assembler code
+Igor Pavlov for lzma and CRC & Decompressor Assembler code 
 Jean-loup Gailly and Mark Adler for the zlib compression library
 Christian Leber for lzma compat layer
 Lasse Collin for debugging the compat layer

@@ -1,5 +1,13 @@
 lrzip ChangeLog
 
+MAY 2020, version 0.715beta, Peter Hyman, pete@peterhyman.com
+
+* Added Assembler module for Decompression. 30%+ fasrer.
+* Updates to configure.ac and lzma/C/Makefile.am to accomodate.
+* lzma/C/Makefile.am uses absolute references so debugging can
+  occur.
+* Update help output and options summary printouts.
+
 APRIL 2020, version 0.710beta, Peter Hyman, pete@peterhyman.com
 
 * zpaq 7.15 integration

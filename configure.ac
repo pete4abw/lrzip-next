@@ -2,7 +2,7 @@
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 m4_define([v_maj], [0])
 m4_define([v_min], [7])
-m4_define([v_mic], [11beta])
+m4_define([v_mic], [15beta])
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 m4_define([v_v], m4_join([], v_min, v_mic))
 m4_define([v_ver], [v_maj.v_v])
@@ -127,14 +127,19 @@ CXXFLAGS="$CXXFLAGS $PTHREAD_CFLAGS"
 ## final checks for assembler
 ## ASM is back for x86_64 by using newer CRC code from p7zip-16.02
 ## object files handled in lzma/C/Makefile.am
+## if x64 then LZMA Assembler Decompressor will be used
 if test x"$ASM" = x"yes"; then
-	ASM_OPT="-I../ASM/x86/"
 	case $host in
 		i?86-*)
-			ASM_OPT="$ASM_OPT -f elf" ;;
+			ASM_OPT="-g -F dwarf -f elf"
+			USE_64"no"
+			;;
 		x86_64-*)
-			ASM_OPT="$ASM_OPT -Dx64 -f elf64" ;;
-		*) ASM_OPT= ;;
+			ASM_OPT="-Dx64 -g -F dwarf -f elf64"
+			USE_64="yes"
+			;;
+		*) ASM_OPT=
+			;;
 	esac
 else
 	ASM_OPT=
@@ -147,11 +152,13 @@ case $host in
 		;;
 	*)
 		CXXFLAGS+=" -DNOJIT"
-		ASM=no
-		ASM_PROG=no ;;
+		ASM="no"
+		ASM_PROG="no"
+		;;
 esac
 
 AM_CONDITIONAL([USE_ASM], [test x"$ASM" = x"yes"])
+AM_CONDITIONAL([USE_X64], [test x"$USE_64" = x"yes"])
 AC_SUBST([ASM_OPT])
 EFL_CHECK_DOXYGEN([build_doc="yes"], [build_doc="no"])
 

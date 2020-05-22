@@ -1,6 +1,11 @@
 lrzip - Long Range ZIP or LZMA RZIP
 ===================================
 
+### NEW, LZMA SDK 19.00
+
+Many new changes including reformatting output, filters, ASM DeCompressor and more!
+(Some of the following documentation is outdated. See ChangeLog and commit messages).
+
 A compression utility that excels at compressing large files (usually > 10-50 MB).
 Larger files and/or more free RAM means that the utility will be able to more
 effectively compress your files (ie: faster / smaller size), especially if the

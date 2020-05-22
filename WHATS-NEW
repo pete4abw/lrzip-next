@@ -2,8 +2,9 @@ lrzip-0.700
 
 LZMA SDK 19.00
 
-Add x86 BCJ Filter. Requires one additional byte for LZMA properties.
-Add ARM, ARMT, PPC, SPARC, IA64 and Delta Filters.
+Add x86, BCJ, ARM, ARMT, PPC, SPARC, IA64 and Delta Filters.
+Update Magic Header. Need one extra byte for Filtering.
+Filters will work with all compression modes.
 Add code to test for lrzip versions < 0.700.
 Incudes code for lzma and lzma2 direct from SDK. Multi Threading still
 dependent on p7zip code with regression to SDK 16.02.
@@ -23,6 +24,10 @@ Dictionary size will be reduced in some cases where ram overhead
 for LZMA exceeds allotted memory.
 Update ZPAQ to 7.15.
 Add minilzo to source tree.
+Updated help listing and options summary messages to make more
+logical.
+Add Assembler Decompression code. Thanks to Igor Pavlov and
+Conor McCarthy for their help in debugging. 30%+ speed increase.
 
 lrzip-0.631
 
