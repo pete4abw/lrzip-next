@@ -211,7 +211,7 @@ static void show_summary(void)
 				print_verbose("Initial LZMA Dictionary Size: %ld\n", control->dictSize );
 			if (ZPAQ_COMPRESS)
 				print_verbose("ZPAQ Compression Level: %d, ZPAQ initial Block Size: %d\n",
-					       control->compression_level/4+3, 11);
+					       control->zpaq_level, control->zpaq_bs);
 			if (FILTER_USED) {
 				print_output("Filter Used: %s",
 					((control->filter_flag == FILTER_FLAG_X86) ? "x86" :

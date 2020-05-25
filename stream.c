@@ -176,7 +176,7 @@ static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthr
 {
 	i64 c_len, c_size;
 	uchar *c_buf;
-	int zpaq_level, zpaq_bs=control->zpaq_bs, zpaq_ease, zpaq_type, compressibility;
+	int zpaq_ease, zpaq_type, compressibility;
 	char method[10]; /* level, block size, ease of compression, type */
 
 	if (!(compressibility=lzo_compresses(control, cthread->s_buf, cthread->s_len)))
@@ -192,21 +192,14 @@ static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthr
 	c_len = 0;
         /* Compression level can be 1 to 5, zpaq version 7.15 */
 	/* Levels 1 and 2 produce worse results and are omitted */
-	zpaq_level = control->compression_level / 4 + 3;	/* levels 3,4, and 5 only */
-	/* block size is >= buffer size expressed as 2^bs MB */
-	/* use control->zpaq_bs for now
-	zpaq_bs = 1+log2(c_size/(1024*1024));
-	if (zpaq_bs > 11) zpaq_bs = 11;
-	else if (zpaq_bs < 1) zpaq_bs = 1;
-	*/
 	zpaq_ease = 255-(compressibility * 2.55);	/* 0, hard, 255, easy. Inverse of lzo_compresses */	
 	if (zpaq_ease < 25) zpaq_ease = 25;		/* too low a value fails */
 	zpaq_type = 0;					/* default, binary data */
 
-	sprintf(method,"%d%d,%d,%d",zpaq_level,zpaq_bs,zpaq_ease,zpaq_type);
+	sprintf(method,"%d%d,%d,%d",control->zpaq_level,control->zpaq_bs,zpaq_ease,zpaq_type);
 
 	print_verbose("ZPAQ: Method selected: %s: level=%d, bs=%d, easy=%d, type=%d\n",
-		       method, zpaq_level, zpaq_bs, zpaq_ease, zpaq_type);	
+		       method, control->zpaq_level, control->zpaq_bs, zpaq_ease, zpaq_type);
 
         zpaq_compress(c_buf, &c_len, cthread->s_buf, cthread->s_len, &method[0],
 			control->msgout, SHOW_PROGRESS ? true: false, thread);
@@ -997,11 +990,10 @@ void *open_stream_out(rzip_control *control, int f, unsigned int n, i64 chunk_li
 		save_threads = control->threads;		// save threads for loops
 		limit = control->usable_ram/testbufs;		// this is max chunk limit based on ram and compression window
 		bool overhead_set = false;
-		int thread_limit;				// control thread loop
+		int thread_limit = control->threads >= 4 ? 4 : control->threads;	// control thread loop
 		if (LZMA_COMPRESS) {
 			i64 save_dictSize = control->dictSize;		// save dictionary
 			i64 DICTSIZEMIN = (1 << 24);			// minimum dictionary size (16MB)
-			thread_limit = (control->threads > 1 ? 2 : control->threads);
 retry_lzma:
 			for (control->dictSize = save_dictSize; control->dictSize > DICTSIZEMIN; control->dictSize *= .90) {
 				// make dictionary LZMA friendly (from LzmaEnc)
@@ -1034,16 +1026,16 @@ retry_lzma:
 				print_verbose("Dictionary Size reduced to %d\n", control->dictSize);
 		} else if (ZPAQ_COMPRESS) {
 			/* compute max possible block size */
-			thread_limit = (control->threads > 3 ? 4 : control->threads);
+			int save_bs = control->zpaq_bs;
 retry_zpaq:
-			for (control->zpaq_bs = 11; control->zpaq_bs > 4; control->zpaq_bs--) {
-				control->overhead = (i64) (1 << control->zpaq_bs) * 1024 * 1024;
+			for (control->zpaq_bs = save_bs; control->zpaq_bs > 4; control->zpaq_bs--) {
+				setup_overhead(control);
 				for (control->threads = save_threads; control->threads > thread_limit; control->threads--) {
 					if (limit >= control->overhead * control->threads) {
 						overhead_set = true;
 						break;
 					}
-				}	// thread loop
+				} // thread loop
 				if (overhead_set == true)
 					break;
 			}	// block size loop
@@ -1051,23 +1043,21 @@ retry_zpaq:
 				thread_limit--;
 				goto retry_zpaq;
 			}
-			if (control->zpaq_bs != 11)
+			if (control->zpaq_bs != save_bs)
 				print_verbose("ZPAQ Block Size reduced to %d\n", control->zpaq_bs);
-			// or for max possible threads
+
+			/* alternate method */
 			/*
-			for (control->threads = save_threads; control->threads > 0; control->threads--) {
-				for (control->zpaq_bs = 11; control->zpaq_bs > 4; control->zpaq_bs--) {
-					control->overhead = (i64) (1 << control->zpaq_bs) * 1024 * 1024;
-					if (limit >= control->overhead * control->threads) {
+			for (control->threads = save_threads; control->threads > thread_limit; control->threads--) {
+				if (limit >= control->overhead * control->threads) {
 						overhead_set = true;
 						break;
-					}
-				}	// block size loop
-				if (overhead_set == true)
-					break;
+				}
 			}	// thread loop
-			if (control->zpaq_bs != 11)
-				print_verbose("ZPAQ Block Size reduced to %d\n", control->zpaq_bs);
+			if (!overhead_set && thread_limit > 1) {			// try again and lower thread_limit
+				thread_limit--;
+				goto retry_zpaq;
+			}
 			*/
 		}
 
