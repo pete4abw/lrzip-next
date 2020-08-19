@@ -1540,8 +1540,8 @@ struct bufRead: public libzpaq::Reader {
 	bufRead(uchar *buf_, i64 *n_, i64 total_len_, int *last_pct_, bool progress_, long thread_, FILE *msgout_):
 		s_buf(buf_), s_len(n_), total_len(total_len_), last_pct(last_pct_), progress(progress_), thread(thread_), msgout(msgout_) {}
 
-	void show_progress (int bytes_in) {
-		if (progress) {
+	int get() {
+		if (progress && !(*s_len % 128)) {
 			int pct = (total_len > 0) ?
 				(total_len - *s_len) * 100 / total_len : 100;
 
@@ -1557,13 +1557,9 @@ struct bufRead: public libzpaq::Reader {
 				*last_pct = pct;
 			}
 		}
-	}
 
-	int get() {
 		if (likely(*s_len > 0)) {
 			(*s_len)--;
-			if (!(*s_len % 128))
-				show_progress(*s_len);
 			return ((int)(uchar)*s_buf++);
 		}
 		return -1;
