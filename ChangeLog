@@ -1,5 +1,12 @@
 lrzip ChangeLog
 
+AUGUST 2020, version 0.720beta, Peter Hyman, pete@peterhyman.com
+
+* regression on libzpaq.h get() function overload. Pct counter
+  did not work with new library.
+* Add Makefile.am files for libzpaq and minilzo. Just to be more
+  proper.
+
 MAY 2020, version 0.715beta, Peter Hyman, pete@peterhyman.com
 
 * Added Assembler module for Decompression. 30%+ fasrer.

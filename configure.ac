@@ -2,7 +2,7 @@
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 m4_define([v_maj], [0])
 m4_define([v_min], [7])
-m4_define([v_mic], [15beta])
+m4_define([v_mic], [20beta])
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 m4_define([v_v], m4_join([], v_min, v_mic))
 m4_define([v_ver], [v_maj.v_v])
@@ -167,6 +167,8 @@ Makefile
 lrzip.pc
 lzma/Makefile
 lzma/C/Makefile
+libzpaq/Makefile
+minilzo/Makefile
 doc/Makefile
 man/Makefile
 ])

@@ -21,7 +21,7 @@ m4/ltoptions.m4 \
 m4/ltsugar.m4 \
 m4/ltversion.m4
 
-SUBDIRS = lzma man doc
+SUBDIRS = lzma libzpaq minilzo man doc
 
 AM_CFLAGS = -I. -I lzma/include -DNDEBUG
 AM_CXXFLAGS = $(AM_CFLAGS)
@@ -43,21 +43,17 @@ libtmplrzip_la_SOURCES = \
   stream.h \
   util.c \
   util.h \
-  @topsrc_dir@/lzma/include/7zCrc.h \
+  lzma/include/7zCrc.h \
   md5.c \
   md5.h \
   aes.c \
   aes.h \
   sha4.c \
-  sha4.h \
-  libzpaq/libzpaq.cpp \
-  libzpaq/libzpaq.h \
-  minilzo/minilzo.c \
-  minilzo/minilzo.h \
-  minilzo/lzoconf.h \
-  minilzo/lzodefs.h
+  sha4.h
 
-libtmplrzip_la_LIBADD = lzma/C/liblzma.la
+libtmplrzip_la_LIBADD = lzma/C/liblzma.la	\
+			libzpaq/libzpaq.la	\
+			minilzo/libminilzo.la
 
 
 lib_LTLIBRARIES = liblrzip.la
@@ -93,8 +89,7 @@ dist_doc_DATA = \
   README.md \
   README-NOT-BACKWARD-COMPATIBLE \
   TODO \
-  WHATS-NEW \
-  minilzo/README.LZO
+  WHATS-NEW
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = lrzip.pc
