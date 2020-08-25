@@ -2,7 +2,7 @@
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 m4_define([v_maj], [0])
 m4_define([v_min], [7])
-m4_define([v_mic], [20beta])
+m4_define([v_mic], [21beta])
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 m4_define([v_v], m4_join([], v_min, v_mic))
 m4_define([v_ver], [v_maj.v_v])
@@ -73,6 +73,22 @@ if test x"$ASM" = x"yes"; then
 	if test x"$ASM_PROG" = x"no"; then
 		ASM=no
 	fi
+## only for x86 and x86_64
+	case $host in
+		i?86-*)
+			ASM_OPT="-g -F dwarf -f elf"
+			USE_64=no
+			;;
+		x86_64-*)
+			ASM_OPT="-Dx64 -g -F dwarf -f elf64"
+			USE_64=yes
+			;;
+		*) 
+			ASM_PROG=
+			ASM_OPT=
+			ASM=no
+			;;
+	esac
 fi
 
 static=no
@@ -100,7 +116,7 @@ AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <sys/types.h>
 main() { return (sizeof(off_t) == 4); }]])],[rzip_cv_HAVE_LARGE_FILES=yes],[rzip_cv_HAVE_LARGE_FILES=no],[rzip_cv_HAVE_LARGE_FILES=cross])])
 if test x"$rzip_cv_HAVE_LARGE_FILES" = x"yes"; then
-    AC_DEFINE(HAVE_LARGE_FILES, 1, [ ])
+	AC_DEFINE(HAVE_LARGE_FILES, 1, [ ])
 fi
 
 AC_C_INLINE
@@ -124,27 +140,6 @@ LIBS="$PTHREAD_LIBS $LIBS"
 CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
 CXXFLAGS="$CXXFLAGS $PTHREAD_CFLAGS"
 
-## final checks for assembler
-## ASM is back for x86_64 by using newer CRC code from p7zip-16.02
-## object files handled in lzma/C/Makefile.am
-## if x64 then LZMA Assembler Decompressor will be used
-if test x"$ASM" = x"yes"; then
-	case $host in
-		i?86-*)
-			ASM_OPT="-g -F dwarf -f elf"
-			USE_64"no"
-			;;
-		x86_64-*)
-			ASM_OPT="-Dx64 -g -F dwarf -f elf64"
-			USE_64="yes"
-			;;
-		*) ASM_OPT=
-			;;
-	esac
-else
-	ASM_OPT=
-fi
-
 ## test for ARM or other non x86 processor
 ## must use -DNOJIT for compiling zpaq
 case $host in
@@ -152,8 +147,6 @@ case $host in
 		;;
 	*)
 		CXXFLAGS+=" -DNOJIT"
-		ASM="no"
-		ASM_PROG="no"
 		;;
 esac
 
@@ -167,6 +160,7 @@ Makefile
 lrzip.pc
 lzma/Makefile
 lzma/C/Makefile
+lzma/ASM/Makefile
 libzpaq/Makefile
 minilzo/Makefile
 doc/Makefile
@@ -200,6 +194,9 @@ echo "Compilation............: make (or gmake)"
 echo "  CPPFLAGS.............: $CPPFLAGS"
 echo "  CFLAGS...............: $CFLAGS"
 echo "  CXXFLAGS.............: $CXXFLAGS"
+if test x"$ASM" = x"yes"; then
+	echo "  ASMFLAGS.............: $ASM_OPT"
+fi
 echo "  LDFLAGS..............: $LDFLAGS"
 echo
 echo "Installation...........: make install (as root if needed, with 'su' or 'sudo')"

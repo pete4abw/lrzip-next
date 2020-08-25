@@ -55,6 +55,9 @@ libtmplrzip_la_LIBADD = lzma/C/liblzma.la	\
 			libzpaq/libzpaq.la	\
 			minilzo/libminilzo.la
 
+if USE_ASM
+libtmplrzip_la_LIBADD += lzma/ASM/liblzmaASM.la
+endif
 
 lib_LTLIBRARIES = liblrzip.la
 liblrzip_la_SOURCES = \
