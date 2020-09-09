@@ -1834,11 +1834,18 @@ fill_another:
 		goto skip_empty;
 	}
 
-	/* Check for invalid data and that the last_head is actually moving
-	 * forward correctly. */
-	if (unlikely(c_len < 1 || u_len < 1 || last_head < 0 || (last_head && last_head <= s->last_head))) {
-		fatal_return(("Invalid data compressed len %lld uncompressed %lld last_head %lld\n",
-			     c_len, u_len, last_head), -1);
+	/* Check for invalid data and that the last_head is actually moving forward correctly.
+	 * Check for:
+	 * 	compressed length (c_len)
+	 * 	uncompressed length (u_len)
+	 * 	invalid current stream pointer (last_head < 0)
+	 * 	stream pointer extending beyond chunk (last_head > sinfo->size)
+	 * 	stream pointer less than last stream pointer (i.e. pointing backwards!)
+	 */
+	if (unlikely(c_len < 1 || u_len < 1 || last_head < 0 || last_head > sinfo->size ||
+				(last_head && (last_head <= s->last_head)))) {
+		failure_return(("Invalid data compressed len %lld uncompressed %lld last_head %lld chunk size %lld\n",
+			     c_len, u_len, last_head, sinfo->size), false);
 	}
 
 	padded_len = MAX(c_len, MIN_SIZE);
