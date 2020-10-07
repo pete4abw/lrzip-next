@@ -14,7 +14,7 @@ m4_define([lt_age], v_min)
 
 
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([lrzip],[v_ver],[kernel@kolivas.org])
+AC_INIT([lrzip],[v_ver],[pete@peterhyman.com])
 AC_PREREQ([2.59])
 AC_CONFIG_SRCDIR([configure.ac])
 AC_CONFIG_MACRO_DIR([m4])
@@ -178,12 +178,6 @@ echo
 echo
 echo "Configuration Options Summary:"
 echo
-echo -n "  ASM................: "
-if test x"$ASM_PROG" = x"no"; then
-	echo "$ASM"
-else
-	echo "$ASM, using $ASM_PROG Assembler"
-fi
 echo "  Static binary......: $static"
 echo "  Host system........: $host"
 echo "  Build system.......: $build"
@@ -194,7 +188,11 @@ echo "Compilation............: make (or gmake)"
 echo "  CPPFLAGS.............: $CPPFLAGS"
 echo "  CFLAGS...............: $CFLAGS"
 echo "  CXXFLAGS.............: $CXXFLAGS"
-if test x"$ASM" = x"yes"; then
+echo -n "  ASM..................: "
+if test x"$ASM_PROG" = x"no"; then
+	echo "$ASM"
+else
+	echo "$ASM, using $ASM_PROG Assembler"
 	echo "  ASMFLAGS.............: $ASM_OPT"
 fi
 echo "  LDFLAGS..............: $LDFLAGS"

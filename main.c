@@ -205,8 +205,7 @@ static void show_summary(void)
 					(NO_COMPRESS ? "RZIP pre-processing only" : "wtf")))))));
 			if (!LZO_COMPRESS && !ZLIB_COMPRESS)
 				print_verbose(". LZO Compressibility testing %s\n", (LZO_TEST? "enabled" : "disabled"));
-			print_verbose("Compression level %d %s\n", control->compression_level,
-				(LZMA_COMPRESS ? (control->compression_level == 5 ? "- Default LZMA level": "" ) : ""));
+			print_verbose("Compression level %d\n", control->compression_level);
 			if (LZMA_COMPRESS)
 				print_verbose("Initial LZMA Dictionary Size: %ld\n", control->dictSize );
 			if (ZPAQ_COMPRESS)
@@ -608,14 +607,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	/* Because LZMA default compression level is 5, not 7, compression_level is
-	 * initialized as 0, not 7. A check must be made to set it if not otherwise
-	 * specified on command line */
-	if (LZMA_COMPRESS) {
-		if (!control->compression_level)
-			control->compression_level = 5; // default LZMA level is 5
-	}
-	else if (!control->compression_level)
+	/* set compression level if unset */
+	if (!control->compression_level)
 		control->compression_level = 7;
 
 

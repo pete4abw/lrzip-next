@@ -1,5 +1,8 @@
 lrzip ChangeLog
 
+OCTOBER 2020, version 0.721beta, Peter Hyman, pete@peterhyman.com
+* scrap defaul LZMA compression level = 5.
+
 AUGUST 2020, version 0.720beta, Peter Hyman, pete@peterhyman.com
 
 * regression on libzpaq.h get() function overload. Pct counter

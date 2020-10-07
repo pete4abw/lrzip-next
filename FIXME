@@ -1,3 +1,7 @@
+October 2020
+
+Decided to get rid of LZMA default = 5 and scrap the below idea.
+
 January 2020
 
 With default LZMA level now 5, hashing levels are affected.
