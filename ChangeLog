@@ -1,7 +1,15 @@
 lrzip ChangeLog
 
-OCTOBER 2020, version 0.721beta, Peter Hyman, pete@peterhyman.com
-* scrap defaul LZMA compression level = 5.
+OCTOBER 2020, version 0.725, Peter Hyman, pete@peterhyman.com
+* scrap defaul LZMA compression level = 5. All use 7 now.
+* add check for corrupt archives
+* clean up get_fileinfo function to remove incorrect fatal_ commands where
+  failure_ should be used.
+* remove check for control->library_mode because it kept failure and fatal
+  from returning properly.
+* addresses lrzip issues: 156, 163, 165, by checking for corrupt archives
+before decompressing or testing.
+* remove beta tag. 
 
 AUGUST 2020, version 0.720beta, Peter Hyman, pete@peterhyman.com
 
