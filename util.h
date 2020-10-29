@@ -43,8 +43,9 @@ static inline void fatal(const rzip_control *control, unsigned int line, const c
 	} else
 		control->log_cb(control->log_data, 0, line, file, func, format, ap);
 	va_end(ap);
-	if (!control->library_mode)
-		fatal_exit((rzip_control*)control);
+	/* removing this because it keeps fatal_ and failure_ from returning */
+//	if (!control->library_mode)
+//		fatal_exit((rzip_control*)control);
 }
 #ifdef fatal
 # undef fatal
@@ -68,8 +69,9 @@ static inline void failure(const rzip_control *control, unsigned int line, const
 	else
 		control->log_cb(control->log_data, 0, line, file, func, format, ap);
 	va_end(ap);
-	if (!control->library_mode)
-		fatal_exit((rzip_control*)control);
+	/* removing this because it keeps fatal_ and failure_ from returning */
+//	if (!control->library_mode)
+//		fatal_exit((rzip_control*)control);
 }
 #ifdef failure
 # undef failure

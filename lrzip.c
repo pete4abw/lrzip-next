@@ -962,6 +962,9 @@ static double percentage(i64 num, i64 den)
 	return d_num / d_den;
 }
 
+// If Decompressing or Testing, omit printing, just read file and see if valid
+// using construct if (INFO)
+// Encrypted files cannot be checked now
 bool get_fileinfo(rzip_control *control)
 {
 	i64 u_len, c_len, second_last, last_head, utotal = 0, ctotal = 0, ofs, stream_head[2];
@@ -1020,15 +1023,15 @@ bool get_fileinfo(rzip_control *control)
 		if (unlikely(read(fd_in, &chunk_byte, 1) != 1))
 			fatal_goto(("Failed to read chunk_byte in get_fileinfo\n"), error);
 		if (unlikely(chunk_byte < 1 || chunk_byte > 8))
-			fatal_goto(("Invalid chunk bytes %d\n", chunk_byte), error);
+			failure_goto(("Invalid chunk bytes %d\n", chunk_byte), error);
 		if (control->major_version == 0 && control->minor_version > 5) {
 			if (unlikely(read(fd_in, &control->eof, 1) != 1))
 				fatal_goto(("Failed to read eof in get_fileinfo\n"), error);
 			if (unlikely(read(fd_in, &chunk_size, chunk_byte) != chunk_byte))
 				fatal_goto(("Failed to read chunk_size in get_fileinfo\n"), error);
 			chunk_size = le64toh(chunk_size);
-			if (unlikely(chunk_size < 0))
-				fatal_goto(("Invalid chunk size %lld\n", chunk_size), error);
+			if (unlikely(chunk_size <= 0))
+				failure_goto(("Invalid chunk size %lld\n", chunk_size), error);
 		}
 	}
 
@@ -1053,15 +1056,15 @@ next_chunk:
 	stream_head[0] = 0;
 	stream_head[1] = stream_head[0] + header_length;
 
-	print_verbose("Rzip chunk %d:\n", ++chunk);
-	if (chunk_byte)
+	chunk_total += chunk_size;
+	if (unlikely(chunk_byte && (chunk_byte > 8 || chunk_size <= 0)))
+		failure_goto(("Invalid chunk data\n"), error);
+
+	if (INFO) {
+		print_verbose("Rzip chunk %d:\n", ++chunk);
 		print_verbose("Chunk byte width: %d\n", chunk_byte);
-	if (chunk_size) {
-		chunk_total += chunk_size;
 		print_verbose("Chunk size: %lld\n", chunk_size);
 	}
-	if (unlikely(chunk_byte && (chunk_byte > 8 || chunk_size < 0)))
-		failure("Invalid chunk data\n");
 	while (stream < NUM_STREAMS) {
 		int block = 1;
 
@@ -1071,9 +1074,11 @@ next_chunk:
 		if (unlikely(!get_header_info(control, fd_in, &ctype, &c_len, &u_len, &last_head, chunk_byte)))
 			return false;
 
-		print_verbose("Stream: %d\n", stream);
-		print_maxverbose("Offset: %lld\n", ofs);
-		print_verbose("Block\tComp\tPercent\tSize\n");
+		if (INFO) {
+			print_verbose("Stream: %d\n", stream);
+			print_maxverbose("Offset: %lld\n", ofs);
+			print_verbose("Block\tComp\tPercent\tSize\n");
+		}
 		do {
 			i64 head_off;
 
@@ -1089,21 +1094,21 @@ next_chunk:
 				return false;
 			if (unlikely(last_head < 0 || c_len < 0 || u_len < 0))
 				failure_goto(("Entry negative, likely corrupted archive.\n"), error);
-			print_verbose("%d\t", block);
-			if (ctype == CTYPE_NONE)
-				print_verbose("none");
-			else if (ctype == CTYPE_BZIP2)
-				print_verbose("bzip2");
-			else if (ctype == CTYPE_LZO)
-				print_verbose("lzo");
-			else if (ctype == CTYPE_LZMA)
-				print_verbose("lzma");
-			else if (ctype == CTYPE_GZIP)
-				print_verbose("gzip");
-			else if (ctype == CTYPE_ZPAQ)
-				print_verbose("zpaq");
-			else
-				print_verbose("Dunno wtf");
+			if (INFO) print_verbose("%d\t", block);
+			if (ctype == CTYPE_NONE) {
+				if (INFO) print_verbose("none");
+			} else if (ctype == CTYPE_BZIP2) {
+				if (INFO) print_verbose("bzip2");
+			} else if (ctype == CTYPE_LZO) {
+				if (INFO) print_verbose("lzo");
+			} else if (ctype == CTYPE_LZMA) {
+				if (INFO) print_verbose("lzma");
+			} else if (ctype == CTYPE_GZIP) {
+				if (INFO) print_verbose("gzip");
+			} else if (ctype == CTYPE_ZPAQ) {
+				if (INFO) print_verbose("zpaq");
+			} else
+				failure_goto(("Unknown Compression Type: %d\n", ctype), error);
 			if (save_ctype == 255)
 				save_ctype = ctype; /* need this for lzma when some chunks could have no compression
 						     * and info will show rzip + none on info display if last chunk
@@ -1111,9 +1116,11 @@ next_chunk:
 						     * the future */
 			utotal += u_len;
 			ctotal += c_len;
-			print_verbose("\t%.1f%%\t%lld / %lld", percentage(c_len, u_len), c_len, u_len);
-			print_maxverbose("\tOffset: %lld\tHead: %lld", head_off, last_head);
-			print_verbose("\n");
+			if (INFO) {
+				print_verbose("\t%.1f%%\t%lld / %lld", percentage(c_len, u_len), c_len, u_len);
+				print_maxverbose("\tOffset: %lld\tHead: %lld", head_off, last_head);
+				print_verbose("\n");
+			}
 			block++;
 		} while (last_head);
 		++stream;
@@ -1129,7 +1136,7 @@ next_chunk:
 		if (unlikely(read(fd_in, &chunk_byte, 1) != 1))
 			fatal_goto(("Failed to read chunk_byte in get_fileinfo\n"), error);
 		if (unlikely(chunk_byte < 1 || chunk_byte > 8))
-			fatal_goto(("Invalid chunk bytes %d\n", chunk_byte), error);
+			failure_goto(("Invalid chunk bytes %d\n", chunk_byte), error);
 		ofs++;
 		if (control->major_version == 0 && control->minor_version > 5) {
 			if (unlikely(read(fd_in, &control->eof, 1) != 1))
@@ -1138,84 +1145,90 @@ next_chunk:
 				fatal_goto(("Failed to read chunk_size in get_fileinfo\n"), error);
 			chunk_size = le64toh(chunk_size);
 			if (unlikely(chunk_size < 0))
-				fatal_goto(("Invalid chunk size %lld\n", chunk_size), error);
+				failure_goto(("Invalid chunk size %lld\n", chunk_size), error);
 			ofs += 1 + chunk_byte;
 			header_length = 1 + (chunk_byte * 3);
 		}
 	}
 	goto next_chunk;
 done:
+	cratio = (long double)expected_size / (long double)infile_size;
 	if (unlikely(ofs > infile_size))
 		failure_goto(("Offset greater than archive size, likely corrupted/truncated archive.\n"), error);
-	print_verbose("Rzip compression: %.1f%% %lld / %lld\n",
-			percentage (utotal, expected_size),
-			utotal, expected_size);
-	print_verbose("Back end compression: %.1f%% %lld / %lld\n",
-			percentage(ctotal, utotal),
-			ctotal, utotal);
-	print_verbose("Overall compression: %.1f%% %lld / %lld\n",
-			percentage(ctotal, expected_size),
-			ctotal, expected_size);
 
-	cratio = (long double)expected_size / (long double)infile_size;
+	if (INFO) {
+		print_verbose("Rzip compression: %.1f%% %lld / %lld\n",
+				percentage (utotal, expected_size),
+				utotal, expected_size);
+		print_verbose("Back end compression: %.1f%% %lld / %lld\n",
+				percentage(ctotal, utotal),
+				ctotal, utotal);
+		print_verbose("Overall compression: %.1f%% %lld / %lld\n",
+				percentage(ctotal, expected_size),
+				ctotal, expected_size);
 
-	print_output("%s:\nlrzip version: %d.%d file\n", infilecopy, control->major_version, control->minor_version);
+		print_output("%s:\nlrzip version: %d.%d file\n", infilecopy, control->major_version, control->minor_version);
 
-	print_output("Compression: ");
-	if (save_ctype == CTYPE_NONE)
-		print_output("rzip alone\n");
-	else if (save_ctype == CTYPE_BZIP2)
-		print_output("rzip + bzip2\n");
-	else if (save_ctype == CTYPE_LZO)
-		print_output("rzip + lzo\n");
-	else if (save_ctype == CTYPE_LZMA) {
-		print_output("rzip + lzma -- ");
-		if (lzma_ret=LzmaProps_Decode(&p, control->lzma_properties, sizeof(control->lzma_properties))==SZ_OK)
-			print_output("lc = %d, lp = %d, pb = %d, Dictionary Size = %d\n", p.lc, p.lp, p.pb, p.dicSize);
+		print_output("Compression: ");
+		if (save_ctype == CTYPE_NONE)
+			print_output("rzip alone\n");
+		else if (save_ctype == CTYPE_BZIP2)
+			print_output("rzip + bzip2\n");
+		else if (save_ctype == CTYPE_LZO)
+			print_output("rzip + lzo\n");
+		else if (save_ctype == CTYPE_LZMA) {
+			print_output("rzip + lzma -- ");
+			if (lzma_ret=LzmaProps_Decode(&p, control->lzma_properties, sizeof(control->lzma_properties))==SZ_OK)
+				print_output("lc = %d, lp = %d, pb = %d, Dictionary Size = %d\n", p.lc, p.lp, p.pb, p.dicSize);
+			else
+				print_err("Corrupt LZMA Properties\n");
+		}
+		else if (save_ctype == CTYPE_GZIP)
+			print_output("rzip + gzip\n");
+		else if (save_ctype == CTYPE_ZPAQ)
+			print_output("rzip + zpaq\n");
 		else
-			print_err("Corrupt LZMA Properties\n");
-	}
-	else if (save_ctype == CTYPE_GZIP)
-		print_output("rzip + gzip\n");
-	else if (save_ctype == CTYPE_ZPAQ)
-		print_output("rzip + zpaq\n");
-	else
-		print_output("Dunno wtf\n");
+			print_output("Dunno wtf\n");
 
-	/* show filter used */
-	if (FILTER_USED) {
-		print_output("Filter Used: %s",
-				((control->filter_flag == FILTER_FLAG_X86) ? "x86" :
-				((control->filter_flag == FILTER_FLAG_ARM) ? "ARM" :
-				((control->filter_flag == FILTER_FLAG_ARMT) ? "ARMT" :
-				((control->filter_flag == FILTER_FLAG_PPC) ? "PPC" :
-				((control->filter_flag == FILTER_FLAG_SPARC) ? "SPARC" :
-				((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
-				((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf?"))))))));
-		if (control->filter_flag == FILTER_FLAG_DELTA)
-			print_output(", offset - %d", control->delta);
-		print_output("\n");
-	}
+		/* show filter used */
+		if (FILTER_USED) {
+			print_output("Filter Used: %s",
+					((control->filter_flag == FILTER_FLAG_X86) ? "x86" :
+					((control->filter_flag == FILTER_FLAG_ARM) ? "ARM" :
+					((control->filter_flag == FILTER_FLAG_ARMT) ? "ARMT" :
+					((control->filter_flag == FILTER_FLAG_PPC) ? "PPC" :
+					((control->filter_flag == FILTER_FLAG_SPARC) ? "SPARC" :
+					((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
+					((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf?"))))))));
+			if (control->filter_flag == FILTER_FLAG_DELTA)
+				print_output(", offset - %d", control->delta);
+			print_output("\n");
+		}
 
-	print_output("Decompressed file size: %llu\n", expected_size);
-	print_output("Compressed file size: %llu\n", infile_size);
-	print_output("Compression ratio: %.3Lf\n", cratio);
+		print_output("Decompressed file size: %llu\n", expected_size);
+		print_output("Compressed file size: %llu\n", infile_size);
+		print_output("Compression ratio: %.3Lf\n", cratio);
+	} /* end if (INFO) */
 
 	if (HAS_MD5) {
 		char md5_stored[MD5_DIGEST_SIZE];
 		int i;
 
-		print_output("MD5 used for integrity testing\n");
 		if (unlikely(lseek(fd_in, -MD5_DIGEST_SIZE, SEEK_END) == -1))
 			fatal_goto(("Failed to seek to md5 data in runzip_fd\n"), error);
 		if (unlikely(read(fd_in, md5_stored, MD5_DIGEST_SIZE) != MD5_DIGEST_SIZE))
 			fatal_goto(("Failed to read md5 data in runzip_fd\n"), error);
-		print_output("MD5: ");
-		for (i = 0; i < MD5_DIGEST_SIZE; i++)
-			print_output("%02x", md5_stored[i] & 0xFF);
-		print_output("\n");
-	} else
-		print_output("CRC32 used for integrity testing\n");
+		if (INFO) {
+			print_output("MD5 used for integrity testing\n");
+			print_output("MD5: ");
+			for (i = 0; i < MD5_DIGEST_SIZE; i++)
+				print_output("%02x", md5_stored[i] & 0xFF);
+			print_output("\n");
+		}
+	} else {
+		if (INFO) print_output("CRC32 used for integrity testing\n");
+	}
+
 	if ( !IS_FROM_FILE )
 		if (unlikely(close(fd_in)))
 			fatal_return(("Failed to close fd_in in get_fileinfo\n"), false);

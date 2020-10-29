@@ -771,8 +771,14 @@ recursion:
 			failure("Unable to work from STDIN while reading password\n");
 
 		memcpy(&local_control, &base_control, sizeof(rzip_control));
-		if (DECOMPRESS || TEST_ONLY)
+		if (DECOMPRESS || TEST_ONLY) {
+			// vaidate file on decompression or test
+			if (unlikely((get_fileinfo(&local_control)) == false)) {
+				print_err("Corrupt lrzip archive. Cannot continue\n",-1);
+				return -1;
+			}
 			decompress_file(&local_control);
+		}
 		else if (INFO)
 			get_fileinfo(&local_control);
 		else
