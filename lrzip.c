@@ -1014,8 +1014,6 @@ bool get_fileinfo(rzip_control *control)
 
 	if (ENCRYPT) {
 		print_output("Encrypted lrzip archive. No further information available\n");
-		if (!STDIN && !IS_FROM_FILE)
-			close(fd_in);
 		goto out;
 	}
 
@@ -1229,15 +1227,19 @@ done:
 		if (INFO) print_output("CRC32 used for integrity testing\n");
 	}
 
-	if ( !IS_FROM_FILE )
+out:
+	// WHen validating, need to reset STDIN back to 0
+	if (STDIN)
+		if (unlikely(lseek(fd_in,0,SEEK_SET)))
+			fatal_return(("Unable to set seek stream back to 0 position\n"),false);
+	if (IS_FROM_FILE)
 		if (unlikely(close(fd_in)))
 			fatal_return(("Failed to close fd_in in get_fileinfo\n"), false);
-
-out:
 	dealloc(control->outfile);
 	return true;
 error:
-	if (!STDIN && ! IS_FROM_FILE) close(fd_in);
+	if (IS_FROM_FILE)
+		close(fd_in);
 	return false;
 }
 
