@@ -337,18 +337,15 @@ int open_tmpoutfile(rzip_control *control)
 static bool fwrite_stdout(rzip_control *control, void *buf, i64 len)
 {
 	uchar *offset_buf = buf;
-	ssize_t ret;
+	ssize_t ret, nmemb;
 	i64 total;
 
 	total = 0;
 	while (len > 0) {
-		if (len > one_g)
-			ret = one_g;
-		else
-			ret = len;
-		ret = fwrite(offset_buf, 1, ret, control->outFILE);
-		if (unlikely(ret <= 0))
-			fatal_return(("Failed to fwrite in fwrite_stdout\n"), false);
+		nmemb = MIN(len, one_g);
+		ret = fwrite(offset_buf, 1, nmemb, control->outFILE);
+		if (unlikely(ret != nmemb))
+			fatal_return(("Failed to fwrite %ld bytes in fwrite_stdout\n", nmemb), false);
 		len -= ret;
 		offset_buf += ret;
 		total += ret;
@@ -360,13 +357,13 @@ static bool fwrite_stdout(rzip_control *control, void *buf, i64 len)
 bool write_fdout(rzip_control *control, void *buf, i64 len)
 {
 	uchar *offset_buf = buf;
-	ssize_t ret;
+	ssize_t ret, nmemb;
 
 	while (len > 0) {
-		ret = MIN(len, one_g);
-		ret = write(control->fd_out, offset_buf, (size_t)ret);
-		if (unlikely(ret <= 0))
-			fatal_return(("Failed to write to fd_out in write_fdout\n"), false);
+		nmemb = MIN(len, one_g);
+		ret = write(control->fd_out, offset_buf, (size_t)nmemb);
+		if (unlikely(ret != nmemb))
+			fatal_return(("Failed to write %ld bytes to fd_out in write_fdout\n", nmemb), false);
 		len -= ret;
 		offset_buf += ret;
 	}
