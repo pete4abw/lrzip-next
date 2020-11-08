@@ -1,0 +1,22 @@
+November 2020
+
+Code in lrzip.c fwrite_stdout and write_fdout cannot check
+properly for free disk space when piping data through lrzip.
+
+Current workaround may be inaccurate!
+ret = fwrite(offset_buf, 1, nmemb, control->outFILE);
+if (unlikely(ret != nmemb))
+	fatal_return(("Failed to fwrite %ld bytes in fwrite_stdout\n", nmemb), false);
+
+This is used because lrzip does not know where stdout ultimately
+will be written to. Should use fstatvfs or similar. Except we
+don't know where piped output will go!
+
+Example
+tar -I lrzip -cf /file_goes_somewihere.tar.lrz somedir
+
+lrzip can't see past STDIN and STDOUT.
+
+
+Peter Hyman
+pete@peterhyman.com

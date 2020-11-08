@@ -16,3 +16,6 @@ function not called properly on compression.
 See if ram management can be improved. Specifically
 to check Available RAM, not just Total RAM. Needed
 for low ram systems without swap.
+
+Use git describe to manage version numbers, not hard code in
+configure.ac

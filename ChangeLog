@@ -1,5 +1,11 @@
 lrzip ChangeLog
 
+NOVEMBER 2020, version 0.725, Peter Hyman, pete@peterhyman.com
+* revert failure and fatal macro changes.
+* Fixup get_fileinfo function to really allow STDIN checks
+* Fix issue where lrzip would not fail if receiving piped data (see
+  FIXME)
+
 OCTOBER 2020, version 0.725, Peter Hyman, pete@peterhyman.com
 * scrap defaul LZMA compression level = 5. All use 7 now.
 * add check for corrupt archives
