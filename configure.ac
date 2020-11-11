@@ -158,11 +158,12 @@ EFL_CHECK_DOXYGEN([build_doc="yes"], [build_doc="no"])
 AC_CONFIG_FILES([
 Makefile
 lrzip.pc
-lzma/Makefile
-lzma/C/Makefile
-lzma/ASM/Makefile
-libzpaq/Makefile
-minilzo/Makefile
+src/Makefile
+src/lzma/Makefile
+src/lzma/C/Makefile
+src/lzma/ASM/Makefile
+src/libzpaq/Makefile
+src/minilzo/Makefile
 doc/Makefile
 man/Makefile
 ])

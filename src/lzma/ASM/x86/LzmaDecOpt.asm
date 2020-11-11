@@ -14,7 +14,7 @@
   %error "x64_IS_REQUIRED"
 %endif
 
-%include "../x86/7zAsm.asm"
+%include "7zAsm.asm"
 
 MY_ASM_START
 

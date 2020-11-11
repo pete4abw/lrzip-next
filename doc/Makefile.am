@@ -1,6 +1,7 @@
 MAINTAINERCLEANFILES = Makefile.in
 
 dist_doc_DATA = \
+  README.NEW.BENCHMARK.ALGO.md \
   README.Assembler \
   README.benchmarks \
   README.filters \

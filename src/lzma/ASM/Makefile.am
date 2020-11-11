@@ -1,17 +1,15 @@
 MAINTAINERCLEANFILES = Makefile.in
 
-## for readability
-## debugger requires absolute paths to find sources in ASM
-LZMA_BASEDIR = @abs_top_srcdir@/lzma
-
+SRC = @srcdir@/x86
+ABSSRC = @abs_srcdir@/x86
 ASM_7z = 7zCrcOpt_asm
-ASM_H  = $(LZMA_BASEDIR)/ASM/x86/7zAsm.asm
-ASM_S  = $(LZMA_BASEDIR)/ASM/x86/$(ASM_7z).asm
-ASM_OPT += -I$(LZMA_BASEDIR)/ASM/x86/
-if USE_X64
+ASM_H  = $(SRC)/7zAsm.asm
+ASM_S  = $(SRC)/$(ASM_7z).asm
+ASM_OPT += -I $(SRC)
 ## For LZMA Assembler Decompressor
+if USE_X64
   ASM_De = LzmaDecOpt
-  ASM_S  += $(LZMA_BASEDIR)/ASM/ASMDecompress/$(ASM_De).asm
+  ASM_S  += $(SRC)/$(ASM_De).asm
 endif
 
 noinst_LTLIBRARIES = liblzmaASM.la
@@ -27,10 +25,11 @@ liblzmaASM_la_LIBADD = $(ASM_7z).lo
 \npic_object='.libs/$(ASM_7z).o'\
 \nnon_pic_object='$(ASM_7z).o'
 
-$(ASM_7z).lo: $(LZMA_BASEDIR)/ASM/x86/$(ASM_7z).asm
-	$(ASM_PROG) $(ASM_OPT) -o $(ASM_7z).o $(LZMA_BASEDIR)/ASM/x86/$(ASM_7z).asm
+## Need absolute location for ASM source for later debugging if required
+$(ASM_7z).lo: $(SRC)/$(ASM_7z).asm
+	$(ASM_PROG) $(ASM_OPT) -o $(ASM_7z).o $(ABSSRC)/$(ASM_7z).asm
 	@echo -e "$(7ZIPASMLOFILE)" > $(ASM_7z).lo
-	@mkdir .libs
+	@mkdir -p .libs
 	@cp $(ASM_7z).o .libs
 
 ## lzmadecompress
@@ -44,8 +43,8 @@ LzmaDecOptFILE := \
 \npic_object='.libs/$(ASM_De).o'\
 \nnon_pic_object='$(ASM_De).o'
 
-$(ASM_De).lo: $(LZMA_BASEDIR)/ASM/ASMDecompress/$(ASM_De).asm
-	$(ASM_PROG) $(ASM_OPT) -o $(ASM_De).o $(LZMA_BASEDIR)/ASM/ASMDecompress/$(ASM_De).asm
+$(ASM_De).lo: $(SRC)/$(ASM_De).asm
+	$(ASM_PROG) $(ASM_OPT) -o $(ASM_De).o $(ABSSRC)/$(ASM_De).asm
 	@echo -e "$(LzmaDecOptFILE)" > $(ASM_De).lo
 	@cp $(ASM_De).o .libs
 endif
