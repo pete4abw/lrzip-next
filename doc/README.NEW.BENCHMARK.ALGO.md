@@ -1,34 +1,57 @@
 # A New Way to Compare Results
 
-Compression ratio is, of course, the primary way to judge a compression program. The smaller the resulting file, the better.
+Compression ratio is, of course, the primary way to judge a
+compression program. The smaller the resulting file, the better.
 
-But when time to compress is considered, the best compression may not be the *best* compression method!
+But when time to compress is considered, the best compression may
+not be the *best* compression method!
 
 ## A way to Rank results
 
-The following table compares different compression methods against each other in terms of compression **and** in terms of time to compress. An index is computed for each which describes as a percent, where each result lies in terms of the all the others. 100% is the worst and every other method is compared to it both in terms of resulting **compression** and **time to compress** expressed as a **percent**. The intent is to compare one to another and not just rank pure compression or time to compress. It compares each to the other relatively.
+The following table compares different compression methods
+against each other in terms of compression **and** in terms of
+time to compress. An index is computed for each which describes
+as a percent, where each result lies in terms of the all the
+others. 100% is the worst and every other method is compared to
+it both in terms of resulting **compression** and **time to
+compress** expressed as a **percent**. The intent is to compare
+one to another and not just rank pure compression or time to
+compress. It compares each to the other relatively.
 
 ### Maybe Mathematically Shaky!
 
-Then an attempt is made to create an **overall index** and **Rank** for each method. For this the **Compression Index** and **Time Index** are ADDED and then divided by 2 to make the **Overall Index** scale to 100%. The lower the number the better! 
+Then an attempt is made to create an **overall index** and
+**Rank** for each method. For this the **Compression Index** and
+**Time Index** are ADDED and then divided by 2 to make the
+**Overall Index** scale to 100%. The lower the number the better! 
 
-The compression index is computed by comparing the size of a compressed file to the maximum (worst) size of all methods. `MYSIZE/MAX(ALLSIZES)` and the time to compress compared to the maximum (slowest) time to compress `MYTIME/MAX(ALLTIMES)`. The worst compression ratio will have an index of 100%. The slowest time to compress will have an index of 100%. All other compression and time indeces will be relative to the best compression and slowest time.
+The compression index is computed by comparing the size of a
+compressed file to the maximum (worst) size of all methods.
+`MYSIZE/MAX(ALLSIZES)` and the time to compress compared to the
+maximum (slowest) time to compress `MYTIME/MAX(ALLTIMES)`. The
+worst compression ratio will have an index of 100%. The slowest
+time to compress will have an index of 100%. All other
+compression and time indeces will be relative to the best
+compression and slowest time.
 
 #### Example
 
-Compression size: 100
-Worst Compression size: 120
-Compression Index: 100/120 = 83.33% (percent relative to largest compressed size)
+Compression size: 100  
+Worst Compression size: 120  
+Compression Index: 100/120 = 83.33% (percent relative to largest
+compressed size)
 
-Time to Compress: 60 seconds
-Slowest Time to Compress: 320 seconds
-Time Index: 60/320 = 18.75% (percent relative to the slowest compression time)
+Time to Compress: 60 seconds  
+Slowest Time to Compress: 320 seconds  
+Time Index: 60/320 = 18.75% (percent relative to the slowest
+compression time)
 
 Combine index: (83.33+18.75)/2 = 51.04
 
 This number can be compared to all others in the set.
 
-In this table, you will see comparisons between the following methods:
+In this table, you will see comparisons between the following
+methods:
 * Standalone programs  
   * BZIP2  
   * GZIP  
@@ -45,16 +68,22 @@ In this table, you will see comparisons between the following methods:
 
 ### Highlights of tests
 
-The input file was a tar'ed linux 5.4.74 kernel that was compiled with the `make defconfig` and `make` in x86_64. So, the input file had both text (around 940MB) and binary information (around 500MB). The results were interesting.
+The input file was a tar'ed linux 5.4.74 kernel that was compiled
+with the `make defconfig` and `make` in x86_64. So, the input
+file had both text (around 940MB) and binary information (around
+500MB). The results were interesting.
 
 * LRZIP+LZO was the **fastest** to compress
 * LRZIP+ZPAQ had the **best** compression
-* XZ was the **slowest** to compress (and had relatively poor compression too)
+* XZ was the **slowest** to compress (and had relatively poor
+  compression too)
 * LRZIP+RZIP had the **worst** compression
-* LRZIP+BZIP2 had the **best overall** index score combining compression and time to compress
+* LRZIP+BZIP2 had the **best overall** index score combining
+  compression and time to compress
 * LRZIP using LZMA (default) fell in the middle of this sample
 
-The differences were small between the top three in compression but the associated times differed by more than double!
+The differences were small between the top three in compression
+but the associated times differed by more than double!
 
 Size|Name|Time|
 --: | --- | ---: |
@@ -70,11 +99,16 @@ Size | Name | Time | Comp Index | Time Index | Overall Index | Rank
 123,584,447 | LRZIP_ZPAQ | 04:22.010 | 84.73% | 87.07% |85.90% | 2
 137,916,765 | ZPAQ_M4 | 05:00.921 | 94.56% | 100.00% |97.28% | 3
 
-Blending time and compression, LRZIP using LZMA comes out on top with an overall index score of 72%, vs 86% and 97% for the ZPAQ variances. Even though it had the worst compression ratio of the three, it had the best time by far, hence the better overall score.
+Blending time and compression, LRZIP using LZMA comes out on top
+with an overall index score of 72%, vs 86% and 97% for the ZPAQ
+variances. Even though it had the worst compression ratio of the
+three, it had the best time by far, hence the better overall
+score.
 
 ## The Test Suite
 
-11 runs of the input file were performed. Before each run all memory and disk caches were flushed and the disk sync'ed.
+11 runs of the input file were performed. Before each run all
+memory and disk caches were flushed and the disk sync'ed.
 
 Size | Name | Time | Comp Index | Time Index | Overall Index | Rank
 --: | -- | -- | :--: | :--: | :--: | :--:
@@ -93,11 +127,12 @@ Size | Name | Time | Comp Index | Time Index | Overall Index | Rank
 
 ### Scores mean nothing
 
-These index scores in and of themselves mean nothing. It's just a way of comparing different items in an identical way!
+These index scores in and of themselves mean nothing. It's just a
+way of comparing different items in an identical way!
 
 Comments are welcome!
 
-November 2020
-Peter Hyman
+November 2020  
+Peter Hyman  
 pete@peterhyman.com
 
