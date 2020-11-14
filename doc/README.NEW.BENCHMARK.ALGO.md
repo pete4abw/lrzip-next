@@ -36,13 +36,13 @@ compression and slowest time.
 
 #### Example
 
-Compression size: 100  
-Worst Compression size: 120  
+Compression size: 100   
+Worst Compression size: 120   
 Compression Index: 100/120 = 83.33% (percent relative to largest
 compressed size)
 
-Time to Compress: 60 seconds  
-Slowest Time to Compress: 320 seconds  
+Time to Compress: 60 seconds   
+Slowest Time to Compress: 320 seconds   
 Time Index: 60/320 = 18.75% (percent relative to the slowest
 compression time)
 
@@ -132,7 +132,7 @@ way of comparing different items in an identical way!
 
 Comments are welcome!
 
-November 2020  
-Peter Hyman  
+November 2020   
+Peter Hyman   
 pete@peterhyman.com
 
