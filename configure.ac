@@ -159,6 +159,7 @@ AC_CONFIG_FILES([
 Makefile
 lrzip.pc
 src/Makefile
+src/demo/Makefile
 src/lzma/Makefile
 src/lzma/C/Makefile
 src/lzma/ASM/Makefile

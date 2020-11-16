@@ -20,7 +20,13 @@ MAINTAINERCLEANFILES = \
 	m4/ltsugar.m4 \
 	m4/ltversion.m4
 
-SUBDIRS = src/lzma src/lib/libzpaq src/lib/minilzo src man doc
+SUBDIRS = src/lzma \
+	  src/lib/libzpaq \
+	  src/lib/minilzo \
+	  src \
+	  src/demo \
+	  man \
+	  doc
 
 dist_doc_DATA = \
 	AUTHORS \
