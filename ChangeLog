@@ -1,5 +1,8 @@
 lrzip ChangeLog
 
+NOVEMBER 2020, version 0.726, Peter Hyman, pete@peterhyman.com
+* New source layout for enhanced readability.
+
 NOVEMBER 2020, version 0.725, Peter Hyman, pete@peterhyman.com
 * revert failure and fatal macro changes.
 * Fixup get_fileinfo function to really allow STDIN checks

@@ -9,5 +9,5 @@ libminilzo_la_SOURCES = \
 
 minilzodocdir = @docdir@/minilzo
 minilzodoc_DATA = \
-	COPYING	\
-	README.LZO
+	doc/COPYING \
+	doc/README.LZO

@@ -2,7 +2,7 @@
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 m4_define([v_maj], [0])
 m4_define([v_min], [7])
-m4_define([v_mic], [25])
+m4_define([v_mic], [26])
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 m4_define([v_v], m4_join([], v_min, v_mic))
 m4_define([v_ver], [v_maj.v_v])
@@ -158,11 +158,13 @@ EFL_CHECK_DOXYGEN([build_doc="yes"], [build_doc="no"])
 AC_CONFIG_FILES([
 Makefile
 lrzip.pc
-lzma/Makefile
-lzma/C/Makefile
-lzma/ASM/Makefile
-libzpaq/Makefile
-minilzo/Makefile
+src/Makefile
+src/demo/Makefile
+src/lzma/Makefile
+src/lzma/C/Makefile
+src/lzma/ASM/Makefile
+src/lib/libzpaq/Makefile
+src/lib/minilzo/Makefile
 doc/Makefile
 man/Makefile
 ])
