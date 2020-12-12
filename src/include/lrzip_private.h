@@ -521,7 +521,7 @@ struct stream_info {
 	char chunk_bytes;
 };
 
-bool progress_flag ; // print newline when verbose and last print was progress indicator
+extern bool progress_flag ; // print newline when verbose and last print was progress indicator
 static inline void print_stuff(const rzip_control *control, int level, unsigned int line, const char *file, const char *func, const char *format, ...)
 {
 	va_list ap;

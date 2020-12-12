@@ -36,6 +36,9 @@
 #include "lrzip_core.h"
 #include "rzip.h"
 
+//  progress flag
+bool progress_flag=false;
+
 #if defined(__APPLE__) || defined(__FreeBSD__)
 # define fmemopen(s, len, modes) fake_fmemopen((s), (len), (modes))
 static FILE *fake_fmemopen(void *buf, size_t buflen, const char *mode)

@@ -63,6 +63,9 @@
 
 #define MAX_PATH_LEN 4096
 
+// progress flag
+bool progress_flag=false;
+
 static rzip_control base_control, local_control, *control;
 
 static void usage(bool compat)
