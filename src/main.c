@@ -775,10 +775,14 @@ recursion:
 
 		memcpy(&local_control, &base_control, sizeof(rzip_control));
 		if (DECOMPRESS || TEST_ONLY) {
-			// vaidate file on decompression or test
-			if (unlikely((get_fileinfo(&local_control)) == false)) {
-				print_err("Corrupt lrzip archive. Cannot continue\n",-1);
-				return -1;
+			// vailidate file on decompression or test
+			if (STDIN)
+				print_err("Can't validate a file from STDIN. To validate, check file directly.");
+			else {
+				if (unlikely((get_fileinfo(&local_control)) == false)) {
+					print_err("Corrupt lrzip archive. Cannot continue\n",-1);
+					return -1;
+				}
 			}
 			decompress_file(&local_control);
 		}

@@ -1,5 +1,16 @@
 lrzip ChangeLog
 
+DECEMBER 2020, version 0.7.27, Peter Hyman, pete@peterhyman.com
+* Revert get_fileinfo function to allow STDIN checks
+  It just did not work as expected.
+* Remove IS_FROM_FILE Definition. It never worked. !STDIN suffices.
+* Undo commit 1510f4a. Decompression can use a local buffer if there is ram.
+  If decompressed file is larger than ram can hold, temp file will fill as
+  expected. No memory leak. Big speed increase.
+* New Version scheme. Major.minor.micro for tags.
+* Last ChangeLog Entry. Git makes it obsolete. WHAT'S NEW will be used to
+announce new features,
+
 NOVEMBER 2020, version 0.726, Peter Hyman, pete@peterhyman.com
 * New source layout for enhanced readability.
 

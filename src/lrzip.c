@@ -704,7 +704,7 @@ bool decompress_file(rzip_control *control)
 	i64 expected_size = 0, free_space;
 	struct statvfs fbuf;
 
-	if (!STDIN && !IS_FROM_FILE) {
+	if ( !STDIN ) {
 		struct stat fdin_stat;
 		/* make sure infile has an extension. If not, add it
 		 * because manipulations may be made to input filename, set local ptr
@@ -755,10 +755,7 @@ bool decompress_file(rzip_control *control)
 			print_progress("Output filename is: %s\n", control->outfile);
 	}
 
-	if ( IS_FROM_FILE ) {
-		fd_in = fileno(control->inFILE);
-	}
-	else if (STDIN) {
+	if (STDIN) {
 		fd_in = open_tmpinfile(control);
 		read_tmpinmagic(control);
 		if (ENCRYPT)
@@ -809,10 +806,9 @@ bool decompress_file(rzip_control *control)
 		}
 	}
 
-	if (STDOUT) {
-		if (unlikely(!open_tmpoutbuf(control)))
-			return false;
-	}
+// check for STDOUT removed. In memory compression speedup. No memory leak.
+	if (unlikely(!open_tmpoutbuf(control)))
+		return false;
 
 	if (!STDIN) {
 		if (unlikely(!read_magic(control, fd_in, &expected_size)))
@@ -877,22 +873,19 @@ select a larger volume.\n",
 	if (TMP_OUTBUF)
 		close_tmpoutbuf(control);
 
-	if (fd_out > 0) {
+	if (fd_out > 0)
 		if (unlikely(close(fd_hist) || close(fd_out)))
 			fatal_return(("Failed to close files\n"), false);
-	}
 
 	if (unlikely(!STDIN && !STDOUT && !TEST_ONLY && !preserve_times(control, fd_in)))
 		return false;
 
-	if ( ! IS_FROM_FILE ) {
+	if ( !STDIN )
 		close(fd_in);
-	}
 
-	if (!KEEP_FILES && !STDIN) {
+	if (!KEEP_FILES && !STDIN)
 		if (unlikely(unlink(control->infile)))
 			fatal_return(("Failed to unlink %s\n", infilecopy), false);
-	}
 
 	if (ENCRYPT)
 		release_hashes(control);
@@ -977,28 +970,21 @@ bool get_fileinfo(rzip_control *control)
 	CLzmaProps p; // decode lzma header
 	int lzma_ret;
 
-	if (!STDIN) {
-		struct stat fdin_stat;
+	// Take out all STDIN checks
+	struct stat fdin_stat;
 
-		stat(control->infile, &fdin_stat);
-		if (!S_ISREG(fdin_stat.st_mode) && (tmp = strrchr(control->infile, '.')) &&
-		    strcmp(tmp,control->suffix)) {
-			infilecopy = alloca(strlen(control->infile) + strlen(control->suffix) + 1);
-			strcpy(infilecopy, control->infile);
-			strcat(infilecopy, control->suffix);
-		} else
-			infilecopy = strdupa(control->infile);
-	}
+	stat(control->infile, &fdin_stat);
+	if (!S_ISREG(fdin_stat.st_mode) && (tmp = strrchr(control->infile, '.')) &&
+	    strcmp(tmp,control->suffix)) {
+		infilecopy = alloca(strlen(control->infile) + strlen(control->suffix) + 1);
+		strcpy(infilecopy, control->infile);
+		strcat(infilecopy, control->suffix);
+	} else
+		infilecopy = strdupa(control->infile);
 
-	if ( IS_FROM_FILE )
-		fd_in = fileno(control->inFILE);
-	else if (STDIN)
-		fd_in = 0;
-	else {
-		fd_in = open(infilecopy, O_RDONLY);
-		if (unlikely(fd_in == -1))
-			fatal_return(("Failed to open %s\n", infilecopy), false);
-	}
+	fd_in = open(infilecopy, O_RDONLY);
+	if (unlikely(fd_in == -1))
+		fatal_return(("Failed to open %s\n", infilecopy), false);
 
 	/* Get file size */
 	if (unlikely(fstat(fd_in, &st)))
@@ -1225,18 +1211,11 @@ done:
 	}
 
 out:
-	// WHen validating, need to reset STDIN back to 0
-	if (STDIN)
-		if (unlikely(lseek(fd_in,0,SEEK_SET)))
-			fatal_return(("Unable to set seek stream back to 0 position\n"),false);
-	if (IS_FROM_FILE)
-		if (unlikely(close(fd_in)))
-			fatal_return(("Failed to close fd_in in get_fileinfo\n"), false);
+	if (unlikely(close(fd_in)))
+		fatal_return(("Failed to close fd_in in get_fileinfo\n"), false);
 	dealloc(control->outfile);
 	return true;
 error:
-	if (IS_FROM_FILE)
-		close(fd_in);
 	return false;
 }
 
@@ -1258,21 +1237,18 @@ bool compress_file(rzip_control *control)
 			return false;
 	memset(header, 0, sizeof(header));
 
-	if ( IS_FROM_FILE )
-		fd_in = fileno(control->inFILE);
-	else if (!STDIN) {
+	if (!STDIN) {
 		 /* is extension at end of infile? */
 		if ((tmp = strrchr(control->infile, '.')) && !strcmp(tmp, control->suffix)) {
 			print_err("%s: already has %s suffix. Skipping...\n", control->infile, control->suffix);
 			return false;
 		}
 
-        fd_in = open(control->infile, O_RDONLY);
-		if (unlikely(fd_in == -1))
-			fatal_return(("Failed to open %s\n", control->infile), false);
-	}
-	else
-		fd_in = 0;
+        	fd_in = open(control->infile, O_RDONLY);
+			if (unlikely(fd_in == -1))
+				fatal_return(("Failed to open %s\n", control->infile), false);
+	} else
+		fd_in = fileno(control->inFILE);
 
 	if (!STDOUT) {
 		if (control->outname) {
@@ -1371,7 +1347,7 @@ bool compress_file(rzip_control *control)
 	dealloc(control->outfile);
 	return true;
 error:
-	if (! IS_FROM_FILE && STDIN && (fd_in > 0))
+	if (!STDIN && (fd_in > 0))
 		close(fd_in);
 	if ((!STDOUT) && (fd_out > 0))
 		close(fd_out);
