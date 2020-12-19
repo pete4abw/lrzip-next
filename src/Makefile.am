@@ -23,7 +23,9 @@ libtmplrzip_la_SOURCES = \
 	include/aes.h \
 	include/md5.h \
 	include/sha4.h \
-	lzma/include/7zCrc.h
+	lzma/include/7zCrc.h \
+	lzma/include/Lzmaec.h
+
 
 libtmplrzip_la_LIBADD = lzma/C/liblzma.la	\
 	lib/libzpaq/libzpaq.la	\
