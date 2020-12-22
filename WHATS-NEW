@@ -1,5 +1,7 @@
 lrzip-0.700
 
+New configure process. Version taken from git-describe.
+
 LZMA SDK 19.00
 
 Add x86, BCJ, ARM, ARMT, PPC, SPARC, IA64 and Delta Filters.

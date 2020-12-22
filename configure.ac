@@ -1,18 +1,15 @@
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
-m4_define([v_maj], [0])
-m4_define([v_min], [7])
-m4_define([v_mic], [27])
+m4_define([v_maj], [m4_esyscmd_s([./util/gitdesc.sh major])])
+m4_define([v_min], [m4_esyscmd_s([./util/gitdesc.sh minor])])
+m4_define([v_mic], [m4_esyscmd_s([./util/gitdesc.sh micro])])
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
-m4_define([v_v], m4_join([], v_min, v_mic))
-m4_define([v_ver], [v_maj.v_v])
+m4_define([v_ver], [v_maj.v_min.v_mic])
 m4_define([lt_rev], m4_eval(v_maj + v_min))
 m4_define([lt_cur], v_mic)
 m4_define([lt_age], v_min)
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
-
-
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT([lrzip],[v_ver],[pete@peterhyman.com])
 AC_PREREQ([2.59])
