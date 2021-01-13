@@ -63,7 +63,7 @@ Low level Compression Options:
  \-N, \-\-nice-level value  Set nice value to value (default 19)
  \-m, \-\-maxram size       Set maximum available ram in hundreds of MB
                          overrides detected amount of available ram
- \-T, \-\-threshold         Disable LZO compressibility testing
+ \-T, \-\-threshold [limit] Disable LZO compressibility testing OR set limit to determine compressibiity (1-99)
  \-U, \-\-unlimited         Use unlimited window size beyond ramsize (potentially much slower)
  \-w, \-\-window size       maximum compression window in hundreds of MB
                          default chosen by heuristic dependent on ram and chosen compression
@@ -198,6 +198,14 @@ block fails to be compressed by the very fast LZO, lrzip will not attempt to
 compress that block with the slower compressor, thereby saving time. If this
 option is enabled, it will bypass the LZO testing and attempt to compress each
 block regardless.
+.IP "\fB-T | --threshold limit\fP"
+If the value \fBlimit\fP is used, it will test compressibility as a percentage of
+chunk size. Limiting chunck compressibility threshold can speed up compression.
+If, for example, LZO_TEST determines a chunk is 99.99% of chunk size, it will
+pass the chunk to the compressor even though it is barely compressible. Setting
+\fBlimit\fP to a lower value, 95% for example, the chunk will not be passed to
+the compressor unless it is at least 5% compression benefit as determined by
+LZO_TEST. Any value from 1-99 is allowed.
 .IP "\fB-U | --unlimited\fP"
 Unlimited window size\&. If this option is set, and the file being compressed
 does not fit into the available ram, lrzip will use a moving second buffer as a

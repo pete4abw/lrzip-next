@@ -116,7 +116,7 @@ static void usage(bool compat)
 	print_output("	-N, --nice-level value	Set nice value to value (default %d)\n", compat ? 0 : 19);
 	print_output("	-m, --maxram size	Set maximum available ram in hundreds of MB\n");
 	print_output("				overrides detected amount of available ram\n");
-	print_output("	-T, --threshold		Disable LZO compressibility testing\n");
+	print_output("	-T, --threshold [limit]	Disable LZO compressibility testing OR set limit to determine compressibiity (1-99)\n");
 	print_output("	-U, --unlimited		Use unlimited window size beyond ramsize (potentially much slower)\n");
 	print_output("	-w, --window size	maximum compression window in hundreds of MB\n");
 	print_output("				default chosen by heuristic dependent on ram and chosen compression\n");
@@ -208,6 +208,8 @@ static void show_summary(void)
 					(NO_COMPRESS ? "RZIP pre-processing only" : "wtf")))))));
 			if (!LZO_COMPRESS && !ZLIB_COMPRESS)
 				print_verbose(". LZO Compressibility testing %s\n", (LZO_TEST? "enabled" : "disabled"));
+			if (LZO_TEST && control->threshold != 100)
+				print_verbose("Threshhold limit = %d\%\n", control->threshold);
 			print_verbose("Compression level %d\n", control->compression_level);
 			if (LZMA_COMPRESS)
 				print_verbose("Initial LZMA Dictionary Size: %ld\n", control->dictSize );
@@ -278,7 +280,7 @@ static struct option long_options[] = {
 	{"recursive",	no_argument,	0,	'r'},
 	{"suffix",	required_argument,	0,	'S'},
 	{"test",	no_argument,	0,	't'},	/* 25 */
-	{"threshold",	required_argument,	0,	'T'},
+	{"threshold",	optional_argument,	0,	'T'},
 	{"unlimited",	no_argument,	0,	'U'},
 	{"verbose",	no_argument,	0,	'v'},
 	{"version",	no_argument,	0,	'V'},
@@ -337,8 +339,8 @@ static void recurse_dirlist(char *indir, char **dirlist, int *entries)
 	closedir(dirp);
 }
 
-static const char *loptions = "bcCdDefghHiKlL:nN:o:O:p:PqrS:tTUm:vVw:z?";
-static const char *coptions = "bcCdefghHikKlLnN:o:O:p:PrS:tTUm:vVw:z?123456789";
+static const char *loptions = "bcCdDefghHiKlL:nN:o:O:p:PqrS:tT::Um:vVw:z?";
+static const char *coptions = "bcCdefghHikKlLnN:o:O:p:PrS:tT::Um:vVw:z?123456789";
 
 int main(int argc, char *argv[])
 {
@@ -571,7 +573,16 @@ int main(int argc, char *argv[])
 			control->flags |= FLAG_TEST_ONLY;
 			break;
 		case 'T':
-			control->flags &= ~FLAG_THRESHOLD;
+			/* process optional threshold limit
+			 * or disable threshold testing
+			 */
+			if (optarg) {
+				i=atoi(optarg);
+				if (i < 1 || i > 99)
+					failure("Threshhold limits are 1-99\n");
+				control->threshold = i;
+			} else
+				control->flags &= ~FLAG_THRESHOLD;
 			break;
 		case 'U':
 			control->flags |= FLAG_UNLIMITED;
@@ -609,11 +620,6 @@ int main(int argc, char *argv[])
 			break;
 		}
 	}
-
-	/* set compression level if unset */
-	if (!control->compression_level)
-		control->compression_level = 7;
-
 
 	argc -= optind;
 	argv += optind;

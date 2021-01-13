@@ -2079,7 +2079,8 @@ static int lzo_compresses(rzip_control *control, uchar *s_buf, i64 s_len)
 	uchar *c_buf = NULL, *test_buf = s_buf;
 	/* set minimum buffer test size based on the length of the test stream */
 	unsigned long buftest_size = (test_len > 5 * STREAM_BUFSIZE ? STREAM_BUFSIZE : STREAM_BUFSIZE / 4096);
-	double ret = 0;
+	double pct = 0;
+	int return_value;
 	int workcounter = 0;	/* count # of passes */
 
 	if (!LZO_TEST)
@@ -2103,10 +2104,11 @@ static int lzo_compresses(rzip_control *control, uchar *s_buf, i64 s_len)
 		workcounter++;
 		lzo1x_1_compress(test_buf, in_len, (uchar *)c_buf, &dlen, wrkmem);
 
-		if (dlen < in_len) {
-			ret = 100 * ((double) dlen / (double) in_len);
+		/* Apply threshold limit if applicable */
+		pct = 100 * ((double) dlen / (double) in_len);
+		if (dlen < in_len * ((double) control->threshold / 100))
 			break;
-		}
+
 		/* expand and move buffer */
 		test_len -= in_len;
 		if (test_len) {
@@ -2116,12 +2118,13 @@ static int lzo_compresses(rzip_control *control, uchar *s_buf, i64 s_len)
 			in_len = MIN(test_len, buftest_size);
 		}
 	}
+	return_value = (pct > control->threshold ? 0 : 1);
 	print_maxverbose("lzo testing %s for chunk %ld. Compressed size = %5.2F%% of chunk, %d Passes\n",
-			(ret == 0? "FAILED" : "OK"), save_len,
-			ret, workcounter);
+			(return_value ? "OK" : "FAILED"), save_len,
+			pct, workcounter);
 
 	dealloc(wrkmem);
 	dealloc(c_buf);
 
-	return (int) ret;
+	return return_value;
 }

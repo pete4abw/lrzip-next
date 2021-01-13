@@ -299,6 +299,12 @@ bool read_config(rzip_control *control)
 			if (isparameter(parametervalue, "no"))
 				control->flags &= ~FLAG_THRESHOLD;
 		}
+		else if (isparameter(parameter, "threshold")) {
+			/* default is 100 */
+			control->threshold = atoi(parametervalue);
+			if (control->threshold < 1 || control->threshold > 99)
+				failure_return(("CONF.FILE error. LZO Threshold must be between 1 and 99"), false);
+		}
 		else if (isparameter(parameter, "hashcheck")) {
 			if (isparameter(parametervalue, "yes")) {
 				control->flags |= FLAG_CHECK;

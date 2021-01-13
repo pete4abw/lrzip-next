@@ -1367,9 +1367,10 @@ bool initialise_control(rzip_control *control)
 	control->flags = FLAG_SHOW_PROGRESS | FLAG_KEEP_FILES | FLAG_THRESHOLD;
 	control->suffix = ".lrz";
 	control->filter_flag = 0;		/* filter flag. Default to none */
-	control->compression_level = 0; 	/* 0 because lrzip default level is 5, others 7 */
+	control->compression_level = 7;
 	control->dictSize = 0;			/* Dictionary Size for lzma. 0 means program decides */
 	control->ramsize = get_ram(control);	/* if something goes wrong, exit from get_ram */
+	control->threshold = 100;		/* default for no threshold limiting */
 	/* for testing single CPU */
 	control->threads = PROCESSORS;		/* get CPUs for LZMA */
 	control->page_size = PAGE_SIZE;

@@ -436,6 +436,7 @@ struct rzip_control {
 	i64 max_chunk;
 	i64 max_mmap;
 	int threads;
+	int threshold;			// threshold limit. 1-99%. Default no limiter
 	char nice_val;			// added for consistency
 	int current_priority;
 	char major_version;

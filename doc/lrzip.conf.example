@@ -25,6 +25,9 @@
 # Perform LZO Test. Default = YES (-T)
 # LZOTEST = NO
 
+# Set Threshold limit for LZO Test. Default 100. Set 1-99 to limit
+# THRESHOLD = 99
+
 # Hash Check on decompression, (-c)
 # HASHCHECK = YES
 
