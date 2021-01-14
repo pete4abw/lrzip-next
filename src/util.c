@@ -277,6 +277,11 @@ bool read_config(rzip_control *control)
 			if ( control->compression_level < 1 || control->compression_level > 9 )
 				failure_return(("CONF.FILE error. Compression Level must between 1 and 9"), false);
 		}
+		else if (isparameter(parameter, "rziplevel")) {
+			control->rzip_compression_level = atoi(parametervalue);
+			if ( control->rzip_compression_level < 1 || control->rzip_compression_level > 9 )
+				failure_return(("CONF.FILE error. RZIP Compression Level must between 1 and 9"), false);
+		}
 		else if (isparameter(parameter, "compressionmethod")) {
 			/* valid are rzip, gzip, bzip2, lzo, lzma (default), and zpaq */
 			if (control->flags & FLAG_NOT_LZMA)

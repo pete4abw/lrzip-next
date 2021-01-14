@@ -72,7 +72,7 @@ static void usage(bool compat)
 {
 	print_output("lrz%s version %s\n", compat ? "" : "ip", PACKAGE_VERSION);
 	print_output("Copyright (C) Con Kolivas 2006-2016\n");
-	print_output("Copyright (C) Peter Hyman 2007-2020\n");
+	print_output("Copyright (C) Peter Hyman 2007-2021\n");
 	print_output("Based on rzip ");
 	print_output("Copyright (C) Andrew Tridgell 1998-2003\n\n");
 	print_output("Usage: lrz%s [options] <file...>\n", compat ? "" : "ip");
@@ -91,7 +91,7 @@ static void usage(bool compat)
 	if (!compat)
 		print_output("	-L, --level level	set lzma/bzip2/gzip compression level (1-9, default 7)\n");
 	print_output("	--dictsize		Set lzma Dictionary Size for LZMA ds=12 to 30 expressed as 2^ds\n");
-	print_output("Filtering Options:\n");
+	print_output("    Filtering Options:\n");
 	print_output("	--x86			Use x86 filter (for all compression modes)\n");
 	print_output("	--arm			Use ARM filter (for all compression modes)\n");
 	print_output("	--armt			Use ARMT filter (for all compression modes)\n");
@@ -99,7 +99,7 @@ static void usage(bool compat)
 	print_output("	--sparc			Use SPARC filter (for all compression modes)\n");
 	print_output("	--ia64			Use IA64 filter (for all compression modes)\n");
 	print_output("	--delta	[1..32]		Use Delta filter (for all compression modes) (1 (default) -17, then multiples of 16 to 256)\n");
-	print_output("Additional Compression Options:\n");
+	print_output("    Additional Compression Options:\n");
 	if (compat)
 		print_output("	-c, --stdout		output to STDOUT\n");
 	print_output("	-e, --encrypt[=password] password protected sha512/aes128 encryption on compression\n");
@@ -112,14 +112,16 @@ static void usage(bool compat)
 	print_output("	-o, --outfile filename	specify the output file name and/or path\n");
 	print_output("	-O, --outdir directory	specify the output directory when -o is not used\n");
 	print_output("	-S, --suffix suffix	specify compressed suffix (default '.lrz')\n");
-	print_output("Low level Compression Options:\n");
+	print_output("    Low level Compression Options:\n");
 	print_output("	-N, --nice-level value	Set nice value to value (default %d)\n", compat ? 0 : 19);
-	print_output("	-m, --maxram size	Set maximum available ram in hundreds of MB\n");
-	print_output("				overrides detected amount of available ram\n");
-	print_output("	-T, --threshold [limit]	Disable LZO compressibility testing OR set limit to determine compressibiity (1-99)\n");
+	print_output("	-m, --maxram size	Set maximum available ram in hundreds of MB\n\t\t\t\tOverrides detected amount of available ram. \
+Useful for testing\n");
+	print_output("	-R, --rzip-level level	Set independent RZIP Compression Level (1-9) for pre-processing (default=compression level)\n");
+	print_output("	-T, --threshold [limit]	Disable LZO compressibility testing OR set limit to determine compressibiity (1-99)\n\t\t\t\t\
+Note: Since limit is optional, the short option must not have a space. e.g. -T75, not -T 75\n");
 	print_output("	-U, --unlimited		Use unlimited window size beyond ramsize (potentially much slower)\n");
-	print_output("	-w, --window size	maximum compression window in hundreds of MB\n");
-	print_output("				default chosen by heuristic dependent on ram and chosen compression\n");
+	print_output("	-w, --window size	maximum compression window in hundreds of MB\n\t\t\t\t\
+default chosen by heuristic dependent on ram and chosen compression\n");
 	print_output("Decompression Options:\n----------------------\n");
 	print_output("	-d, --decompress	decompress\n");
 	print_output("	-t, --test		test compressed file integrity\n");
@@ -139,23 +141,24 @@ static void usage(bool compat)
 	print_output("	-p, --threads value	Set processor count to override number of threads\n");
 	print_output("	-r, --recursive		operate recursively on directories\n");
 	print_output("	-v[v%s], --verbose	Increase verbosity\n", compat ? "v" : "");
-	print_output("	-V, --version		show version\n");
-	print_output("\nLRZIP=NOCONFIG environment variable setting can be used to bypass lrzip.conf.\n");
-	print_output("TMP environment variable will be used for storage of temporary files when needed.\n");
-	print_output("TMPDIR may also be stored in lrzip.conf file.\n");
-	print_output("\nIf no filenames or \"-\" is specified, stdin/out will be used.\n");
+	print_output("	-V, --version		display software version and license\n");
+	print_output("\nLRZIP=NOCONFIG environment variable setting can be used to bypass lrzip.conf.\n\
+TMP environment variable will be used for storage of temporary files when needed.\n\
+TMPDIR may also be stored in lrzip.conf file.\n\
+\nIf no filenames or \"-\" is specified, stdin/out will be used.\n");
 
 }
 
-static void license(void)
+static void license(bool compat)
 {
-	print_output("lrz version %s\n", PACKAGE_VERSION);
-	print_output("Copyright (C) Con Kolivas 2006-2016\n");
-	print_output("Based on rzip ");
-	print_output("Copyright (C) Andrew Tridgell 1998-2003\n\n");
-	print_output("This is free software.  You may redistribute copies of it under the terms of\n");
-	print_output("the GNU General Public License <http://www.gnu.org/licenses/gpl.html>.\n");
-	print_output("There is NO WARRANTY, to the extent permitted by law.\n");
+	print_output("lrz%s version %s\n\
+Copyright (C) Con Kolivas 2006-2016\n\
+Copyright (C) Peter Hyman 2007-2021\n\
+Based on rzip Copyright (C) Andrew Tridgell 1998-2003\n\n\
+This is free software.  You may redistribute copies of it under the terms of\n\
+the GNU General Public License <http://www.gnu.org/licenses/gpl.html>.\n\
+There is NO WARRANTY, to the extent permitted by law.\n",
+compat ? "" : "ip", PACKAGE_VERSION);
 }
 
 static void sighandler(int sig __UNUSED__)
@@ -211,6 +214,7 @@ static void show_summary(void)
 			if (LZO_TEST && control->threshold != 100)
 				print_verbose("Threshhold limit = %d\%\n", control->threshold);
 			print_verbose("Compression level %d\n", control->compression_level);
+			print_verbose("RZIP Compression level %d\n", control->rzip_compression_level);
 			if (LZMA_COMPRESS)
 				print_verbose("Initial LZMA Dictionary Size: %ld\n", control->dictSize );
 			if (ZPAQ_COMPRESS)
@@ -252,50 +256,51 @@ static void show_summary(void)
 }
 
 static struct option long_options[] = {
-	{"bzip2",	no_argument,	0,	'b'},	/* 0 */
+	{"bzip2",	no_argument,	0,	'b'},		/* 0 */
 	{"check",	no_argument,	0,	'c'},
 	{"check",	no_argument,	0,	'C'},
 	{"decompress",	no_argument,	0,	'd'},
 	{"delete",	no_argument,	0,	'D'},
-	{"encrypt",	optional_argument,	0,	'e'}, /* 5 */
+	{"encrypt",	optional_argument,	0,	'e'},	/* 5 */
 	{"force",	no_argument,	0,	'f'},
 	{"gzip",	no_argument,	0,	'g'},
 	{"help",	no_argument,	0,	'h'},
 	{"hash",	no_argument,	0,	'H'},
-	{"info",	no_argument,	0,	'i'},	/* 10 */
+	{"info",	no_argument,	0,	'i'},		/* 10 */
 	{"keep-broken",	no_argument,	0,	'k'},
 	{"keep-broken",	no_argument,	0,	'K'},
 	{"lzo",		no_argument,	0,	'l'},
 	{"lzma",       	no_argument,	0,	'/'},
-	{"level",	optional_argument,	0,	'L'}, /* 15 */
+	{"level",	optional_argument,	0,	'L'},	/* 15 */
 	{"license",	no_argument,	0,	'L'},
 	{"maxram",	required_argument,	0,	'm'},
 	{"no-compress",	no_argument,	0,	'n'},
 	{"nice-level",	required_argument,	0,	'N'},
-	{"outfile",	required_argument,	0,	'o'},
-	{"outdir",	required_argument,	0,	'O'}, /* 20 */
+	{"outfile",	required_argument,	0,	'o'},	/* 20 */
+	{"outdir",	required_argument,	0,	'O'},
 	{"threads",	required_argument,	0,	'p'},
 	{"progress",	no_argument,	0,	'P'},
 	{"quiet",	no_argument,	0,	'q'},
-	{"recursive",	no_argument,	0,	'r'},
+	{"recursive",	no_argument,	0,	'r'},		/* 25 */
 	{"suffix",	required_argument,	0,	'S'},
-	{"test",	no_argument,	0,	't'},	/* 25 */
+	{"test",	no_argument,	0,	't'},
 	{"threshold",	optional_argument,	0,	'T'},
 	{"unlimited",	no_argument,	0,	'U'},
-	{"verbose",	no_argument,	0,	'v'},
+	{"verbose",	no_argument,	0,	'v'},		/* 30 */
 	{"version",	no_argument,	0,	'V'},
-	{"window",	required_argument,	0,	'w'},  /* 30 */
+	{"window",	required_argument,	0,	'w'},
 	{"zpaq",	no_argument,	0,	'z'},
 	{"fast",	no_argument,	0,	'1'},
-	{"best",	no_argument,	0,	'9'},
+	{"best",	no_argument,	0,	'9'},		/* 35 */
 	{"dictsize",	required_argument,	0,	'\\'},
-	{"x86",		no_argument,	0,	']'},	/* 35 */
+	{"x86",		no_argument,	0,	']'},
 	{"arm",		no_argument,	0,	'['},
 	{"armt",	no_argument,	0,	'}'},
-	{"ppc",		no_argument,	0,	'{'},
+	{"ppc",		no_argument,	0,	'{'},		/* 40 */
 	{"sparc",	no_argument,	0,	'\''},
-	{"ia64",	no_argument,	0,	';'},	/* 40 */
+	{"ia64",	no_argument,	0,	';'},
 	{"delta",	optional_argument,	0,	':'},
+	{"rzip-level",	required_argument,	0,	'R'},
 	{0,	0,	0,	0},
 };
 
@@ -339,8 +344,8 @@ static void recurse_dirlist(char *indir, char **dirlist, int *entries)
 	closedir(dirp);
 }
 
-static const char *loptions = "bcCdDefghHiKlL:nN:o:O:p:PqrS:tT::Um:vVw:z?";
-static const char *coptions = "bcCdefghHikKlLnN:o:O:p:PrS:tT::Um:vVw:z?123456789";
+static const char *loptions = "bcCdDefghHiKlL:nN:o:O:p:PqrR:S:tT::Um:vVw:z?";
+static const char *coptions = "bcCdefghHikKlLnN:o:O:p:PrR:S:tT::Um:vVw:z?123456789";
 
 int main(int argc, char *argv[])
 {
@@ -507,12 +512,21 @@ int main(int argc, char *argv[])
 			break;
 		case 'L':
 			if (compat) {
-				license();
+				license(compat);
 				exit(0);
 			}
 			control->compression_level = atoi(optarg);
 			if (control->compression_level < 1 || control->compression_level > 9)
 				failure("Invalid compression level (must be 1-9)\n");
+			/* if rzip compression level not set, make equal to compression level */
+			if ( !control->rzip_compression_level )
+				control->rzip_compression_level = control->compression_level;
+			break;
+		case 'R':
+			/* explicitly set rzip compression level */
+			control->rzip_compression_level = atoi(optarg);
+			if (control->rzip_compression_level < 1 || control->rzip_compression_level > 9)
+				failure("Invalid rzip compression level (must be 1-9)\n");
 			break;
 		case 'm':
 			control->ramsize = atol(optarg) * 1024 * 1024 * 100;
@@ -599,7 +613,7 @@ int main(int argc, char *argv[])
 			}
 			break;
 		case 'V':
-			print_output("lrzip version %s\n", PACKAGE_VERSION);
+			license(compat);
 			exit(0);
 			break;
 		case 'w':

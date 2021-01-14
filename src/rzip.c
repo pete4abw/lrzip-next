@@ -999,7 +999,7 @@ void rzip_fd(rzip_control *control, int fd_in, int fd_out)
 	if (st->chunk_size < len)
 		round_to_page(&st->chunk_size);
 
-	st->level = &levels[control->compression_level];
+	st->level = &levels[control->rzip_compression_level];
 	st->fd_in = fd_in;
 	st->fd_out = fd_out;
 	st->stdin_eof = 0;

@@ -12,6 +12,9 @@
 # Compression Level 1-9 (7 Default). (-L)
 # COMPRESSIONLEVEL = 7
 
+# RZIP Compression Level 1-9 (Default = Compression Level) (-R)
+# RZIPLEVEL = 7
+
 # Use -U setting, Unlimited ram. Yes or No
 # UNLIMITED = NO
 

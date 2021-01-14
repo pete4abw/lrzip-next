@@ -421,6 +421,7 @@ struct rzip_control {
 	FILE *msgerr;			//stream for output errors
 	char *suffix;
 	uchar compression_level;
+	uchar rzip_compression_level;	// separate rzip compression level
 	i64 overhead;			// compressor overhead
 	i64 usable_ram;			// the most ram we'll try to use on one activity
 	i64 maxram;			// the largest chunk of ram to allocate

@@ -63,6 +63,7 @@ Low level Compression Options:
  \-N, \-\-nice-level value  Set nice value to value (default 19)
  \-m, \-\-maxram size       Set maximum available ram in hundreds of MB
                          overrides detected amount of available ram
+ \-R, \-\-rzip-level level  Set independent RZIP Compression Level (1-9) for pre-processing (default=compression level)
  \-T, \-\-threshold [limit] Disable LZO compressibility testing OR set limit to determine compressibiity (1-99)
  \-U, \-\-unlimited         Use unlimited window size beyond ramsize (potentially much slower)
  \-w, \-\-window size       maximum compression window in hundreds of MB
@@ -189,6 +190,9 @@ from \-20 to 19. Note this does NOT speed up or slow down compression.
 .IP "\fB-m | --maxram \fImaxram\fR"
 Specify the maximum system memory in 100MB blocks. Overrides detected ram.
 Ex. 40=4GB.
+.IP "\fB-R | --rzip-level \fIlevel\fP"
+Specify the rzip pre-processing compression level. If not set, will default
+to compression level.
 .IP "\fB-T | --threshold\fP"
 Disables the LZO compressibility threshold testing when a slower compression
 back-end is used. LZO testing is normally performed for the slower back-end
@@ -198,7 +202,7 @@ block fails to be compressed by the very fast LZO, lrzip will not attempt to
 compress that block with the slower compressor, thereby saving time. If this
 option is enabled, it will bypass the LZO testing and attempt to compress each
 block regardless.
-.IP "\fB-T | --threshold limit\fP"
+.IP "\fB-T | --threshold \fIlimit\fP"
 If the value \fBlimit\fP is used, it will test compressibility as a percentage of
 chunk size. Limiting chunck compressibility threshold can speed up compression.
 If, for example, LZO_TEST determines a chunk is 99.99% of chunk size, it will
