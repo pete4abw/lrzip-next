@@ -518,9 +518,6 @@ int main(int argc, char *argv[])
 			control->compression_level = atoi(optarg);
 			if (control->compression_level < 1 || control->compression_level > 9)
 				failure("Invalid compression level (must be 1-9)\n");
-			/* if rzip compression level not set, make equal to compression level */
-			if ( !control->rzip_compression_level )
-				control->rzip_compression_level = control->compression_level;
 			break;
 		case 'R':
 			/* explicitly set rzip compression level */
@@ -637,6 +634,10 @@ int main(int argc, char *argv[])
 
 	argc -= optind;
 	argv += optind;
+
+	/* if rzip compression level not set, make equal to compression level */
+	if (! control->rzip_compression_level )
+		control->rzip_compression_level = control->compression_level;
 
 	if (control->outname) {
 		if (argc > 1)
