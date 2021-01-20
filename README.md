@@ -21,8 +21,8 @@ Many new changes including
 (See original README for more historical info)
 
 ### Download and Build
-`$ git clone https://github.com/pete4abw/lrzip`
-or if you desire to also download the **lrzip-fe** front end
+`$ git clone https://github.com/pete4abw/lrzip`\
+or if you desire to also download the **lrzip-fe** front end\
 `$ git clone --recurse-submodules https://github.com/pete4abw/lrzip`
 
 If you forget use --recurse-submodules and want to download lrzip-fe separately, use these commands:
@@ -89,15 +89,15 @@ Option|Meaning
 
 #### Backends:
 rzip:
-<http://rzip.samba.org/>
+<http://rzip.samba.org/>\
 lzo:
-<http://www.oberhumer.com/opensource/lzo/>
+<http://www.oberhumer.com/opensource/lzo/>\
 lzma:
-<http://www.7-zip.org/>
+<http://www.7-zip.org/>\
 gzip:
-<https://www.gnu.org/software/gzip/>
+<https://www.gnu.org/software/gzip/>\
 bzip2:
-<https://sourceware.org/bzip2/>
+<https://sourceware.org/bzip2/>\
 zpaq:
 <http://mattmahoney.net/dc/>
 
@@ -142,14 +142,14 @@ Person(s) with names in ***both*** have made innumerable massive contributions.
 
 #### README Authors
 
-Con Kolivas (`ckolivas` on GitHub) <kernel@kolivas.org>
+Con Kolivas (`ckolivas` on GitHub) <kernel@kolivas.org>\
 Fri, 10 June 2016: README
 
-Also documented by
-Peter Hyman (pete4abw on Guthub) <pete@peterhyman.com>
-Sun, 04 Jan 2009, README
+Also documented by\
+Peter Hyman (pete4abw on Guthub) <pete@peterhyman.com>\
+Sun, 04 Jan 2009, README\
 Sat, 16 Jan 2021: README.md
 
-Mostly Rewritten + GFMified:
-Haneef Mubarak (haneefmubarak on GitHub)
+Mostly Rewritten + GFMified:\
+Haneef Mubarak (haneefmubarak on GitHub)\
 Sun/Mon Sep 01-02 2013: README.md (now OLDREADME.md)
