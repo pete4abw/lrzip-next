@@ -1,3 +1,4 @@
 [submodule "lrzip-fe"]
 	path = lrzip-fe
 	url = https://github.com/pete4abw/lrzip-fe
+	brabch = master
