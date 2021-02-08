@@ -1,4 +1,4 @@
-#?bin/sh
+#!/bin/sh
 # Peter Hyman, pete@peterhyman.com
 # December 2020
 
