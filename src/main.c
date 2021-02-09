@@ -358,6 +358,7 @@ int main(int argc, char *argv[])
 	int hours,minutes;
 	extern int optind;
 	char *eptr, *av; /* for environment */
+	char *endptr = NULL;
 
         control = &base_control;
 
@@ -447,7 +448,9 @@ int main(int argc, char *argv[])
 			break;
 		case '\\':
 			/* Dictionary Size, 2^12-30 */
-			control->dictSize = atoi(optarg);
+			control->dictSize = strtol(optarg, &endptr, 10);
+			if (*endptr)
+				failure("Extra characters after dictionary size: \'%s\'\n", endptr);
 			if (control->dictSize < 12 || control->dictSize > 30)
 				failure("Dictionary Size must be between 12 and 30 for 2^12 (4KB) to 2^30 (1GB)");
 			control->dictSize = (1 << control->dictSize);
@@ -482,7 +485,9 @@ int main(int argc, char *argv[])
 			control->filter_flag = FILTER_FLAG_DELTA;	// DELTA
 			/* Delta Values are 1-16, then multiples of 16 to 256 */
 			if (optarg) {
-				i=atoi(optarg);
+				i=strtol(optarg, &endptr, 10);
+				if (*endptr)
+					failure("Extra characters after delta offset: \'%s\'\n", endptr);
 				if (i < 1 || i > 32)
 					failure("Delta offset value must be between 1 and 32\n");
 				control->delta = ( i <= 17 ? i : (i-16) * 16 );
@@ -515,21 +520,29 @@ int main(int argc, char *argv[])
 				license(compat);
 				exit(0);
 			}
-			control->compression_level = atoi(optarg);
+			control->compression_level = strtol(optarg, &endptr, 10);
+			if (*endptr)
+				failure("Extra characters after compression level: \'%s\'\n", endptr);
 			if (control->compression_level < 1 || control->compression_level > 9)
 				failure("Invalid compression level (must be 1-9)\n");
 			break;
 		case 'R':
 			/* explicitly set rzip compression level */
-			control->rzip_compression_level = atoi(optarg);
+			control->rzip_compression_level = strtol(optarg, &endptr, 10);
+			if (*endptr)
+				failure("Extra characters after rzip compression level: \'%s\'\n", endptr);
 			if (control->rzip_compression_level < 1 || control->rzip_compression_level > 9)
 				failure("Invalid rzip compression level (must be 1-9)\n");
 			break;
 		case 'm':
-			control->ramsize = atol(optarg) * 1024 * 1024 * 100;
+			control->ramsize = strtol(optarg, &endptr, 10) * 1024 * 1024 * 100;
+			if (*endptr)
+				failure("Extra characters after ramsize: \'%s\'\n", endptr);
 			break;
 		case 'N':
-			control->nice_val = atoi(optarg);
+			control->nice_val = strtol(optarg, &endptr, 10);
+			if (*endptr)
+				failure("Extra characters after nice level: \'%s\'\n", endptr);
 			if (control->nice_val < PRIO_MIN || control->nice_val > PRIO_MAX)
 				failure("Invalid nice value (must be %d...%d)\n", PRIO_MIN, PRIO_MAX);
 			break;
@@ -554,7 +567,9 @@ int main(int argc, char *argv[])
 				strcat(control->outdir, "/");
 			break;
 		case 'p':
-			control->threads = atoi(optarg);
+			control->threads = strtol(optarg, &endptr, 10);
+			if (*endptr)
+				failure("Extra characters after number of threads: \'%s\'\n", endptr);
 			if (control->threads < 1)
 				failure("Must have at least one thread\n");
 			break;
@@ -588,7 +603,9 @@ int main(int argc, char *argv[])
 			 * or disable threshold testing
 			 */
 			if (optarg) {
-				i=atoi(optarg);
+				i=strtol(optarg, &endptr, 10);
+				if (*endptr)
+					failure("Extra characters after threshold limit: \'%s\'\n", endptr);
 				if (i < 1 || i > 99)
 					failure("Threshhold limits are 1-99\n");
 				control->threshold = i;
@@ -614,7 +631,9 @@ int main(int argc, char *argv[])
 			exit(0);
 			break;
 		case 'w':
-			control->window = atol(optarg);
+			control->window = strtol(optarg, &endptr, 10);
+			if (*endptr)
+				failure("Extra characters after window size: \'%s\'\n", endptr);
 			if (control->window < 1)
 				failure("Window must be positive\n");
 			break;
