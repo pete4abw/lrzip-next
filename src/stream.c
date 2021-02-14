@@ -599,7 +599,7 @@ static int lzo_decompress_buf(rzip_control *control __UNUSED__, struct uncomp_th
 		goto out;
 	}
 
-	lzerr = lzo1x_decompress((uchar*)c_buf, ucthread->c_len, (uchar*)ucthread->s_buf, &dlen, NULL);
+	lzerr = lzo1x_decompress_safe((uchar*)c_buf, ucthread->c_len, (uchar*)ucthread->s_buf, &dlen, NULL);
 	if (unlikely(lzerr != LZO_E_OK)) {
 		print_err("Failed to decompress buffer - lzerr=%d\n", lzerr);
 		ret = -1;
@@ -1206,7 +1206,7 @@ void *open_stream_in(rzip_control *control, int f, int n, char chunk_bytes)
 			sinfo->size = le64toh(sinfo->size);
 			print_maxverbose("Chunk size: %lld\n", sinfo->size);
 			control->st_size += sinfo->size;
-			if (unlikely(sinfo->chunk_bytes < 1 || sinfo->chunk_bytes > 8 || sinfo->size < 0)) {
+			if (unlikely(sinfo->chunk_bytes < 1 || sinfo->chunk_bytes > 8 || sinfo->size <= 0)) {
 				print_err("Invalid chunk data size %d bytes %lld\n", sinfo->size, sinfo->chunk_bytes);
 				goto failed;
 			}
