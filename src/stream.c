@@ -86,7 +86,6 @@ typedef struct stream_thread_struct {
 static long output_thread;
 static pthread_mutex_t output_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t output_cond = PTHREAD_COND_INITIALIZER;
-static pthread_t *threads;
 
 static unsigned save_threads = 0;	// need for multiple chunks to restore thread count
 static i64 limit = 0;			// save for open_stream_out
@@ -890,6 +889,7 @@ i64 get_readseek(rzip_control *control, int fd)
 
 bool prepare_streamout_threads(rzip_control *control)
 {
+	pthread_t *threads;
 	int i;
 
 	/* As we serialise the generation of threads during the rzip
@@ -900,7 +900,7 @@ bool prepare_streamout_threads(rzip_control *control)
 		++control->threads;
 	if (NO_COMPRESS)
 		control->threads = 1;
-	threads = calloc(sizeof(pthread_t), control->threads);
+	threads = control->pthreads = calloc(sizeof(pthread_t), control->threads);
 	if (unlikely(!threads))
 		fatal_return(("Unable to calloc threads in prepare_streamout_threads\n"), false);
 
@@ -931,7 +931,7 @@ bool close_streamout_threads(rzip_control *control)
 			close_thread = 0;
 	}
 	dealloc(cthreads);
-	dealloc(threads);
+	dealloc(control->pthreads);
 	return true;
 }
 
@@ -1143,6 +1143,7 @@ void *open_stream_in(rzip_control *control, int f, int n, char chunk_bytes)
 	struct uncomp_thread *ucthreads;
 	struct stream_info *sinfo;
 	int total_threads, i;
+	pthread_t *threads;
 	i64 header_length;
 
 	sinfo = calloc(sizeof(struct stream_info), 1);
@@ -1155,7 +1156,7 @@ void *open_stream_in(rzip_control *control, int f, int n, char chunk_bytes)
 		total_threads = control->threads + 2;
 	else
 		total_threads = control->threads + 1;
-	threads = calloc(sizeof(pthread_t), total_threads);
+	threads = control->pthreads = calloc(sizeof(pthread_t), total_threads);
 	if (unlikely(!threads))
 		return NULL;
 
@@ -1608,6 +1609,7 @@ error:
 
 static void clear_buffer(rzip_control *control, struct stream_info *sinfo, int streamno, int newbuf)
 {
+	pthread_t *threads = control->pthreads;
 	stream_thread_struct *s;
 	static int i = 0;
 
@@ -1752,8 +1754,9 @@ static int fill_buffer(rzip_control *control, struct stream_info *sinfo, struct 
 {
 	i64 u_len, c_len, last_head, padded_len, header_length, max_len;
 	uchar enc_head[25 + SALT_LEN], blocksalt[SALT_LEN];
-	stream_thread_struct *sts;
 	struct uncomp_thread *ucthreads = sinfo->ucthreads;
+	pthread_t *threads = control->pthreads;
+	stream_thread_struct *sts;
 	uchar c_type, *s_buf;
 	void *thr_return;
 
@@ -2028,7 +2031,7 @@ int close_stream_in(rzip_control *control, void *ss)
 
 	output_thread = 0;
 	dealloc(sinfo->ucthreads);
-	dealloc(threads);
+	dealloc(control->pthreads);
 	dealloc(sinfo->s);
 	dealloc(sinfo);
 
