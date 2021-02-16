@@ -537,6 +537,7 @@ int main(int argc, char *argv[])
 				failure("Extra characters after ramsize: \'%s\'\n", endptr);
 			break;
 		case 'N':
+			nice_set = true;
 			control->nice_val = strtol(optarg, &endptr, 10);
 			if (*endptr)
 				failure("Extra characters after nice level: \'%s\'\n", endptr);
