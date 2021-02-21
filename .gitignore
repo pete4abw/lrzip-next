@@ -16,6 +16,7 @@ libtool
 lrzip
 lrzip*.tar.bz2
 lrzip*.tar.gz
+lrzip*.tar.lrz
 ltmain.sh
 missing
 stamp-h1
@@ -28,3 +29,9 @@ man/lrunzip.1
 man/lrzcat.1
 man/lrztar.1
 man/lrzuntar.1
+man/lrz.1
+src/libzpaq/.dirstamp
+lrzip.pc
+test/regressiontest.out
+src/demo/decompress_demo
+src/demo/liblrzip_demo
