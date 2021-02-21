@@ -1,6 +1,6 @@
 /*
-   Copyright (C) 2006-2016 Con Kolivas
-   Copyright (C) 2011, 2019 Peter Hyman
+   Copyright (C) 2006-2016, 2021 Con Kolivas
+   Copyright (C) 2011, 2019, 2020, 2021 Peter Hyman
    Copyright (C) 1998-2003 Andrew Tridgell
 
    This program is free software; you can redistribute it and/or modify
@@ -71,7 +71,7 @@ static rzip_control base_control, local_control, *control;
 static void usage(bool compat)
 {
 	print_output("lrz%s version %s\n", compat ? "" : "ip", PACKAGE_VERSION);
-	print_output("Copyright (C) Con Kolivas 2006-2016\n");
+	print_output("Copyright (C) Con Kolivas 2006-2021\n");
 	print_output("Copyright (C) Peter Hyman 2007-2021\n");
 	print_output("Based on rzip ");
 	print_output("Copyright (C) Andrew Tridgell 1998-2003\n\n");
