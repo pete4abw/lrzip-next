@@ -42,6 +42,7 @@
 #include <zlib.h>
 #include <lzo/lzoconf.h>
 #include <lzo/lzo1x.h>
+#include <lz4.h>
 #ifdef HAVE_ERRNO_H
 # include <errno.h>
 #endif
@@ -151,7 +152,7 @@ bool join_pthread(rzip_control *control, pthread_t th, void **thread_return)
 /* just to keep things clean, declare function here
  * but move body to the end since it's a work function
 */
-static int lzo_compresses(rzip_control *control, uchar *s_buf, i64 s_len);
+static int lz4_compresses(rzip_control *control, uchar *s_buf, i64 s_len);
 
 /*
   ***** COMPRESSION FUNCTIONS *****
@@ -170,7 +171,7 @@ static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthr
 	int zpaq_ease, zpaq_type, compressibility;
 	char method[10]; /* level, block size, ease of compression, type */
 
-	if (!(compressibility=lzo_compresses(control, cthread->s_buf, cthread->s_len)))
+	if (!(compressibility=lz4_compresses(control, cthread->s_buf, cthread->s_len)))
 		return 0;
 
 	c_size = round_up_page(control, cthread->s_len + 10000);
@@ -183,7 +184,7 @@ static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthr
 	c_len = 0;
         /* Compression level can be 1 to 5, zpaq version 7.15 */
 	/* Levels 1 and 2 produce worse results and are omitted */
-	zpaq_ease = 255-(compressibility * 2.55);	/* 0, hard, 255, easy. Inverse of lzo_compresses */	
+	zpaq_ease = 255-(compressibility * 2.55);	/* 0, hard, 255, easy. Inverse of lz4_compresses */	
 	if (zpaq_ease < 25) zpaq_ease = 25;		/* too low a value fails */
 	zpaq_type = 0;					/* default, binary data */
 
@@ -215,7 +216,7 @@ static int bzip2_compress_buf(rzip_control *control, struct compress_thread *cth
 	int bzip2_ret;
 	uchar *c_buf;
 
-	if (!lzo_compresses(control, cthread->s_buf, cthread->s_len))
+	if (!lz4_compresses(control, cthread->s_buf, cthread->s_len))
 		return 0;
 
 	c_buf = malloc(dlen);
@@ -312,7 +313,7 @@ static int lzma_compress_buf(rzip_control *control, struct compress_thread *cthr
 	size_t dlen;
 
 
-	if (!lzo_compresses(control, cthread->s_buf, cthread->s_len))
+	if (!lz4_compresses(control, cthread->s_buf, cthread->s_len))
 		return 0;
 
 	print_maxverbose("Starting lzma back end compression thread...\n");
@@ -2071,47 +2072,44 @@ int close_stream_in(rzip_control *control, void *ss)
 	return 0;
 }
 
-/* As others are slow and lzo very fast, it is worth doing a quick lzo pass
-   to see if there is any compression at all with lzo first. It is unlikely
-   that others will be able to compress if lzo is unable to drop a single byte
-   so do not compress any block that is incompressible by lzo. */
-static int lzo_compresses(rzip_control *control, uchar *s_buf, i64 s_len)
+/* As others are slow and lz4 very fast, it is worth doing a quick lz4 pass
+   to see if there is any compression at all with lz4 first. It is unlikely
+   that others will be able to compress if lz4 is unable to drop a single byte
+   so do not compress any block that is incompressible by lz4. */
+static int lz4_compresses(rzip_control *control, uchar *s_buf, i64 s_len)
 {
-	lzo_bytep wrkmem = NULL;
-	lzo_uint in_len, test_len = s_len, save_len = s_len;
-	lzo_uint dlen;
-	uchar *c_buf = NULL, *test_buf = s_buf;
+	int in_len, test_len = s_len, save_len = s_len;
+	int dlen;
+	char *c_buf = NULL, *test_buf = (char *)s_buf;
 	/* set minimum buffer test size based on the length of the test stream */
-	unsigned long buftest_size = (test_len > 5 * STREAM_BUFSIZE ? STREAM_BUFSIZE : STREAM_BUFSIZE / 4096);
+	int buftest_size = (test_len > 5 * STREAM_BUFSIZE ? STREAM_BUFSIZE : STREAM_BUFSIZE / 4096);
 	double pct = 0;
 	int return_value;
 	int workcounter = 0;	/* count # of passes */
+	int lz4_ret;
 
-	if (!LZO_TEST)
+	if (!LZ4_TEST)
 		return 1;
-	wrkmem = (lzo_bytep) malloc(LZO1X_1_MEM_COMPRESS);
-	if (unlikely(wrkmem == NULL))
-		fatal_return(("Unable to allocate wrkmem in lzo_compresses\n"), 0);
 
 	in_len = MIN(test_len, buftest_size);
 	dlen = STREAM_BUFSIZE + STREAM_BUFSIZE / 16 + 64 + 3;
 
 	c_buf = malloc(dlen);
-	if (unlikely(!c_buf)) {
-		dealloc(wrkmem);
-		fatal_return(("Unable to allocate c_buf in lzo_compresses\n"), 0);
-	}
+	if (unlikely(!c_buf))
+		fatal_return(("Unable to allocate c_buf in lz4_compresses\n"), 0);
 
 	/* Test progressively larger blocks at a time and as soon as anything
 	   compressible is found, jump out as a success */
 	while (test_len > 0) {
 		workcounter++;
-		lzo1x_1_compress(test_buf, in_len, (uchar *)c_buf, &dlen, wrkmem);
+		lz4_ret = LZ4_compress_default((const char *)test_buf, c_buf, test_len, dlen);
 
 		/* Apply threshold limit if applicable */
-		pct = 100 * ((double) dlen / (double) in_len);
-		if (dlen < in_len * ((double) control->threshold / 100))
-			break;
+		if (lz4_ret > 0) {
+			pct = 100 * ((double) lz4_ret / (double) in_len);
+			if (lz4_ret < in_len * ((double) control->threshold / 100))
+				break;
+		}
 
 		/* expand and move buffer */
 		test_len -= in_len;
@@ -2123,11 +2121,10 @@ static int lzo_compresses(rzip_control *control, uchar *s_buf, i64 s_len)
 		}
 	}
 	return_value = (pct > control->threshold ? 0 : 1);
-	print_maxverbose("lzo testing %s for chunk %ld. Compressed size = %5.2F%% of chunk, %d Passes\n",
+	print_maxverbose("lz4 testing %s for chunk %ld. Compressed size = %5.2F%% of chunk, %d Passes\n",
 			(return_value ? "OK" : "FAILED"), save_len,
 			pct, workcounter);
 
-	dealloc(wrkmem);
 	dealloc(c_buf);
 
 	return return_value;

@@ -127,7 +127,9 @@ AC_CHECK_LIB(m, sqrt, ,
 AC_CHECK_LIB(z, compress2, ,
 	AC_MSG_ERROR([Could not find zlib library - please install zlib-dev]))
 AC_CHECK_LIB(bz2, BZ2_bzBuffToBuffCompress, ,
-	AC_MSG_ERROR([Could not find bz2 library - please install libbz2-dev]))
+        AC_MSG_ERROR([Could not find bz2 library - please install libbz2-dev]))
+AC_CHECK_LIB(lz4, LZ4_compress_default, ,
+	AC_MSG_ERROR([Could not find lz4 library - please install liblz4-dev]))
 
 AC_CHECK_FUNCS(mmap strerror)
 AC_CHECK_FUNCS(getopt_long)
@@ -135,7 +137,7 @@ AC_CHECK_FUNCS(getopt_long)
 AX_PTHREAD
 LIBS="$PTHREAD_LIBS $LIBS"
 CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
-CXXFLAGS="$CXXFLAGS $PTHREAD_CFLAGS"
+CXXFLAGS="$CXXFLAGS $PTHREAD_CXXFLAGS"
 
 ## test for ARM or other non x86 processor
 ## must use -DNOJIT for compiling zpaq

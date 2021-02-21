@@ -1,7 +1,7 @@
 .\" LRZIP manpage
 .\" Comment lines for readability
 .\"
-.TH "lrzip" 1 "May 2020" "lrzip Command Reference" ""
+.TH "lrzip" 1 "February 2021" "lrzip Command Reference" ""
 .SH "NAME"
 lrzip \- a large-file compression program
 .SH "SYNOPSIS"
@@ -64,7 +64,7 @@ Low level Compression Options:
  \-m, \-\-maxram size       Set maximum available ram in hundreds of MB
                          overrides detected amount of available ram
  \-R, \-\-rzip-level level  Set independent RZIP Compression Level (1-9) for pre-processing (default=compression level)
- \-T, \-\-threshold [limit] Disable LZO compressibility testing OR set limit to determine compressibiity (1-99)
+ \-T, \-\-threshold [limit] Disable LZ4 compressibility testing OR set limit to determine compressibiity (1-99)
  \-U, \-\-unlimited         Use unlimited window size beyond ramsize (potentially much slower)
  \-w, \-\-window size       maximum compression window in hundreds of MB
                          default chosen by heuristic dependent on ram and chosen compression
@@ -194,22 +194,22 @@ Ex. 40=4GB.
 Specify the rzip pre-processing compression level. If not set, will default
 to compression level.
 .IP "\fB-T | --threshold\fP"
-Disables the LZO compressibility threshold testing when a slower compression
-back-end is used. LZO testing is normally performed for the slower back-end
+Disables the LZ4 compressibility threshold testing when a slower compression
+back-end is used. LZ4 testing is normally performed for the slower back-end
 compression of LZMA and ZPAQ. The reasoning is that if it is completely
-incompressible by LZO then it will also be incompressible by them. Thus if a
-block fails to be compressed by the very fast LZO, lrzip will not attempt to
+incompressible by LZ4 then it will also be incompressible by them. Thus if a
+block fails to be compressed by the very fast LZ4, lrzip will not attempt to
 compress that block with the slower compressor, thereby saving time. If this
-option is enabled, it will bypass the LZO testing and attempt to compress each
+option is enabled, it will bypass the LZ4 testing and attempt to compress each
 block regardless.
 .IP "\fB-T | --threshold \fIlimit\fP"
 If the value \fBlimit\fP is used, it will test compressibility as a percentage of
 chunk size. Limiting chunck compressibility threshold can speed up compression.
-If, for example, LZO_TEST determines a chunk is 99.99% of chunk size, it will
+If, for example, LZ4_TEST determines a chunk is 99.99% of chunk size, it will
 pass the chunk to the compressor even though it is barely compressible. Setting
 \fBlimit\fP to a lower value, 95% for example, the chunk will not be passed to
 the compressor unless it is at least 5% compression benefit as determined by
-LZO_TEST. Any value from 1-99 is allowed.
+LZ4_TEST. Any value from 1-99 is allowed.
 .IP "\fB-U | --unlimited\fP"
 Unlimited window size\&. If this option is set, and the file being compressed
 does not fit into the available ram, lrzip will use a moving second buffer as a

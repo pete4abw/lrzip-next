@@ -117,7 +117,7 @@ static void usage(bool compat)
 	print_output("	-m, --maxram size	Set maximum available ram in hundreds of MB\n\t\t\t\tOverrides detected amount of available ram. \
 Useful for testing\n");
 	print_output("	-R, --rzip-level level	Set independent RZIP Compression Level (1-9) for pre-processing (default=compression level)\n");
-	print_output("	-T, --threshold [limit]	Disable LZO compressibility testing OR set limit to determine compressibiity (1-99)\n\t\t\t\t\
+	print_output("	-T, --threshold [limit]	Disable LZ4 compressibility testing OR set limit to determine compressibiity (1-99)\n\t\t\t\t\
 Note: Since limit is optional, the short option must not have a space. e.g. -T75, not -T 75\n");
 	print_output("	-U, --unlimited		Use unlimited window size beyond ramsize (potentially much slower)\n");
 	print_output("	-w, --window size	maximum compression window in hundreds of MB\n\t\t\t\t\
@@ -207,8 +207,8 @@ static void show_summary(void)
 					(ZPAQ_COMPRESS ? "ZPAQ" :
 					(NO_COMPRESS ? "RZIP pre-processing only" : "wtf")))))));
 			if (!LZO_COMPRESS && !ZLIB_COMPRESS)
-				print_verbose(". LZO Compressibility testing %s\n", (LZO_TEST? "enabled" : "disabled"));
-			if (LZO_TEST && control->threshold != 100)
+				print_verbose(". LZ4 Compressibility testing %s\n", (LZ4_TEST? "enabled" : "disabled"));
+			if (LZ4_TEST && control->threshold != 100)
 				print_verbose("Threshhold limit = %d\%\n", control->threshold);
 			print_verbose("Compression level %d\n", control->compression_level);
 			print_verbose("RZIP Compression level %d\n", control->rzip_compression_level);
@@ -681,9 +681,9 @@ int main(int argc, char *argv[])
 		control->flags &= ~FLAG_UNLIMITED;
 	}
 
-	/* if any filter used, disable LZO testing or certain compression modes */
+	/* if any filter used, disable LZ4 testing or certain compression modes */
 	if ((control->flags & FLAG_THRESHOLD) && (FILTER_USED || ZLIB_COMPRESS || LZO_COMPRESS || NO_COMPRESS)) {
-		print_output("LZO Threshold testing disabled due to Filtering and/or Compression type (gzip, lzo, rzip).\n");
+		print_output("LZ4 Threshold testing disabled due to Filtering and/or Compression type (gzip, lzo, rzip).\n");
 		control->flags &= ~FLAG_THRESHOLD;
 	}
 
