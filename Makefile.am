@@ -39,10 +39,10 @@ dist_doc_DATA = \
 	WHATS-NEW
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = lrzip.pc
+pkgconfig_DATA = lrzip-next.pc
 
 EXTRA_DIST = \
-	lrzip.pc.in \
+	lrzip-next.pc.in \
 	src/lrztar \
 	description-pak \
 	autogen.sh \
@@ -50,10 +50,10 @@ EXTRA_DIST = \
 	$(dist_doc_DATA)
 
 install-exec-hook:
-	$(LN_S) -f lrzip$(EXEEXT) $(DESTDIR)$(bindir)/lrunzip$(EXEEXT)
-	$(LN_S) -f lrzip$(EXEEXT) $(DESTDIR)$(bindir)/lrzcat$(EXEEXT)
+	$(LN_S) -f lrzip-next$(EXEEXT) $(DESTDIR)$(bindir)/lrunzip$(EXEEXT)
+	$(LN_S) -f lrzip-next$(EXEEXT) $(DESTDIR)$(bindir)/lrzcat$(EXEEXT)
 	$(LN_S) -f lrztar$(EXEEXT) $(DESTDIR)$(bindir)/lrzuntar$(EXEEXT)
-	$(LN_S) -f lrzip$(EXEEXT) $(DESTDIR)$(bindir)/lrz$(EXEEXT)
+	$(LN_S) -f lrzip-next$(EXEEXT) $(DESTDIR)$(bindir)/lrz$(EXEEXT)
 
 
 uninstall-local:

@@ -54,7 +54,7 @@ Notice:
           v_H=0 v_c=0 v_k=0 v_o=0 v_O=0 v_m=0 x= i="$(pwd)"
     tar --version &> /dev/null \
         || { printf "lrztar: no tar in your path\n"; return 1; }
-    lrzip --version &> /dev/null \
+    lrzip-next --version &> /dev/null \
         || { printf "lrztar: no lrzip in your path\n"; return 1; }
     lrzcat --version &> /dev/null \
         || { printf "lrztar: no lrzcat in your path\n"; return 1; }
@@ -144,7 +144,7 @@ Notice:
                 return 1
             }
         fi
-        tar c "$s" | lrzip "${p[@]}"
+        tar c "$s" | lrzip-next "${p[@]}"
         x=$?
     }
     return $x

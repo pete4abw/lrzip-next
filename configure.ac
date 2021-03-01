@@ -11,7 +11,7 @@ m4_define([lt_age], v_min)
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([lrzip],[v_ver],[pete@peterhyman.com])
+AC_INIT([lrzip-next],[v_ver],[pete@peterhyman.com])
 AC_PREREQ([2.59])
 AC_CONFIG_SRCDIR([configure.ac])
 AC_CONFIG_MACRO_DIR([m4])
@@ -156,7 +156,7 @@ EFL_CHECK_DOXYGEN([build_doc="yes"], [build_doc="no"])
 
 AC_CONFIG_FILES([
 Makefile
-lrzip.pc
+lrzip-next.pc
 src/Makefile
 src/demo/Makefile
 src/lzma/Makefile

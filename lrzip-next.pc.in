@@ -3,8 +3,8 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 
-Name: lrzip
-Description: lrzip compression library
+Name: lrzip-next
+Description: lrzip-next compression library
 Version: @VERSION@
-Libs: -L${libdir} -llrzip
+Libs: -L${libdir} -llrzip-next
 Libs.private: @LIBS@
