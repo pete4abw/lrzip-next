@@ -5,6 +5,6 @@ includedir=@includedir@
 
 Name: lrzip-next
 Description: lrzip-next compression library
-Version: @VERSION@
+Version: @LIBVER@
 Libs: -L${libdir} -llrzip-next
 Libs.private: @LIBS@

@@ -5,9 +5,6 @@ m4_define([v_min], [m4_esyscmd_s([./util/gitdesc.sh minor])])
 m4_define([v_mic], [m4_esyscmd_s([./util/gitdesc.sh micro])])
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 m4_define([v_ver], [v_maj.v_min.v_mic])
-m4_define([lt_rev], m4_eval(v_maj + v_min))
-m4_define([lt_cur], v_mic)
-m4_define([lt_age], v_min)
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 dnl Process this file with autoconf to produce a configure script.
@@ -18,10 +15,17 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([config.h])
 
 AM_INIT_AUTOMAKE([1.6 dist-bzip2 foreign subdir-objects])
-m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_USE_SYSTEM_EXTENSIONS
 
 AC_PROG_LIBTOOL
+LT_INIT
+## Really set library version, but trim only major:minor version.
+LT_VER="v_maj:v_min:$(echo v_mic | cut -d- -f1)"
+AC_SUBST([LT_VER])
+## for pkgconfig
+LIBVER=${LT_VER//:/.}
+AC_SUBST([LIBVER])
+
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 m4_ifdef([v_rev], , [m4_define([v_rev], [0])])
@@ -29,10 +33,6 @@ m4_ifdef([v_rel], , [m4_define([v_rel], [])])
 AC_DEFINE_UNQUOTED(LRZIP_MAJOR_VERSION, [v_maj], [Major version])
 AC_DEFINE_UNQUOTED(LRZIP_MINOR_VERSION, [v_min], [Minor version])
 AC_DEFINE_UNQUOTED(LRZIP_MINOR_SUBVERSION, [v_mic], [Micro version])
-version_info="lt_rev:lt_cur:lt_age"
-release_info="v_rel"
-AC_SUBST(version_info)
-AC_SUBST(release_info)
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 VMAJ=v_maj
