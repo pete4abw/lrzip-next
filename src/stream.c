@@ -79,12 +79,12 @@ static struct compress_thread {
 } *cthreads;
 
 typedef struct stream_thread_struct {
-	int i;
+	int i;		/* this is the current thread */
 	rzip_control *control;
 	struct stream_info *sinfo;
 } stream_thread_struct;
 
-static long output_thread;
+static int output_thread;
 static pthread_mutex_t output_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t output_cond = PTHREAD_COND_INITIALIZER;
 
@@ -164,7 +164,7 @@ static int lz4_compresses(rzip_control *control, uchar *s_buf, i64 s_len);
   length in c_len
 */
 
-static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthread, long thread)
+static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthread, int current_thread)
 {
 	i64 c_len, c_size;
 	uchar *c_buf;
@@ -190,11 +190,11 @@ static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthr
 
 	sprintf(method,"%d%d,%d,%d",control->zpaq_level,control->zpaq_bs,zpaq_ease,zpaq_type);
 
-	print_verbose("ZPAQ: Method selected: %s: level=%d, bs=%d, easy=%d, type=%d\n",
-		       method, control->zpaq_level, control->zpaq_bs, zpaq_ease, zpaq_type);
+	print_verbose("Starting zpaq backend compression thread %d...\nZPAQ: Method selected: %s: level=%d, bs=%d, easy=%d, type=%d\n",
+		       current_thread, method, control->zpaq_level, control->zpaq_bs, zpaq_ease, zpaq_type);
 
         zpaq_compress(c_buf, &c_len, cthread->s_buf, cthread->s_len, &method[0],
-			control->msgout, SHOW_PROGRESS ? true: false, thread);
+			control->msgout, SHOW_PROGRESS ? true: false, current_thread);
 
 	if (unlikely(c_len >= cthread->c_len)) {
 		print_maxverbose("Incompressible block\n");
@@ -304,7 +304,7 @@ static int gzip_compress_buf(rzip_control *control, struct compress_thread *cthr
 	return 0;
 }
 
-static int lzma_compress_buf(rzip_control *control, struct compress_thread *cthread)
+static int lzma_compress_buf(rzip_control *control, struct compress_thread *cthread, int current_thread)
 {
 	unsigned char lzma_properties[5]; /* lzma properties, encoded */
 	int lzma_level, lzma_ret;
@@ -316,7 +316,7 @@ static int lzma_compress_buf(rzip_control *control, struct compress_thread *cthr
 	if (!lz4_compresses(control, cthread->s_buf, cthread->s_len))
 		return 0;
 
-	print_maxverbose("Starting lzma back end compression thread...\n");
+	print_maxverbose("Starting lzma back end compression thread %d...\n", current_thread);
 retry:
 	dlen = round_up_page(control, cthread->s_len * 1.02); // add 2% for lzma overhead to prevent memory overrun
 	c_buf = malloc(dlen);
@@ -441,7 +441,7 @@ out_free:
 
   try to decompress a buffer. Return 0 on success and -1 on failure.
 */
-static int zpaq_decompress_buf(rzip_control *control __UNUSED__, struct uncomp_thread *ucthread, long thread)
+static int zpaq_decompress_buf(rzip_control *control __UNUSED__, struct uncomp_thread *ucthread, int current_thread)
 {
 	i64 dlen = ucthread->u_len;
 	uchar *c_buf;
@@ -457,7 +457,7 @@ static int zpaq_decompress_buf(rzip_control *control __UNUSED__, struct uncomp_t
 
 	dlen = 0;
 	zpaq_decompress(ucthread->s_buf, &dlen, c_buf, ucthread->c_len,
-			control->msgout, SHOW_PROGRESS ? true: false, thread);
+			control->msgout, SHOW_PROGRESS ? true: false, current_thread);
 
 	if (unlikely(dlen != ucthread->u_len)) {
 		print_err("Inconsistent length after decompression. Got %ld bytes, expected %lld\n", dlen, ucthread->u_len);
@@ -1360,7 +1360,7 @@ static void *compthread(void *data)
 {
 	stream_thread_struct *s = data;
 	rzip_control *control = s->control;
-	long i = s->i;
+	int current_thread = s->i;
 	struct compress_thread *cti;
 	struct stream_info *ctis;
 	int waited = 0, ret = 0;
@@ -1370,7 +1370,7 @@ static void *compthread(void *data)
 	/* Make sure this thread doesn't already exist */
 
 	dealloc(data);
-	cti = &cthreads[i];
+	cti = &cthreads[current_thread];
 	ctis = cti->sinfo;
 
 	if (unlikely(setpriority(PRIO_PROCESS, 0, control->nice_val) == -1)) {
@@ -1401,7 +1401,7 @@ retry:
 				((control->filter_flag == FILTER_FLAG_PPC) ? "PPC" :
 				((control->filter_flag == FILTER_FLAG_SPARC) ? "SPARC" :
 				((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
-				((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf"))))))), i);
+				((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf"))))))), current_thread);
 		if (control->filter_flag == FILTER_FLAG_X86) {
 			UInt32 x86State;
 			x86_Convert_Init(x86State);
@@ -1435,7 +1435,7 @@ retry:
 	if (!NO_COMPRESS && cti->c_len >= 64) {
 		/* Any Filter */
 		if (LZMA_COMPRESS)
-			ret = lzma_compress_buf(control, cti);
+			ret = lzma_compress_buf(control, cti, current_thread);
 		else if (LZO_COMPRESS)
 			ret = lzo_compress_buf(control, cti);
 		else if (BZIP2_COMPRESS)
@@ -1443,7 +1443,7 @@ retry:
 		else if (ZLIB_COMPRESS)
 			ret = gzip_compress_buf(control, cti);
 		else if (ZPAQ_COMPRESS)
-			ret = zpaq_compress_buf(control, cti, i);
+			ret = zpaq_compress_buf(control, cti, current_thread);
 		else failure_goto(("Dunno wtf compression to use!\n"), error);
 	}
 
@@ -1468,7 +1468,7 @@ retry:
 
 	if (!waited) {
 		lock_mutex(control, &output_lock);
-		while (output_thread != i)
+		while (output_thread != current_thread)
 			cond_wait(control, &output_cond, &output_lock);
 		unlock_mutex(control, &output_lock);
 		waited = 1;
@@ -1551,7 +1551,7 @@ retry:
 			* later */
 			if (ENCRYPT) {
 				if (unlikely(write_val(control, 0, SALT_LEN)))
-					fatal_goto(("Failed to write_buf blank salt in compthread %d\n", i), error);
+					fatal_goto(("Failed to write_buf blank salt in compthread %d\n", current_thread), error);
 				ctis->cur_pos += SALT_LEN;
 			}
 			ctis->s[j].last_head = ctis->cur_pos + 1 + (write_len * 2);
@@ -1563,29 +1563,29 @@ retry:
 		}
 	}
 
-	print_maxverbose("Compthread %ld seeking to %lld to store length %d\n", i, ctis->s[cti->streamno].last_head, write_len);
+	print_maxverbose("Compthread %d seeking to %lld to store length %d\n", current_thread, ctis->s[cti->streamno].last_head, write_len);
 
 	if (unlikely(seekto(control, ctis, ctis->s[cti->streamno].last_head)))
-		fatal_goto(("Failed to seekto in compthread %d\n", i), error);
+		fatal_goto(("Failed to seekto in compthread %d\n", current_thread), error);
 
 	if (unlikely(write_val(control, ctis->cur_pos, write_len)))
-		fatal_goto(("Failed to write_val cur_pos in compthread %d\n", i), error);
+		fatal_goto(("Failed to write_val cur_pos in compthread %d\n", current_thread), error);
 
 	if (ENCRYPT)
 		rewrite_encrypted(control, ctis, ctis->s[cti->streamno].last_head - 17);
 
 	ctis->s[cti->streamno].last_head = ctis->cur_pos + 1 + (write_len * 2) + (ENCRYPT ? SALT_LEN : 0);
 
-	print_maxverbose("Compthread %ld seeking to %lld to write header\n", i, ctis->cur_pos);
+	print_maxverbose("Compthread %d seeking to %lld to write header\n", current_thread, ctis->cur_pos);
 
 	if (unlikely(seekto(control, ctis, ctis->cur_pos)))
-		fatal_goto(("Failed to seekto cur_pos in compthread %d\n", i), error);
+		fatal_goto(("Failed to seekto cur_pos in compthread %d\n", current_thread), error);
 
-	print_maxverbose("Thread %ld writing %lld compressed bytes from stream %d\n", i, padded_len, cti->streamno);
+	print_maxverbose("Thread %d writing %lld compressed bytes from stream %d\n", current_thread, padded_len, cti->streamno);
 
 	if (ENCRYPT) {
 		if (unlikely(write_val(control, 0, SALT_LEN)))
-			fatal_goto(("Failed to write_buf header salt in compthread %d\n", i), error);
+			fatal_goto(("Failed to write_buf header salt in compthread %d\n", current_thread), error);
 		ctis->cur_pos += SALT_LEN;
 		ctis->s[cti->streamno].last_headofs = ctis->cur_pos;
 	}
@@ -1594,7 +1594,7 @@ retry:
 		write_val(control, cti->c_len, write_len) ||
 		write_val(control, cti->s_len, write_len) ||
 		write_val(control, 0, write_len))) {
-			fatal_goto(("Failed write in compthread %d\n", i), error);
+			fatal_goto(("Failed write in compthread %d\n", current_thread), error);
 	}
 	ctis->cur_pos += 1 + (write_len * 3);
 
@@ -1602,16 +1602,16 @@ retry:
 		if (unlikely(!get_rand(control, cti->salt, SALT_LEN)))
 			goto error;
 		if (unlikely(write_buf(control, cti->salt, SALT_LEN)))
-			fatal_goto(("Failed to write_buf block salt in compthread %d\n", i), error);
+			fatal_goto(("Failed to write_buf block salt in compthread %d\n", current_thread), error);
 		if (unlikely(!lrz_encrypt(control, cti->s_buf, padded_len, cti->salt)))
 			goto error;
 		ctis->cur_pos += SALT_LEN;
 	}
 
-	print_maxverbose("Compthread %ld writing data at %lld\n", i, ctis->cur_pos);
+	print_maxverbose("Compthread %d writing data at %lld\n", current_thread, ctis->cur_pos);
 
 	if (unlikely(write_buf(control, cti->s_buf, padded_len)))
-		fatal_goto(("Failed to write_buf s_buf in compthread %d\n", i), error);
+		fatal_goto(("Failed to write_buf s_buf in compthread %d\n", current_thread), error);
 
 	ctis->cur_pos += padded_len;
 	dealloc(cti->s_buf);
@@ -1632,28 +1632,28 @@ static void clear_buffer(rzip_control *control, struct stream_info *sinfo, int s
 {
 	pthread_t *threads = control->pthreads;
 	stream_thread_struct *s;
-	static int i = 0;
+	static int current_thread = 0;
 
 	/* Make sure this thread doesn't already exist */
-	cksem_wait(control, &cthreads[i].cksem);
+	cksem_wait(control, &cthreads[current_thread].cksem);
 
-	cthreads[i].sinfo = sinfo;
-	cthreads[i].streamno = streamno;
-	cthreads[i].s_buf = sinfo->s[streamno].buf;
-	cthreads[i].s_len = sinfo->s[streamno].buflen;
+	cthreads[current_thread].sinfo = sinfo;
+	cthreads[current_thread].streamno = streamno;
+	cthreads[current_thread].s_buf = sinfo->s[streamno].buf;
+	cthreads[current_thread].s_len = sinfo->s[streamno].buflen;
 
-	print_maxverbose("Starting thread %ld to compress %lld bytes from stream %d\n",
-			 i, cthreads[i].s_len, streamno);
+	print_maxverbose("Starting thread %d to compress %lld bytes from stream %d\n",
+			 current_thread, cthreads[current_thread].s_len, streamno);
 
 	s = malloc(sizeof(stream_thread_struct));
 	if (unlikely(!s)) {
-		cksem_post(control, &cthreads[i].cksem);
+		cksem_post(control, &cthreads[current_thread].cksem);
 		failure("Unable to malloc in clear_buffer");
 	}
-	s->i = i;
+	s->i = current_thread;
 	s->control = control;
-	if (unlikely((!create_pthread(control, &threads[i], NULL, compthread, s)) ||
-	             (!detach_pthread(control, &threads[i]))))
+	if (unlikely((!create_pthread(control, &threads[current_thread], NULL, compthread, s)) ||
+	             (!detach_pthread(control, &threads[current_thread]))))
 		failure("Unable to create compthread in clear_buffer");
 
 	if (newbuf) {
@@ -1665,8 +1665,8 @@ static void clear_buffer(rzip_control *control, struct stream_info *sinfo, int s
 		sinfo->s[streamno].buflen = 0;
 	}
 
-	if (++i == control->threads)
-		i = 0;
+	if (++current_thread == control->threads)
+		current_thread = 0;
 }
 
 /* flush out any data in a stream buffer */
@@ -1679,8 +1679,8 @@ static void *ucompthread(void *data)
 {
 	stream_thread_struct *sts = data;
 	rzip_control *control = sts->control;
-	int waited = 0, ret = 0, i = sts->i;
-	struct uncomp_thread *uci = &sts->sinfo->ucthreads[i];
+	int waited = 0, ret = 0, current_thread = sts->i;
+	struct uncomp_thread *uci = &sts->sinfo->ucthreads[current_thread];
 
 	dealloc(data);
 
@@ -1705,7 +1705,7 @@ retry:
 				ret = gzip_decompress_buf(control, uci);
 				break;
 			case CTYPE_ZPAQ:
-				ret = zpaq_decompress_buf(control, uci, i);
+				ret = zpaq_decompress_buf(control, uci, current_thread);
 				break;
 			default:
 				failure_return(("Dunno wtf decompression type to use!\n"), NULL);
@@ -1720,7 +1720,7 @@ retry:
 				((control->filter_flag == FILTER_FLAG_PPC) ? "PPC" :
 				((control->filter_flag == FILTER_FLAG_SPARC) ? "SPARC" :
 				((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
-				((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf"))))))), i);
+				((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf"))))))), current_thread);
 		if (control->filter_flag == FILTER_FLAG_X86) {
 			UInt32 x86State;
 			x86_Convert_Init(x86State);
@@ -1758,14 +1758,14 @@ retry:
 		 * decompression fails due to inadequate memory to try again
 		 * serialised. */
 		lock_mutex(control, &output_lock);
-		while (output_thread != i)
+		while (output_thread != current_thread)
 			cond_wait(control, &output_cond, &output_lock);
 		unlock_mutex(control, &output_lock);
 		waited = 1;
 		goto retry;
 	}
 
-	print_maxverbose("Thread %ld decompressed %lld bytes from stream %d\n", i, uci->u_len, uci->streamno);
+	print_maxverbose("Thread %d decompressed %lld bytes from stream %d\n", current_thread, uci->u_len, uci->streamno);
 
 	return NULL;
 }

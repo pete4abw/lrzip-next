@@ -44,8 +44,8 @@ void close_tmpinbuf(rzip_control *control);
 bool initialise_control(rzip_control *control);
 #define initialize_control(_control) initialise_control(_control)
 extern void zpaq_compress(uchar *c_buf, i64 *c_len, uchar *s_buf, i64 s_len, uchar *method,
-			  FILE *msgout, bool progress, long thread);
+			  FILE *msgout, bool progress, int thread);
 extern void zpaq_decompress(uchar *s_buf, i64 *d_len, uchar *c_buf, i64 c_len,
-			    FILE *msgout, bool progress, long thread);
+			    FILE *msgout, bool progress, int thread);
 
 #endif

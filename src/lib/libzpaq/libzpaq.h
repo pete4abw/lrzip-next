@@ -1534,10 +1534,10 @@ struct bufRead: public libzpaq::Reader {
 	i64 total_len;
 	int *last_pct;
 	bool progress;
-	long thread;
+	int thread;
 	FILE *msgout;
 
-	bufRead(uchar *buf_, i64 *n_, i64 total_len_, int *last_pct_, bool progress_, long thread_, FILE *msgout_):
+	bufRead(uchar *buf_, i64 *n_, i64 total_len_, int *last_pct_, bool progress_, int thread_, FILE *msgout_):
 		s_buf(buf_), s_len(n_), total_len(total_len_), last_pct(last_pct_), progress(progress_), thread(thread_), msgout(msgout_) {}
 
 	int get() {
@@ -1551,7 +1551,7 @@ struct bufRead: public libzpaq::Reader {
 				fprintf(msgout, "\r\t\t\tZPAQ\t");
 				for (i = 0; i < thread; i++)
 					fprintf(msgout, "\t");
-				fprintf(msgout, "%ld:%i%%  \r",
+				fprintf(msgout, "%d:%i%%  \r",
 					thread + 1, pct);
 				fflush(msgout);
 				*last_pct = pct;
@@ -1593,7 +1593,7 @@ struct bufWrite: public libzpaq::Writer {
 };
 
 extern "C" void zpaq_compress(uchar *c_buf, i64 *c_len, uchar *s_buf, i64 s_len,
-		uchar *method, FILE *msgout, bool progress, long thread)
+		uchar *method, FILE *msgout, bool progress, int thread)
 {
 	i64 total_len = s_len;
 	int last_pct = 100;
@@ -1605,7 +1605,7 @@ extern "C" void zpaq_compress(uchar *c_buf, i64 *c_len, uchar *s_buf, i64 s_len,
 }
 
 extern "C" void zpaq_decompress(uchar *s_buf, i64 *d_len, uchar *c_buf, i64 c_len,
-				FILE *msgout, bool progress, long thread)
+				FILE *msgout, bool progress, int thread)
 {
 	i64 total_len = c_len;
 	int last_pct = 100;
