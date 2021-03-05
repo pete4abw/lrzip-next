@@ -2102,7 +2102,7 @@ static int lz4_compresses(rzip_control *control, uchar *s_buf, i64 s_len)
 	   compressible is found, jump out as a success */
 	while (test_len > 0) {
 		workcounter++;
-		lz4_ret = LZ4_compress_default((const char *)test_buf, c_buf, test_len, dlen);
+		lz4_ret = LZ4_compress_default((const char *)test_buf, c_buf, in_len, dlen);
 
 		/* Apply threshold limit if applicable */
 		if (lz4_ret > 0) {
@@ -2120,9 +2120,9 @@ static int lz4_compresses(rzip_control *control, uchar *s_buf, i64 s_len)
 			in_len = MIN(test_len, buftest_size);
 		}
 	}
-	return_value = (pct > control->threshold ? 0 : 1);
+	return_value = (pct > control->threshold ? 0 : (int) pct);
 	print_maxverbose("lz4 testing %s for chunk %ld. Compressed size = %5.2F%% of chunk, %d Passes\n",
-			(return_value ? "OK" : "FAILED"), save_len,
+			(return_value > 0 ? "OK" : "FAILED"), save_len,
 			pct, workcounter);
 
 	dealloc(c_buf);
