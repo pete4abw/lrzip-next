@@ -171,8 +171,14 @@ static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthr
 	int zpaq_ease, zpaq_type, compressibility;
 	char method[10]; /* level, block size, ease of compression, type */
 
-	if (!(compressibility=lz4_compresses(control, cthread->s_buf, cthread->s_len)))
-		return 0;
+	/* if we're testing compressibility */
+	if (LZ4_TEST) {
+		if (!(compressibility=lz4_compresses(control, cthread->s_buf, cthread->s_len)))
+			return 0;
+	} /* else set compressibility to a neutral value */
+	else
+		compressibility = 50;	/* midpoint */
+
 
 	c_size = round_up_page(control, cthread->s_len + 10000);
 	c_buf = malloc(c_size);
@@ -184,7 +190,7 @@ static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthr
 	c_len = 0;
         /* Compression level can be 1 to 5, zpaq version 7.15 */
 	/* Levels 1 and 2 produce worse results and are omitted */
-	zpaq_ease = 255-(compressibility * 2.55);	/* 0, hard, 255, easy. Inverse of lz4_compresses */	
+	zpaq_ease = 256-(compressibility * 2.55);	/* 0, hard, 255, easy. Inverse of lz4_compresses */
 	if (zpaq_ease < 25) zpaq_ease = 25;		/* too low a value fails */
 	zpaq_type = 0;					/* default, binary data */
 
@@ -216,8 +222,10 @@ static int bzip2_compress_buf(rzip_control *control, struct compress_thread *cth
 	int bzip2_ret;
 	uchar *c_buf;
 
-	if (!lz4_compresses(control, cthread->s_buf, cthread->s_len))
-		return 0;
+	if (LZ4_TEST) {
+		if (!lz4_compresses(control, cthread->s_buf, cthread->s_len))
+			return 0;
+	}
 
 	c_buf = malloc(dlen);
 	if (!c_buf) {
@@ -312,9 +320,10 @@ static int lzma_compress_buf(rzip_control *control, struct compress_thread *cthr
 	uchar *c_buf;
 	size_t dlen;
 
-
-	if (!lz4_compresses(control, cthread->s_buf, cthread->s_len))
-		return 0;
+	if (LZ4_TEST) {
+		if (!lz4_compresses(control, cthread->s_buf, cthread->s_len))
+			return 0;
+	}
 
 	print_maxverbose("Starting lzma back end compression thread %d...\n", current_thread);
 retry:
@@ -2078,31 +2087,27 @@ int close_stream_in(rzip_control *control, void *ss)
    so do not compress any block that is incompressible by lz4. */
 static int lz4_compresses(rzip_control *control, uchar *s_buf, i64 s_len)
 {
-	int in_len, test_len = s_len, save_len = s_len;
-	int dlen;
+	int in_len, d_len, buftest_size, test_len = s_len;
 	char *c_buf = NULL, *test_buf = (char *)s_buf;
 	/* set minimum buffer test size based on the length of the test stream */
-	int buftest_size = (test_len > 5 * STREAM_BUFSIZE ? STREAM_BUFSIZE : STREAM_BUFSIZE / 4096);
 	double pct = 0;
 	int return_value;
 	int workcounter = 0;	/* count # of passes */
 	int lz4_ret;
 
-	if (!LZ4_TEST)
-		return 1;
+	in_len = MIN(test_len, STREAM_BUFSIZE); // Set min of s_len or 10MB
+	buftest_size = in_len;
+	d_len = in_len+1;
 
-	in_len = MIN(test_len, buftest_size);
-	dlen = STREAM_BUFSIZE + STREAM_BUFSIZE / 16 + 64 + 3;
-
-	c_buf = malloc(dlen);
+	c_buf = malloc(d_len);
 	if (unlikely(!c_buf))
 		fatal_return(("Unable to allocate c_buf in lz4_compresses\n"), 0);
 
 	/* Test progressively larger blocks at a time and as soon as anything
-	   compressible is found, jump out as a success */
+	   compressible is found, including with Threshold, jump out as a success */
 	while (test_len > 0) {
 		workcounter++;
-		lz4_ret = LZ4_compress_default((const char *)test_buf, c_buf, in_len, dlen);
+		lz4_ret = LZ4_compress_default((const char *)test_buf, c_buf, in_len, d_len);
 
 		/* Apply threshold limit if applicable */
 		if (lz4_ret > 0) {
@@ -2113,17 +2118,22 @@ static int lz4_compresses(rzip_control *control, uchar *s_buf, i64 s_len)
 
 		/* expand and move buffer */
 		test_len -= in_len;
-		if (test_len) {
-			test_buf += (ptrdiff_t)in_len;
+		if (test_len > 0) {
+			// No. Don't move pte. test_buf += (ptrdiff_t)in_len;
+			buftest_size += in_len;
 			if (buftest_size < STREAM_BUFSIZE)
 				buftest_size <<= 1;
 			in_len = MIN(test_len, buftest_size);
+			d_len += in_len;	// Make sure dlen is increased as buffer test does
+			c_buf = realloc(c_buf, d_len);
+			if (unlikely(!c_buf))
+				fatal_return(("Unable to reallocate c_buf in lz4_compresses\n"), 0);
 		}
 	}
 	return_value = (pct > control->threshold ? 0 : (int) pct);
-	print_maxverbose("lz4 testing %s for chunk %ld. Compressed size = %5.2F%% of chunk, %d Passes\n",
-			(return_value > 0 ? "OK" : "FAILED"), save_len,
-			pct, workcounter);
+	print_maxverbose("lz4 testing %s for chunk %ld. Compressed size = %5.2F%% of test size %d, %d Passes\n",
+			(return_value > 0 ? "OK" : "FAILED"), s_len,
+			pct, buftest_size, workcounter);
 
 	dealloc(c_buf);
 
