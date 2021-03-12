@@ -32,6 +32,10 @@ $ git clone https://github.com/pete4abw/lrzip-next
 $ cd lrzip-next
 $ git submodule update --init (to download lrzip-fe)
 ```
+Note: Downloading tarballs won't compile because of `git describe` usage. This is a
+development platform. Precise versioning is important to tag errors to precise
+commits.
+
 ### Build
 ```
 cd lrzip-next
@@ -68,7 +72,7 @@ faster compression than standalone compressors and much faster decompression.
 using lzma compression at level 7. To operate on more than one file, the included **lrztar** 
 application can be run or **lrzip** can be inserted into a **tar** command.
 
-`lrzip-next file` will compress `file` using lzma compression at level 7.
+`lrzip-next file` will compress `file` using lzma compression at level 7.  
 `tar --use-compress-program=lrzip-next -cf file.lrz file...` will compress file(s) or a 
 directory(ies) *file...* using lzma compression at level 7.
 
