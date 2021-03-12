@@ -341,8 +341,8 @@ static void recurse_dirlist(char *indir, char **dirlist, int *entries)
 	closedir(dirp);
 }
 
-static const char *loptions = "bcCdDefghHiKlL:nN:o:O:p:PqrR:S:tT::Um:vVw:z?";
-static const char *coptions = "bcCdefghHikKlLnN:o:O:p:PrR:S:tT::Um:vVw:z?123456789";
+static const char *loptions = "bcCdDe:fghHiKlL:nN:o:O:p:PqrR:S:tT::Um:vVw:z?";
+static const char *coptions = "bcCde:fghHikKlLnN:o:O:p:PrR:S:tT::Um:vVw:z?123456789";
 
 int main(int argc, char *argv[])
 {
