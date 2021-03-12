@@ -1867,10 +1867,16 @@ fill_another:
 	 * 	invalid current stream pointer (last_head < 0)
 	 * 	stream pointer extending beyond chunk (last_head > sinfo->size)
 	 * 	stream pointer less than last stream pointer (i.e. pointing backwards!)
+	 *	Encrypt check requires slightly different test. Doesn't know sinfo->size yet
 	 */
-	if (unlikely(c_len < 1 || u_len < 1 || last_head < 0 || last_head > sinfo->size ||
-				(last_head && (last_head <= s->last_head)))) {
-		failure_return(("Invalid data compressed len %lld uncompressed %lld last_head %lld chunk size %lld\n",
+	if (ENCRYPT) {
+		if (unlikely(c_len < 1 || u_len < 1 || last_head < 0 || (last_head && (last_head <= s->last_head))))
+			failure_return(("Invalid data compressed len %lld uncompressed %lld last_head %lld chunk size %lld\n",
+			     c_len, u_len, last_head, sinfo->size), false);
+	} else {
+		if (unlikely(c_len < 1 || u_len < 1 || last_head < 0 || last_head > sinfo->size ||
+				(last_head && (last_head <= s->last_head))))
+			failure_return(("Invalid data compressed len %lld uncompressed %lld last_head %lld chunk size %lld\n",
 			     c_len, u_len, last_head, sinfo->size), false);
 	}
 
