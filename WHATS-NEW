@@ -1,3 +1,7 @@
+lrzip-next 0.742
+
+We do know file size even when coming from STDIN or tar -I
+
 lrzip-0.700
 
 New configure process. Version taken from git-describe.

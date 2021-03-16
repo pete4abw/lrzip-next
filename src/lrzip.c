@@ -136,13 +136,13 @@ bool write_magic(rzip_control *control)
 		'L', 'R', 'Z', 'I', LRZIP_MAJOR_VERSION, LRZIP_MINOR_VERSION
 	};
 
-	/* File size is stored as zero for streaming STDOUT blocks when the
-	 * file size is unknown. In encrypted files, the size is left unknown
+	 /* In encrypted files, the size is left unknown
 	 * and instead the salt is stored here to preserve space. */
+	// FIXME. I think we can do better. 8 bytes is no reason to save space
 	if (ENCRYPT)
 		memcpy(&magic[6], &control->salt, 8);
-	else if (!STDIN || !STDOUT || control->eof) {
-		i64 esize = htole64(control->st_size);
+	else if (control->eof) {
+		i64 esize = htole64(control->st_size);	// we know file size even when piped
 
 		memcpy(&magic[6], &esize, 8);
 	}
