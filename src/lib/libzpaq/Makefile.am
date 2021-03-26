@@ -1,7 +1,8 @@
 MAINTAINERCLEANFILES = Makefile.in
 
 ## zpaq recommends best optimization for speed
-CXXFLAGS += -O3
+## define unix for Apple and Linux
+CXXFLAGS += -O3 -Dunix
 
 noinst_LTLIBRARIES = libzpaq.la
 libzpaq_la_SOURCES = \
