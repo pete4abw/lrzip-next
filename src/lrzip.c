@@ -76,9 +76,9 @@ static i64 fdout_seekto(rzip_control *control, i64 pos)
 }
 
 i64 get_ram(rzip_control *control)
+{
 #ifdef __APPLE__
 # include <sys/sysctl.h>
-{
 	int mib[2];
 	size_t len;
 	i64 ramsize;
@@ -87,7 +87,6 @@ i64 get_ram(rzip_control *control)
 	mib[1] = HW_MEMSIZE;
 	sysctl(mib, 2, &ramsize, &len, NULL, 0);
 #else /* __APPLE__ */
-{
 	i64 ramsize;
 	FILE *meminfo;
 	char aux[256];
