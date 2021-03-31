@@ -2,6 +2,8 @@ lrzip-next 0.742
 
 We do know file size even when coming from STDIN or tar -I
 
+Static Binaries available: https://peterhyman.com/download/lrzip-next.
+
 lrzip-0.700
 
 New configure process. Version taken from git-describe.
