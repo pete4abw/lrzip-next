@@ -22,7 +22,6 @@ MAINTAINERCLEANFILES = \
 
 SUBDIRS = src/lzma \
 	  src/lib/libzpaq \
-	  src/lib/minilzo \
 	  src \
 	  src/demo \
 	  man \

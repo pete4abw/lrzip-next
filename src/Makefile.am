@@ -29,8 +29,7 @@ libtmplrzip_next_la_SOURCES = \
 
 
 libtmplrzip_next_la_LIBADD = lzma/C/liblzma.la	\
-	lib/libzpaq/libzpaq.la	\
-	lib/minilzo/libminilzo.la
+	lib/libzpaq/libzpaq.la
 
 if USE_ASM
 libtmplrzip_next_la_LIBADD += lzma/ASM/liblzmaASM.la
@@ -54,7 +53,7 @@ nodist_EXTRA_lrzip_next_SOURCES = dummyy.cxx
 
 lrzip_next_LDADD = libtmplrzip_next.la
 if STATIC
-	lrzip_next_LDFLAGS = -all-static
+lrzip_next_LDFLAGS = -all-static
 endif
 
 lrzip_next_HEADERS = include/Lrzip.h
