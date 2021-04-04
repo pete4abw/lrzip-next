@@ -19,3 +19,6 @@ for low ram systems without swap.
 
 Use git describe to manage version numbers, not hard code in
 configure.ac
+
+Figure out why swapfile is used on larger compressions.
+If swap is off, compression still runs fine.

@@ -996,30 +996,38 @@ void *open_stream_out(rzip_control *control, int f, unsigned int n, i64 chunk_li
 		if (LZMA_COMPRESS) {
 			i64 save_dictSize = control->dictSize;		// save dictionary
 			i64 DICTSIZEMIN = (1 << 24);			// minimum dictionary size (16MB)
+			int l2;
+			l2 = (int) log2(control->dictSize);		// save exponent
 retry_lzma:
-			for (control->dictSize = save_dictSize; control->dictSize > DICTSIZEMIN; control->dictSize *= .90) {
-				// make dictionary LZMA friendly (from LzmaEnc)
-				if (control->dictSize >= ((UInt32)1 << 22)) {
-					UInt32 kDictMask = ((UInt32)1 << 20) - 1;
-					if (control->dictSize < (UInt32)0xFFFFFFFF - kDictMask)
-						control->dictSize = (control->dictSize + kDictMask) & ~kDictMask;
-				} else {
-					for (i = 11; i <= 30; i++) {
-						if (control->dictSize <= ((UInt32)2 << i)) { control->dictSize = (2 << i); break; }
-						if (control->dictSize <= ((UInt32)3 << i)) { control->dictSize = (3 << i); break; }
-					}
-				}
-				round_to_page(&control->dictSize);	// align
-				setup_overhead(control);		// recompute overhead
-				for (control->threads = save_threads; control->threads > thread_limit; control->threads--) {
-					if (limit >= control->overhead * control->threads) {
+			control->dictSize = save_dictSize;		// start over
+			do {
+				for (control->threads = save_threads; control->threads >= thread_limit; control->threads--) {
+					if (limit >= (control->overhead * control->threads)/testbufs) {
 						overhead_set = true;			// got it!
 						break;
 					}
 				}	// thread loop
 				if (overhead_set == true)
 					break;
-			}	// dictionary size loop
+				else {
+					/* make dictionary LZMA friendly (from LzmaEnc)
+					 * using reduced set of dictionary sizes
+					 * 2^n, 3^n, 2^n+1, 3^n+1...
+					*/
+					for (i = l2; i >= 12; i--) {
+						if (control->dictSize == ((UInt32)2 << i)) {
+							control->dictSize = (3 << (i-1));
+							break;
+						}
+						if (control->dictSize == ((UInt32)3 << i)) {
+							control->dictSize = (2 << (i));
+								break;
+						}
+					}
+				}
+				round_to_page(&control->dictSize);			// align
+				setup_overhead(control);				// recompute overhead
+			} while (control->dictSize > DICTSIZEMIN);			// dictionary size loop
 			if (!overhead_set && thread_limit > 1) {			// try again and lower thread_limit
 				thread_limit--;
 				goto retry_lzma;
@@ -1047,20 +1055,6 @@ retry_zpaq:
 			}
 			if (control->zpaq_bs != save_bs)
 				print_verbose("ZPAQ Block Size reduced to %d\n", control->zpaq_bs);
-
-			/* alternate method */
-			/*
-			for (control->threads = save_threads; control->threads > thread_limit; control->threads--) {
-				if (limit >= control->overhead * control->threads) {
-						overhead_set = true;
-						break;
-				}
-			}	// thread loop
-			if (!overhead_set && thread_limit > 1) {			// try again and lower thread_limit
-				thread_limit--;
-				goto retry_zpaq;
-			}
-			*/
 		}
 
 		if (control->threads != save_threads)
@@ -2096,7 +2090,7 @@ static int lz4_compresses(rzip_control *control, uchar *s_buf, i64 s_len)
 	int in_len, d_len, buftest_size, test_len = s_len;
 	char *c_buf = NULL, *test_buf = (char *)s_buf;
 	/* set minimum buffer test size based on the length of the test stream */
-	double pct = 0;
+	double pct = 101;	/* set to failure */
 	int return_value;
 	int workcounter = 0;	/* count # of passes */
 	int lz4_ret;
@@ -2125,18 +2119,19 @@ static int lz4_compresses(rzip_control *control, uchar *s_buf, i64 s_len)
 		/* expand and move buffer */
 		test_len -= in_len;
 		if (test_len > 0) {
-			// No. Don't move pte. test_buf += (ptrdiff_t)in_len;
+			// No. Don't move ptr. Just increase length tested
 			buftest_size += in_len;
 			if (buftest_size < STREAM_BUFSIZE)
 				buftest_size <<= 1;
 			in_len = MIN(test_len, buftest_size);
-			d_len += in_len;	// Make sure dlen is increased as buffer test does
+			d_len = in_len+1;		// Make sure dlen is increased as buffer test does
 			c_buf = realloc(c_buf, d_len);
 			if (unlikely(!c_buf))
 				fatal_return(("Unable to reallocate c_buf in lz4_compresses\n"), 0);
 		}
 	}
-	return_value = (pct > control->threshold ? 0 : (int) pct);
+	/* if pct >0 and <1 round up so return value won't show failed */
+	return_value = (int) (pct > control->threshold ? 0 : pct < 1 ? pct+1 : pct);
 	print_maxverbose("lz4 testing %s for chunk %ld. Compressed size = %5.2F%% of test size %d, %d Passes\n",
 			(return_value > 0 ? "OK" : "FAILED"), s_len,
 			pct, buftest_size, workcounter);

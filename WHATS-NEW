@@ -1,4 +1,15 @@
-lrzip-next 0.742
+lrzip-next 0.7.43
+
+Optimize open_stream_out() function to expand compression buffer
+computation. Use simplified method of reducing dictionary size
+when necessary. If dictSize too large, reduce as follows:
+
+if dictSize == 2^n, reduce to 3^(n-1);
+if dictSize == 3^n, reduce to 2^n;
+
+This is the lzma2 method.
+
+lrzip-next 0.7.42
 
 We do know file size even when coming from STDIN or tar -I
 
