@@ -1,5 +1,11 @@
 lrzip-next 0.7.43
 
+Update util/gitdesc.sh so that it can compile even if a tarball
+is downloaded. Utilize a VERSION file to provide Major, Minor, and
+Micro versions to configure.ac.
+
+Thanks to Jim Garlick's scrub application for inspiration.
+
 Optimize open_stream_out() function to expand compression buffer
 computation. Use simplified method of reducing dictionary size
 when necessary. If dictSize too large, reduce as follows:

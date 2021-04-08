@@ -32,9 +32,8 @@ $ git clone https://github.com/pete4abw/lrzip-next
 $ cd lrzip-next
 $ git submodule update --init (to download lrzip-fe)
 ```
-Note: Downloading tarballs won't compile because of `git describe` usage. This is a
-development platform. Precise versioning is important to tag errors to precise
-commits.
+**NEW**! Tarballs will now compile from version 0.7.44 onward. gitdesc.sh has been made
+more intelligent! Recommend downloading from master, not from past tags/releases.
 
 **NEW**! If you just want to try `lrzip-next`, download the static binaries. No compilation
 necessary. [Visit this link to download](https://peterhyman.com/download/lrzip-next/).

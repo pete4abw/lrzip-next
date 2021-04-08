@@ -46,16 +46,25 @@ tagopt="--tags"
 # Expected format is:
 # v#.#.#-#-g#######
 init() {
-	describe_tag=$(git describe $tagopt --long --abbrev=7)
-	describe_tag=${describe_tag/v/}
-	describe_tag=${describe_tag/g/}
-	commit=$(echo $describe_tag | cut -d- -f3)
-	tagrev=$(echo $describe_tag | cut -d- -f2)
-	version=$(echo $describe_tag | cut -d- -f1)
-	micro=$(echo $version | cut -d. -f3)
-	[ $tagrev -gt 0 ] && micro=$micro-$tagrev-$commit
-	minor=$(echo $version | cut -d. -f2)
-	major=$(echo $version | cut -d. -f1)
+	if [ -d '.git' ] ; then
+		describe_tag=$(git describe $tagopt --long --abbrev=7)
+		describe_tag=${describe_tag/v/}
+		describe_tag=${describe_tag/g/}
+		commit=$(echo $describe_tag | cut -d- -f3)
+		tagrev=$(echo $describe_tag | cut -d- -f2)
+		version=$(echo $describe_tag | cut -d- -f1)
+		micro=$(echo $version | cut -d. -f3)
+		[ $tagrev -gt 0 ] && micro=$micro-$tagrev-$commit
+		minor=$(echo $version | cut -d. -f2)
+		major=$(echo $version | cut -d. -f1)
+	elif [ -r VERSION ] ; then
+		major=$(awk '/Major: / {printf "%s",$2; exit}' VERSION)
+		minor=$(awk '/Minor: / {printf "%s",$2; exit}' VERSION)
+		micro=$(awk '/Micro: / {printf "%s",$2; exit}' VERSION)
+	else
+		echo "Cannot find .git or VERSION file. Aborting"
+		exit 1
+	fi
 }
 
 [ ! $(which git) ] && die "Something very wrong: git not found."
