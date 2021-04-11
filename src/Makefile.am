@@ -13,7 +13,6 @@ libtmplrzip_next_la_SOURCES = \
 	md5.c \
 	aes.c \
 	sha4.c \
-	include/liblrzip_private.h \
 	include/lrzip_core.h \
 	include/lrzip_private.h \
 	include/rzip.h \
@@ -35,14 +34,6 @@ if USE_ASM
 libtmplrzip_next_la_LIBADD += lzma/ASM/liblzmaASM.la
 endif
 
-lib_LTLIBRARIES = liblrzip-next.la
-liblrzip_next_la_SOURCES = \
-	liblrzip.c \
-	include/liblrzip_private.h
-nodist_EXTRA_liblrzip_next_la_SOURCES = dummy.cxx
-liblrzip_next_la_LIBADD = libtmplrzip_next.la
-liblrzip_next_la_LDFLAGS = -version-number $(LT_VER)
-
 lrztardir = $(bindir)
 lrztar_SCRIPTS = lrztar
 
@@ -55,6 +46,3 @@ lrzip_next_LDADD = libtmplrzip_next.la
 if STATIC
 lrzip_next_LDFLAGS = -all-static
 endif
-
-lrzip_next_HEADERS = include/Lrzip.h
-lrzip_nextdir = $(includedir)

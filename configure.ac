@@ -19,12 +19,6 @@ AC_USE_SYSTEM_EXTENSIONS
 
 AC_PROG_LIBTOOL
 LT_INIT
-## Really set library version, but trim only major:minor version.
-LT_VER="v_maj:v_min:$(echo v_mic | cut -d- -f1)"
-AC_SUBST([LT_VER])
-## for pkgconfig
-LIBVER=${LT_VER//:/.}
-AC_SUBST([LIBVER])
 
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
@@ -158,9 +152,7 @@ EFL_CHECK_DOXYGEN([build_doc="yes"], [build_doc="no"])
 
 AC_CONFIG_FILES([
 Makefile
-lrzip-next.pc
 src/Makefile
-src/demo/Makefile
 src/lzma/Makefile
 src/lzma/C/Makefile
 src/lzma/ASM/Makefile

@@ -1,0 +1,10 @@
+prefix=/usr/local
+exec_prefix=/usr/local/bin
+libdir=/usr/local/lib
+includedir=/usr/local/include
+
+Name: lrzip-next
+Description: lrzip-next compression library
+Version: 0.7
+Libs: -L${libdir} -llrzip-next
+Libs.private: -llz4 -llzo2 -lbz2 -lz -lm -lpthread 

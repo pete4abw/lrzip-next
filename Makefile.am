@@ -23,7 +23,6 @@ MAINTAINERCLEANFILES = \
 SUBDIRS = src/lzma \
 	  src/lib/libzpaq \
 	  src \
-	  src/demo \
 	  man \
 	  doc
 
@@ -37,11 +36,7 @@ dist_doc_DATA = \
 	TODO \
 	WHATS-NEW
 
-pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = lrzip-next.pc
-
 EXTRA_DIST = \
-	lrzip-next.pc.in \
 	src/lrztar \
 	description-pak \
 	autogen.sh \

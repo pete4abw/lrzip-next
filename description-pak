@@ -1,1 +1,11 @@
-lrzip
+lrzip-next
+
+lrzip-next is an enhanced and expanded version of
+lrzip. It includes optimizations to chunk and block
+sizes, pre-compression filtering, updated SDKs of
+lzma and zpaq, very fast Assembler decompressor
+(x64 only), variable threshold testing, ability
+to set lzma dictionary size independently, and
+much more.
+
+Maintained by Peter Hyman, https://github.com/pete4abw/lrzip-next
