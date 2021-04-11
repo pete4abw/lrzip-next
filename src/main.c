@@ -267,7 +267,7 @@ static struct option long_options[] = {
 	{"keep-broken",	no_argument,	0,	'k'},
 	{"keep-broken",	no_argument,	0,	'K'},
 	{"lzo",		no_argument,	0,	'l'},
-	{"lzma",       	no_argument,	0,	'/'},
+	{"lzma",       	no_argument,	0,	0},
 	{"level",	optional_argument,	0,	'L'},	/* 15 */
 	{"license",	no_argument,	0,	'L'},
 	{"maxram",	required_argument,	0,	'm'},
@@ -289,14 +289,14 @@ static struct option long_options[] = {
 	{"zpaq",	no_argument,	0,	'z'},
 	{"fast",	no_argument,	0,	'1'},
 	{"best",	no_argument,	0,	'9'},		/* 35 */
-	{"dictsize",	required_argument,	0,	'\\'},
-	{"x86",		no_argument,	0,	']'},
-	{"arm",		no_argument,	0,	'['},
-	{"armt",	no_argument,	0,	'}'},
-	{"ppc",		no_argument,	0,	'{'},		/* 40 */
-	{"sparc",	no_argument,	0,	'\''},
-	{"ia64",	no_argument,	0,	';'},
-	{"delta",	optional_argument,	0,	':'},
+	{"dictsize",	required_argument,	0,	0},
+	{"x86",		no_argument,	0,	0},
+	{"arm",		no_argument,	0,	0},
+	{"armt",	no_argument,	0,	0},
+	{"ppc",		no_argument,	0,	0},		/* 40 */
+	{"sparc",	no_argument,	0,	0},
+	{"ia64",	no_argument,	0,	0},
+	{"delta",	optional_argument,	0,	0},
 	{"rzip-level",	required_argument,	0,	'R'},
 	{0,	0,	0,	0},
 };
@@ -352,7 +352,7 @@ int main(int argc, char *argv[])
 	struct sigaction handler;
 	double seconds,total_time; // for timers
 	bool nice_set = false;
-	int c, i, ds;
+	int c, i, ds, long_opt_index;
 	int hours,minutes;
 	extern int optind;
 	char *eptr, *av; /* for environment */
@@ -396,7 +396,7 @@ int main(int argc, char *argv[])
 	if (options_file && (control->flags & FLAG_NOT_LZMA))		/* if some compression set in lrzip.conf    */
 		conf_file_compression_set = true;			/* need this to allow command line override */
 
-	while ((c = getopt_long(argc, argv, compat ? coptions : loptions, long_options, &i)) != -1) {
+	while ((c = getopt_long(argc, argv, compat ? coptions : loptions, long_options, &long_opt_index)) != -1) {
 		switch (c) {
 		case 'b':
 		case 'g':
@@ -423,9 +423,6 @@ int main(int argc, char *argv[])
 			/* now FLAG_NOT_LZMA will evaluate as true */
 			conf_file_compression_set = false;
 			break;
-		case '/':						/* LZMA Compress selected */
-			control->flags &= ~FLAG_NOT_LZMA;		/* clear alternate compression flags */
-			break;
 		case 'c':
 			if (compat) {
 				control->flags |= FLAG_KEEP_FILES;
@@ -443,15 +440,6 @@ int main(int argc, char *argv[])
 		case 'D':
 			control->flags &= ~FLAG_KEEP_FILES;
 			break;
-		case '\\':
-			/* Dictionary Size, 2^12-30 */
-			control->dictSize = strtol(optarg, &endptr, 10);
-			if (*endptr)
-				failure("Extra characters after dictionary size: \'%s\'\n", endptr);
-			if (control->dictSize < 12 || control->dictSize > 30)
-				failure("Dictionary Size must be between 12 and 30 for 2^12 (4KB) to 2^30 (1GB)");
-			control->dictSize = (1 << control->dictSize);
-			break;
 		case 'e':
 			control->flags |= FLAG_ENCRYPT;
 			control->passphrase = optarg;
@@ -459,39 +447,6 @@ int main(int argc, char *argv[])
 		case 'f':
 			control->flags |= FLAG_FORCE_REPLACE;
 			break;
-		/* Filtering */
-		case ']':
-			control->filter_flag = FILTER_FLAG_X86;		// x86
-			break;
-		case '[':
-			control->filter_flag = FILTER_FLAG_ARM;		// ARM
-			break;
-		case '}':
-			control->filter_flag = FILTER_FLAG_ARMT;	// ARMT
-			break;
-		case '{':
-			control->filter_flag = FILTER_FLAG_PPC;		// PPC
-			break;
-		case '\'':
-			control->filter_flag = FILTER_FLAG_SPARC;	// SPARC
-			break;
-		case ';':
-			control->filter_flag = FILTER_FLAG_IA64;	// IA64
-			break;
-		case ':':
-			control->filter_flag = FILTER_FLAG_DELTA;	// DELTA
-			/* Delta Values are 1-16, then multiples of 16 to 256 */
-			if (optarg) {
-				i=strtol(optarg, &endptr, 10);
-				if (*endptr)
-					failure("Extra characters after delta offset: \'%s\'\n", endptr);
-				if (i < 1 || i > 32)
-					failure("Delta offset value must be between 1 and 32\n");
-				control->delta = ( i <= 17 ? i : (i-16) * 16 );
-			} else
-				control->delta = DEFAULT_DELTA;			// 1 is default
-			break;
-
 		case 'h':
 		case '?':
 			usage(compat);
@@ -646,8 +601,60 @@ int main(int argc, char *argv[])
 		case '9':
 			control->compression_level = c - '0';
 			break;
-		}
-	}
+		case 0:	/* these are long options without a short code */
+			if (FILTER_USED && long_opt_index >= 37 )
+				print_output("Filter already selected. %s filter ignored.\n", long_options[long_opt_index].name);
+			else {
+				switch(long_opt_index) {
+					/* in case lzma selected, need to reset not lzma flag */
+					case 14:
+						control->flags &= ~FLAG_NOT_LZMA;		/* clear alternate compression flags */
+						break;
+						/* Dictionary Size, 2^12-30 */
+					case 36:
+						control->dictSize = strtol(optarg, &endptr, 10);
+						if (*endptr)
+							failure("Extra characters after dictionary size: \'%s\'\n", endptr);
+						if (control->dictSize < 12 || control->dictSize > 30)
+							failure("Dictionary Size must be between 12 and 30 for 2^12 (4KB) to 2^30 (1GB)");
+						control->dictSize = (1 << control->dictSize);
+						break;
+						/* Filtering */
+					case 37:
+						control->filter_flag = FILTER_FLAG_X86;		// x86
+						break;
+					case 38:
+						control->filter_flag = FILTER_FLAG_ARM;		// ARM
+						break;
+					case 39:
+						control->filter_flag = FILTER_FLAG_ARMT;	// ARMT
+						break;
+					case 40:
+						control->filter_flag = FILTER_FLAG_PPC;		// PPC
+						break;
+					case 41:
+						control->filter_flag = FILTER_FLAG_SPARC;	// SPARC
+						break;
+					case 42:
+						control->filter_flag = FILTER_FLAG_IA64;	// IA64
+						break;
+					case 43:
+						control->filter_flag = FILTER_FLAG_DELTA;	// DELTA
+						/* Delta Values are 1-16, then multiples of 16 to 256 */
+						if (optarg) {
+							i=strtol(optarg, &endptr, 10);
+							if (*endptr)
+								failure("Extra characters after delta offset: \'%s\'\n", endptr);
+							if (i < 1 || i > 32)
+								failure("Delta offset value must be between 1 and 32\n");
+							control->delta = ( i <= 17 ? i : (i-16) * 16 );
+						} else
+							control->delta = DEFAULT_DELTA;		// 1 is default
+						break;
+				}	//switch
+			}	//if filter used
+		}	// main switch
+	}	// while input loop
 
 	argc -= optind;
 	argv += optind;
