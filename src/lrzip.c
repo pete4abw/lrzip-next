@@ -546,7 +546,7 @@ static bool open_tmpoutbuf(rzip_control *control)
 	control->flags |= FLAG_TMP_OUTBUF;
 	/* Allocate slightly more so we can cope when the buffer overflows and
 	 * fall back to a real temporary file */
-	control->out_maxlen = maxlen - control->page_size;
+	control->out_maxlen = maxlen + control->page_size;
 	control->tmp_outbuf = buf;
 	if (!DECOMPRESS && !TEST_ONLY)
 		control->out_ofs = control->out_len = MAGIC_LEN;
