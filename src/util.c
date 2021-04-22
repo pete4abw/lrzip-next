@@ -139,7 +139,7 @@ void setup_overhead(rzip_control *control)
 		}
 		/* LZMA spec shows memory requirements as 6MB, not 4MB and state size
 		 * where default is 16KB */
-		control->overhead = (control->dictSize * 23 / 2) + (6 * 1024 * 1024) + 16384;
+		control->overhead = ((i64)control->dictSize * 23 / 2) + (6 * 1024 * 1024) + 16384;
 	} else if (ZPAQ_COMPRESS) {
 		if (control->zpaq_bs == 0) {
 			control->zpaq_level = control->compression_level /4 + 3;	/* only use levels 3,4 and 5 */
@@ -382,9 +382,11 @@ bool read_config(rzip_control *control)
 				control->flags |= FLAG_ENCRYPT;
 		}
 		else if (isparameter(parameter, "dictionarysize")) {
-			control->dictSize = atoi(parametervalue);
-			if (control->dictSize != 0 && (control->dictSize < 12 || control->dictSize > 30))
-				failure_return(("CONF FILE error. Dictionary Size must be between 12 and 30."), false);
+			int p;
+			p = atoi(parametervalue);
+			if (p < 0 || p > 40)
+				failure_return(("CONF FILE error. Dictionary Size must be between 0 and 40."), false);
+			control->dictSize = ((p == 40) ? 0xFFFFFFFF : ((2 | ((p) & 1)) << ((p) / 2 + 11)));	// Slight modification to lzma2 spec 2^31 OK
 		}
 		else {
 			/* oops, we have an invalid parameter, display */

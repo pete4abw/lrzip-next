@@ -93,7 +93,7 @@ Option|Meaning
 -n, --no-compress|no backend compression - prepare for other compressor
 -z, --zpaq|zpaq compression (best, extreme compression, extremely slow)
 -L, --level level|set lzma/bzip2/gzip compression level (1-9, default 7)
---dictsize|Set lzma Dictionary Size for LZMA ds=12 to 30 expressed as 2^ds
+--dictsize|Set lzma Dictionary Size for LZMA ds=0 to 40 expressed as 2<<11, 3<<11, 2<<12, 3<<12...2<<31-1
 **General Options**
 -h, -?, --help|show help
 -H, --hash|display md5 hash integrity information

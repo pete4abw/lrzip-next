@@ -38,7 +38,12 @@ Parameter values are not case sensitive except where specified\&.
 # May be overriden by command line compression choice.
 # \fBCOMPRESSIONMETHOD = lzma\fP
 
-# LZMA Dictionary Size. 0 = default value used. 12-30 = 2^ds will be used.
+# LZMA Dictionary Size. 0-40 where
+# 0 = 2^12, 1 = 2^12 * 3/2
+# 2 = 2^13, 3 = 2^13 * 3/2
+# ...
+# 38 = 2^31, 39 = 2^31 * 3/2
+# 40 = 2^32 - 1;
 # \fBDICTIONARYSIZE = 0\fP
 
 # Perform LZ4 Test. Default = YES (-T )

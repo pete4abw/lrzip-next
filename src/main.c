@@ -57,6 +57,7 @@
 #include "lrzip_core.h"
 #include "util.h"
 #include "stream.h"
+#include <inttypes.h>
 
 /* needed for CRC routines */
 #include "7zCrc.h"
@@ -90,7 +91,7 @@ static void usage(bool compat)
 	}
 	if (!compat)
 		print_output("	-L, --level level	set lzma/bzip2/gzip compression level (1-9, default 7)\n");
-	print_output("	--dictsize		Set lzma Dictionary Size for LZMA ds=12 to 30 expressed as 2^ds\n");
+	print_output("	--dictsize		Set lzma Dictionary Size for LZMA ds=0 to 40 expressed as 2<<11, 3<<11, 2<<12, 3<<12...2<<31-1\n");
 	print_output("    Filtering Options:\n");
 	print_output("	--x86			Use x86 filter (for all compression modes)\n");
 	print_output("	--arm			Use ARM filter (for all compression modes)\n");
@@ -213,7 +214,7 @@ static void show_summary(void)
 			print_verbose("Compression level %d\n", control->compression_level);
 			print_verbose("RZIP Compression level %d\n", control->rzip_compression_level);
 			if (LZMA_COMPRESS)
-				print_verbose("Initial LZMA Dictionary Size: %ld\n", control->dictSize );
+				print_verbose("Initial LZMA Dictionary Size: %"PRIu32"\n", control->dictSize );
 			if (ZPAQ_COMPRESS)
 				print_verbose("ZPAQ Compression Level: %d, ZPAQ initial Block Size: %d\n",
 					       control->zpaq_level, control->zpaq_bs);
@@ -610,14 +611,21 @@ int main(int argc, char *argv[])
 					case 14:
 						control->flags &= ~FLAG_NOT_LZMA;		/* clear alternate compression flags */
 						break;
-						/* Dictionary Size, 2^12-30 */
 					case 36:
-						control->dictSize = strtol(optarg, &endptr, 10);
+						/* Dictionary Size,	2<<11, 3<<11
+						 * 			2<<12, 3<<12
+						 * 			...
+						 * 			2<<30, 3<<30
+						 * 			2<<31 - 1
+						 * Uses new lzma2 limited dictionary sizes */
+						if (!LZMA_COMPRESS)
+							print_err("--dictsize option only valid for LZMA compression. Ignorred.\n");
+						ds = strtol(optarg, &endptr, 10);
 						if (*endptr)
 							failure("Extra characters after dictionary size: \'%s\'\n", endptr);
-						if (control->dictSize < 12 || control->dictSize > 30)
-							failure("Dictionary Size must be between 12 and 30 for 2^12 (4KB) to 2^30 (1GB)");
-						control->dictSize = (1 << control->dictSize);
+						if (ds< 0 || ds > 40)
+							failure("Dictionary Size must be between 0 and 40 for 2^12 (4KB) to 2^31 (4GB)");
+						control->dictSize = ((ds == 40) ? 0xFFFFFFFF : (((u32)2 | (ds & 1)) << (ds / 2 + 11)));	// Slight modification to lzma2 spec 2^31 OK
 						break;
 						/* Filtering */
 					case 37:

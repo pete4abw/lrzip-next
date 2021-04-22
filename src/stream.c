@@ -982,9 +982,6 @@ void *open_stream_out(rzip_control *control, int f, unsigned int n, i64 chunk_li
 		testbufs = 2;
 
 	/* Reduce threads one by one and then reduce dictionary size
-	* by 10% until testsize is within range of estimated allocated
-	* memory for backend compression. Leave `limit` alone for now.
-	* First reduce threads, then dictionary size.
 	* This block only has to be done once since memory never
 	* changes, chunk sizes are the same. */
 
@@ -993,16 +990,15 @@ void *open_stream_out(rzip_control *control, int f, unsigned int n, i64 chunk_li
 		limit = control->usable_ram/testbufs;		// this is max chunk limit based on ram and compression window
 		bool overhead_set = false;
 		int thread_limit = control->threads >= 4 ? 4 : control->threads;	// control thread loop
+		int exponent = 40;				// highest possible value for dictsize spec
 		if (LZMA_COMPRESS) {
-			i64 save_dictSize = control->dictSize;		// save dictionary
-			i64 DICTSIZEMIN = (1 << 24);			// minimum dictionary size (16MB)
-			int l2;
-			l2 = (int) log2(control->dictSize);		// save exponent
+			u32 save_dictSize = control->dictSize;	// save dictionary
+			u32 DICTSIZEMIN = (1 << 24);		// minimum dictionary size (16MB)
 retry_lzma:
-			control->dictSize = save_dictSize;		// start over
+			control->dictSize = save_dictSize;	// start over
 			do {
 				for (control->threads = save_threads; control->threads >= thread_limit; control->threads--) {
-					if (limit >= (control->overhead * control->threads)/testbufs) {
+					if (limit >= (control->overhead * control->threads / testbufs)) {
 						overhead_set = true;			// got it!
 						break;
 					}
@@ -1014,18 +1010,21 @@ retry_lzma:
 					 * using reduced set of dictionary sizes
 					 * 2^n, 3^n, 2^n+1, 3^n+1...
 					*/
-					for (i = l2; i >= 12; i--) {
-						if (control->dictSize == ((UInt32)2 << i)) {
-							control->dictSize = (3 << (i-1));
+					for ( ; exponent >= 0; exponent-- ) {
+						if (!(exponent % 2)) {
+							control->dictSize = ((u32)3 << ((exponent-1) / 2 + 11));
 							break;
 						}
-						if (control->dictSize == ((UInt32)3 << i)) {
-							control->dictSize = (2 << (i));
-								break;
+						else
+						{
+							control->dictSize = ((u32)2 << (exponent / 2 + 11));
+							break;
 						}
 					}
+					exponent--;
+					if (exponent < 0)				// Just to be proper. Should never happen. NEVER!
+						failure_return(("Unexpected Fatal Error in open_stream_out dictSize. Cannot continue.\n"), false);
 				}
-				round_to_page(&control->dictSize);			// align
 				setup_overhead(control);				// recompute overhead
 			} while (control->dictSize > DICTSIZEMIN);			// dictionary size loop
 			if (!overhead_set && thread_limit > 1) {			// try again and lower thread_limit
@@ -1033,7 +1032,7 @@ retry_lzma:
 				goto retry_lzma;
 			}
 			if (control->dictSize != save_dictSize)
-				print_verbose("Dictionary Size reduced to %d\n", control->dictSize);
+				print_verbose("Dictionary Size reduced to %ld\n", control->dictSize);
 		} else if (ZPAQ_COMPRESS) {
 			/* compute max possible block size */
 			int save_bs = control->zpaq_bs;
@@ -1059,6 +1058,8 @@ retry_zpaq:
 
 		if (control->threads != save_threads)
 			print_verbose("Threads reduced to %d\n", control->threads);
+
+		print_verbose("Per Thread Memory Overhead is %ld\n", control->overhead);
 
 		save_threads = control->threads;			// preserve thread count. Important
 
