@@ -1,0 +1,19 @@
+lrzip-next NEWS file
+
+Apr 2021
+With the inclusion of the LZMA2 reduced dictionary size set, the
+possibility for including more details in the magic header is there.
+For example, the current LZMA encoding block is 5 bytes. 1 byte for
+lc, lp, and pb, and 4 bytes for Dictionary Size. The LZMA2 standard
+uses only 2 bytes. 1 byte for lc, lp, and pb, and 1 byte for
+Dictionary Size which is encoded as 0 to 40. This will leave three
+bytes for storing additional compression details.
+
+Some possibilities are ZPAQ Block sizes, Compression Level setting,
+Memory settings such as Compression Window, Memory Overhead, Rzip
+Compression Level, etc.
+
+More on this later as these items are evaluated.
+
+Peter Hyman
+28-Apr-2021

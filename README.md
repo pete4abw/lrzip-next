@@ -163,7 +163,7 @@ Person(s) with names in ***both*** have made innumerable massive contributions.
 For **lrzip-next**\
 Peter Hyman (pete4abw on Guthub) <pete@peterhyman.com>\
 Sun, 04 Jan 2009, README\
-Mon, 01 Mar 2021: README.md
+Mon, 28 Apr 2021: README.md
 
 For **lrzip**\
 Con Kolivas (`ckolivas` on GitHub) <kernel@kolivas.org>\

@@ -1,3 +1,9 @@
+lrzip-next 0.7.50
+
+New method for adjusting LZMA Dictionary sizes. Follow the
+LZMA2 paradigm, See open_stream_out() function. See Wiki page
+Update on LZMA Compression Memory Usage for details.
+
 lrzip-next 0.7.43
 
 Update util/gitdesc.sh so that it can compile even if a tarball
