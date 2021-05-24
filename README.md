@@ -8,14 +8,13 @@ Many new changes, not in the main branch, including:
 * more helpful usage messages
 * filters for x86 and other processors, and delta
 * ASM DeCompressor (up to 40% faster. x86_64 only)
-* variable threshold testing
 * ability to set rzip pre-compression level independently of compression level
 * variable compressibility threshold testing
 * ability to set specific LZMA Dictionary Size
 * improved info reporting
 * improved memory management favoring large chunk and dictionary sizes over maxmizing number of threads
 * improved ZPAQ processing by analyzing data prior to sending to compressor
-* many bug fixes including validating a file prior to decompression
+* many bug fixes including validating a file prior to decompression (prevents corrupt file decompression before it starts!)
 * use of git describe to present current version without changing configure.ac
 * lz4 Threshold testing (replaces lzo)
 
@@ -48,17 +47,17 @@ $ ./configure [options] (see configure --help for all options)
 ```
 If any required libraries or compilers are missing, **configure** will report and stop.
 ```
-$ make [-j8] (for parallel make)
+$ make [-j#] (for parallel make where # is typically number of processors)
 $ make install (as root)
 ```
 
 ### How it Works
-**lrzip-next** applies a two-step process (optionally three-step process if filters are used) 
-and reads file or STDIN input, passes it to the **rzip** pre-processor (and optional filter). 
-The rzip pre-processor applies long-range redundancy reduction and then passes the streams of 
-data to a back-end compressor. **lrzip--next** will, by default, test each stream with a *compressibility* 
-test using **lz4** prior to compression. The selected back-end compressor works on smaller data 
-sets and ignore streams of data that may not compress well. The end result is significantly 
+**lrzip-next** applies a two-step process (optionally three-step process if filters are used)
+and reads file or STDIN input, passes it to the **rzip** pre-processor (and optional filter).
+The rzip pre-processor applies long-range redundancy reduction and then passes the streams of
+data to a back-end compressor. **lrzip--next** will, by default, test each stream with a *compressibility*
+test using **lz4** prior to compression. The selected back-end compressor works on smaller data
+sets and ignore streams of data that may not compress well. The end result is significantly
 faster compression than standalone compressors and much faster decompression.
 
 **lrzip-next**'s compressors are:
@@ -72,15 +71,25 @@ faster compression than standalone compressors and much faster decompression.
 **lrzip-next**'s memory management scheme permits maximum use of system ram to pre-process files and then compress them.
 
 ### Usage and Integration
-**lrzip-next** operates on one file at a time. It's default mode is to create a compressed file 
-using lzma compression at level 7. To operate on more than one file, the included **lrztar** 
+**lrzip-next** operates on one file at a time. It's default mode is to create a compressed file
+using lzma compression at level 7. To operate on more than one file, the included **lrztar**
 application can be run or **lrzip** can be inserted into a **tar** command.
 
-`lrzip-next file` will compress `file` using lzma compression at level 7.  
-`tar --use-compress-program=lrzip-next -cf file.lrz file...` will compress file(s) or a 
-directory(ies) *file...* using lzma compression at level 7.
+`lrzip-next [-options] file` will compress `file` using lzma compression at level 7.\
+`tar --use-compress-program='lrzip-next [-options]' [-tar options] -cf file.tar.lrz file...` will compress file(s) or
+directory(ies) using lzma compression at level 7.\
+`tar [-tar options] -cf- file... | lrzip-next [-options] -o file.tar.lrz` will pipe tar output to **lrzip-next** with default options.
 
-For a list of all options and their usage, see the manpage or just type `lrzip-next` 
+The differences between the three usage examples are memory available for compression/decompression.\
+The first and third options will use roughly 1/3 of total ram for compression/decompression.\
+The second option willl use roughly 1/6 of total ram for compression/decompression.\
+All depends if the **lrzip-next** options **-m** or **-w** are used. Normally lrzip-next will determine optimum memory usage.
+
+Using `tar` with `lrzip-next` has advantages since it does not create a separate (possibly large) tar file, but rather passes the
+tar'red information right to `lrzip-next` which then compresses it on-the-fly. Similarly, on decompression, no intermediate
+tar file has to be created. `lrzip-next` output is piped right to `tar` which then can extract files/directories as specified.
+
+For a list of all options and their usage, see the manpage or just type `lrzip-next`
 with no options. The highlevel compression options are listed here.
 
 Option|Meaning
@@ -94,6 +103,14 @@ Option|Meaning
 -z, --zpaq|zpaq compression (best, extreme compression, extremely slow)
 -L, --level level|set lzma/bzip2/gzip compression level (1-9, default 7)
 --dictsize|Set lzma Dictionary Size for LZMA ds=0 to 40 expressed as 2<<11, 3<<11, 2<<12, 3<<12...2<<31-1
+**Filtering Options**
+--x86|Use x86 filter (for all compression modes)
+--arm|Use ARM filter (for all compression modes)
+--armt|Use ARMT filter (for all compression modes)
+--ppc|Use PPC filter (for all compression modes)
+--sparc|Use SPARC filter (for all compression modes)
+--ia64|Use IA64 filter (for all compression modes)
+--delta [1..32]|Use Delta filter (for all compression modes) (1 (default) -17, then multiples of 16 to 256)
 **General Options**
 -h, -?, --help|show help
 -H, --hash|display md5 hash integrity information
@@ -103,7 +120,6 @@ Option|Meaning
 -r, --recursive|operate recursively on directories
 -v[v], --verbose|Increase verbosity
 -V, --version|display software version and license
-
 
 #### Backends:
 rzip:
