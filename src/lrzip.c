@@ -761,9 +761,12 @@ bool decompress_file(rzip_control *control)
 	if (STDIN) {
 		fd_in = open_tmpinfile(control);
 		read_tmpinmagic(control);
+		if (ENCRYPT && control->passphrase == NULL)
+			failure_return(("Cannot decompress encrypted file from STDIN. Use -e passphrase.\n"), false);
 		if (ENCRYPT)
-			failure_return(("Cannot decompress encrypted file from STDIN\n"), false);
-		expected_size = control->st_size;
+			expected_size = 0;
+		else
+			expected_size = control->st_size;
 		if (unlikely(!open_tmpinbuf(control)))
 			return false;
 	} else {

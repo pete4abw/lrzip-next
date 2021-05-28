@@ -70,6 +70,7 @@ Low level Compression Options:
                          default chosen by heuristic dependent on ram and chosen compression
 .B Decompression Options:
  \-d, \-\-decompress        decompress
+ \-e, \-f, \-o \-O           Same as above. See Compression Options
  \-t, \-\-test              test compressed file integrity
  \-c, \-\-check             check integrity of file written on decompression
 .B General options:
@@ -173,6 +174,14 @@ according to the date the file is encrypted, increasing the number of CPU
 cycles required for each password attempt in accordance with Moore's law, thus
 making the difficulty of attempting brute force attacks proportional to the
 power of modern computers.
+.IP
+The optional password may be inserted on the command line, however there are
+obvious security risks to doing so, so take care. If the short option \fB-e\fP
+is used, there must be no space between the option and the password. e.g.
+\fB-efoo\fP.
+.IP
+These options may be used for Encryption, Decryption, or Test. If output is to
+STDOUT, then the option cannot be used.
 .IP "\fB-D | --delete\fP"
 If this option is specified then lrzip will delete the
 source file after successful compression or decompression. When this
@@ -249,6 +258,8 @@ Decompress. If this option is not used then lrzip looks at
 the name used to launch the program. If it contains the string
 "lrunzip" then the \-d option is automatically set. If it contains the string
 "lrzcat" then the \-d \-o \- options are automatically set.
+.IP "\fB-e, -f, -o, -O\fP"
+Same as above. See \fBCompression Options\fP.
 .IP "\fB-t | --test\fP"
 This tests the compressed file integrity. It does this by decompressing it
 to a temporary file and then deleting it.

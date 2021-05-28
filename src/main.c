@@ -125,6 +125,7 @@ Note: Since limit is optional, the short option must not have a space. e.g. -T75
 default chosen by heuristic dependent on ram and chosen compression\n");
 	print_output("Decompression Options:\n----------------------\n");
 	print_output("	-d, --decompress	decompress\n");
+	print_output("  -e, -f -o -O		Same a Compression Options\n");
 	print_output("	-t, --test		test compressed file integrity\n");
 	if (compat)
 		print_output("	-C, --check		check integrity of file written on decompression\n");
@@ -342,8 +343,8 @@ static void recurse_dirlist(char *indir, char **dirlist, int *entries)
 	closedir(dirp);
 }
 
-static const char *loptions = "bcCdDe:fghHiKlL:nN:o:O:p:PqrR:S:tT::Um:vVw:z?";
-static const char *coptions = "bcCde:fghHikKlLnN:o:O:p:PrR:S:tT::Um:vVw:z?123456789";
+static const char *loptions = "bcCdDe::fghHiKlL:nN:o:O:p:PqrR:S:tT::Um:vVw:z?";
+static const char *coptions = "bcCde::fghHikKlLnN:o:O:p:PrR:S:tT::Um:vVw:z?123456789";
 
 int main(int argc, char *argv[])
 {
@@ -443,7 +444,8 @@ int main(int argc, char *argv[])
 			break;
 		case 'e':
 			control->flags |= FLAG_ENCRYPT;
-			control->passphrase = optarg;
+			if (optarg)
+				control->passphrase = optarg;
 			break;
 		case 'f':
 			control->flags |= FLAG_FORCE_REPLACE;
@@ -826,8 +828,10 @@ recursion:
 
 		gettimeofday(&start_time, NULL);
 
-		if (unlikely((STDIN || STDOUT) && ENCRYPT))
-			failure("Unable to work from STDIN while reading password\n");
+		if (unlikely(STDIN && ENCRYPT && control->passphrase == NULL))
+			failure("Unable to work from STDIO while reading password. Use -e passphrase.\n");
+		if (unlikely(STDOUT && !(DECOMPRESS || INFO || TEST_ONLY) && ENCRYPT))
+			failure("Unable to encrypt while writing to STDOUT.\n");
 
 		memcpy(&local_control, &base_control, sizeof(rzip_control));
 		if (DECOMPRESS || TEST_ONLY) {
