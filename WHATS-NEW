@@ -1,3 +1,8 @@
+lrzip-next 0.7.55
+
+Use libgcrypt for mdd5, sha4, aes.
+Update how encryption command-line options are interpreted
+
 lrzip-next 0.7.50
 
 New method for adjusting LZMA Dictionary sizes. Follow the

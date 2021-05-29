@@ -17,6 +17,8 @@ Many new changes, not in the main branch, including:
 * many bug fixes including validating a file prior to decompression (prevents corrupt file decompression before it starts!)
 * use of git describe to present current version without changing configure.ac
 * lz4 Threshold testing (replaces lzo)
+* Substitute libgcrypt functions for separate sources for **md5** and **sha512** hash functions, and **aes 128 bit** encryption.  
+(This will allow for future bug fixes and possibly using different encryption methods through a standard library.)
 
 (See original README for more historical info)
 

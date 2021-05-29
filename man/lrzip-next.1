@@ -1,38 +1,39 @@
 .\" LRZIP manpage
 .\" Comment lines for readability
 .\"
-.TH "lrzip" 1 "February 2021" "lrzip Command Reference" ""
+.nh
+.TH "lrzip-next" 1 "May 2021" "lrzip-next Command Reference" ""
 .SH "NAME"
-lrzip \- a large-file compression program
+lrzip-next \- a large-file compression program
 .SH "SYNOPSIS"
 .PP
-lrzip [OPTIONS] <file>
+lrzip-next [OPTIONS] <file>
 .br
-lrzip \-d [OPTIONS] <file>
+lrzip-next \-d [OPTIONS] <file>
 .br
 lrunzip [OPTIONS] <file>
 .br
 lrzcat [OPTIONS] <file>
 .br
-lrztar [lrzip options] <directory>
+lrztar [lrzip-next options] <directory>
 .br
-lrztar \-d [lrzip options] <directory>
+lrztar \-d [lrzip-next options] <directory>
 .br
-lrzuntar [lrzip options] <directory>
+lrzuntar [lrzip-next options] <directory>
 .br
 lrz [lrz options] <directory>
 .br
-LRZIP=NOCONFIG [lrzip|lrunzip] [OPTIONS] <file>
+LRZIP=NOCONFIG [lrzip-next|lrunzip] [OPTIONS] <file>
 .PP
 .SH "DESCRIPTION"
 .PP
-LRZIP is a file compression program designed to do particularly
+LRZIP-NEXT is a file compression program designed to do particularly
 well on very large files containing long distance redundancy\&.
-lrztar is a wrapper for LRZIP to simplify compression and decompression
+lrztar is a wrapper for LRZIP-NEXT to simplify compression and decompression
 of directories.
 .\"
 .SH "OPTIONS SUMMARY"
-Here is a summary of the options to lrzip.
+Here is a summary of the options to lrzip-next.
 .nf
 .B Compression Options:
  \-\-lzma                  lzma compression (default)
@@ -101,12 +102,12 @@ the original rzip does.
 Gzip compression. Uses gzip compression for the 2nd stage. Uses libz compress
 and uncompress functions.
 .IP "\fB-l | --lzo\fP"
-LZO compression. If this option is set then lrzip will use the ultra
+LZO compression. If this option is set then lrzip-next will use the ultra
 fast lzo compression algorithm for the 2nd stage. This mode of compression
 gives bzip2 like compression at the speed it would normally take to simply
 copy the file, giving excellent compression/time value.
 .IP "\fB-n | --rzip\fP"
-No 2nd stage compression. If this option is set then lrzip will only
+No 2nd stage compression. If this option is set then lrzip-next will only
 perform the long distance redundancy 1st stage compression. While this does
 not compress any faster than LZO compression, it produces a smaller file
 that then responds better to further compression (by eg another application),
@@ -119,10 +120,10 @@ slower than lzma which is the default).
 .IP "\fB-L 1\&.\&.9\fP"
 Set the compression level from 1 to 9. The default is to use level 7, which
 gives good all round compression. The compression level is also strongly related
-to how much memory lrzip uses. See the \-w option for details.
+to how much memory lrzip-next uses. See the \-w option for details.
 .IP "\fB--dictsize=0\&.\&.40\fP (LZMA only)"
 Set Dictionary Size for LZMA from 2^12 (4KB) to 2^32-1 (4GB-1). Normally this
-option is not useful since lrzip will set and sometimes change the dictionary
+option is not useful since lrzip-next will set and sometimes change the dictionary
 size depending on the compression level selected and usable ram available. If
 sufficient ram is not available, Dictionary size will be reduced until total
 overhead * number of threads will fit in ram.
@@ -176,18 +177,27 @@ making the difficulty of attempting brute force attacks proportional to the
 power of modern computers.
 .IP
 The optional password may be inserted on the command line, however there are
-obvious security risks to doing so, so take care. If the short option \fB-e\fP
+obvious security risks to doing so, such as the cleartext password will be
+visible on a screen or persistent in a screen buffer; the cleartext password
+will be visible in a process listing, so take care. If the short option \fB-e\fP
 is used, there must be no space between the option and the password. e.g.
-\fB-efoo\fP.
+\fB-epassphrase\fP.
 .IP
-These options may be used for Encryption, Decryption, or Test. If output is to
-STDOUT, then the option cannot be used.
+These options may be used for Encryption, Decryption, or Test under the following
+conditions.
+.br
+If output is to STDOUT, then the option cannot be used during compression.
+.br
+If input is from STDIN, then the password must be on the command line.
+.br
+If lrzip-next is embedded in a \fBtar -I lrzip-next [options]\fP command, then
+this option cannot be used.
 .IP "\fB-D | --delete\fP"
-If this option is specified then lrzip will delete the
+If this option is specified then lrzip-next will delete the
 source file after successful compression or decompression. When this
 option is not specified then the source files are not deleted.
 .IP "\fB-f | --force\fP"
-If this option is not specified (Default) then lrzip will not
+If this option is not specified (Default) then lrzip-next will not
 overwrite any existing files. If you set this option then rzip will
 silently overwrite any files as needed.
 .IP "\fB-k | --keep-broken\fP"
@@ -208,7 +218,7 @@ Set the compression suffix. The default is '.lrz'.
 .SH "Low Level Compression Options:"
 .IP "\fB-N | --nice-val \fIvalue\fP"
 The default nice value is 19. This option can be used to set the priority
-scheduling for the lrzip backup or decompression. Valid nice values are
+scheduling for the lrzip-next backup or decompression. Valid nice values are
 from \-20 to 19. Note this does NOT speed up or slow down compression.
 .IP "\fB-m | --maxram \fImaxram\fR"
 Specify the maximum system memory in 100MB blocks. Overrides detected ram.
@@ -221,7 +231,7 @@ Disables the LZ4 compressibility threshold testing when a slower compression
 back-end is used. LZ4 testing is normally performed for the slower back-end
 compression of LZMA and ZPAQ. The reasoning is that if it is completely
 incompressible by LZ4 then it will also be incompressible by them. Thus if a
-block fails to be compressed by the very fast LZ4, lrzip will not attempt to
+block fails to be compressed by the very fast LZ4, lrzip-next will not attempt to
 compress that block with the slower compressor, thereby saving time. If this
 option is enabled, it will bypass the LZ4 testing and attempt to compress each
 block regardless.
@@ -235,26 +245,27 @@ the compressor unless it is at least 5% compression benefit as determined by
 LZ4_TEST. Any value from 1-99 is allowed.
 .IP "\fB-U | --unlimited\fP"
 Unlimited window size\&. If this option is set, and the file being compressed
-does not fit into the available ram, lrzip will use a moving second buffer as a
-"sliding mmap" which emulates having infinite ram. This will provide the most
-possible compression in the first rzip stage which can improve the compression
-of ultra large files when they're bigger than the available ram. However it runs
-progressively slower the larger the difference between ram and the file size,
-so is best reserved for when the smallest possible size is desired on a very
-large file, and the time taken is not important.
+does not fit into the available ram, lrzip-next will use a moving second buffer
+as a "sliding mmap" which emulates having infinite ram. This will provide the
+most possible compression in the first rzip stage which can improve the
+compression of ultra large files when they're bigger than the available ram.
+However it runs progressively slower the larger the difference between ram and
+the file size, so is best reserved for when the smallest possible size is
+desired on a very large file, and the time taken is not important.
 .IP "\fB-w | --window \fIsize\fP"
 Set the maximum allowable compression window size to n in hundreds of megabytes.
-This is the amount of memory lrzip will search during its first stage of
-pre-compression and is the main thing that will determine how much benefit lrzip
-will provide over ordinary compression with the 2nd stage algorithm. If not set
-(recommended), the value chosen will be determined by an internal heuristic in
-lrzip which uses the most memory that is reasonable, without any hard upper
-limit. It is limited to 2GB on 32bit machines. lrzip will always reduce the
-window size to the biggest it can be without running out of memory.
+This is the amount of memory lrzip-next will search during its first stage of
+pre-compression and is the main thing that will determine how much benefit
+lrzip-next will provide over ordinary compression with the 2nd stage algorithm.
+If not set (recommended), the value chosen will be determined by an internal
+heuristic in lrzip-next which uses the most memory that is reasonable, without
+any hard upper limit. It is limited to 2GB on 32bit machines. lrzip-next will
+always reduce the window size to the biggest it can be without running out of
+memory.
 .\"
 .SH "Decompression Options:"
 .IP "\fB-d | --decompress\fP"
-Decompress. If this option is not used then lrzip looks at
+Decompress. If this option is not used then lrzip-next looks at
 the name used to launch the program. If it contains the string
 "lrunzip" then the \-d option is automatically set. If it contains the string
 "lrzcat" then the \-d \-o \- options are automatically set.
@@ -265,11 +276,11 @@ This tests the compressed file integrity. It does this by decompressing it
 to a temporary file and then deleting it.
 .IP "\fB-c | --check\fP"
 This option enables integrity checking of the file written to disk on
-decompression. All decompression is tested internally in lrzip with either
+decompression. All decompression is tested internally in lrzip-next with either
 crc32 or md5 hash checking depending on the version of the archive already.
 However the file written to disk may be corrupted for other reasons to do with
 other userspace problems such as faulty library versions, drivers, hardware
-failure and so on. Enabling this option will make lrzip perform an md5 hash
+failure and so on. Enabling this option will make lrzip-next perform an md5 hash
 check on the file that's written to disk. When the archive has the md5 value
 stored in it, it is compared to this. Otherwise it is compared to the value
 calculated during decompression. This offers an extra guarantee that the file
@@ -280,7 +291,7 @@ written is the same as the original archived.
 Print an options summary page
 .IP "\fB-H | --hash\fP"
 This shows the md5 hash value calculated on compressing or decompressing an
-lrzip archive. By default all compression has the md5 value calculated and
+lrzip-next archive. By default all compression has the md5 value calculated and
 stored in all archives since version 0.560. On decompression, when an md5
 value has been found, it will be calculated and used for integrity checking.
 If the md5 value is not stored in the archive, it will not be calculated unless
@@ -297,18 +308,18 @@ a breakdown of all the internal blocks and progressively more information
 pertaining to them will also be shown.
 .IP "\fB-p | --threads\ \fIvalue\fP"
 Set the number of processor count to determine the number of threads to run.
-Normally lrzip will scale according to the number of CPUs it detects. Using
+Normally lrzip-next will scale according to the number of CPUs it detects. Using
 this will override the value in case you wish to use less CPUs to either
 decrease the load on your machine, or to improve compression. Setting it to
 1 will maximise compression but will not attempt to use more than one CPU.
 .IP "\fB-q | --quiet\fP"
-If this option is specified then lrzip will not show the
+If this option is specified then lrzip-next will not show the
 percentage progress while compressing. Note that compression happens in
 bursts with lzma compression which is the default compression. This means
 that it will progress very rapidly for short periods and then stop for
 long periods.
 .IP "\fB-r | --recursive\fP"
-If this option is specified, lrzip will recursively enter the directories
+If this option is specified, lrzip-next will recursively enter the directories
 specified, compressing or decompressing every file individually in the same
 directory. Note for better compression it is recommended to instead combine
 files in a tar file rather than compress them separately, either manually
@@ -316,10 +327,10 @@ or with the lrztar helper.
 .IP "\fB-v[v] | --verbose\fP"
 Increases verbosity. \-vv will print more messages than \-v.
 .IP "\fB-V | --version\fP"
-Print the lrzip version number.
+Print the lrzip-next version number.
 .\"
 .SH "INSTALLATION"
-"make install" or just install lrzip somewhere in your search path.
+"make install" or just install lrzip-next somewhere in your search path.
 .SH "COMPRESSION ALGORITHM"
 LRZIP operates in two stages. The first stage finds and encodes large chunks of
 duplicated data over potentially very long distances in the input file. The
@@ -330,11 +341,11 @@ be omitted entirely doing only the first stage. A one stage only compressed file
 can almost always improve both the compression size and speed done by a
 subsequent compression program.
 .PP
-The key difference between lrzip and other well known compression
+The key difference between lrzip-next and other well known compression
 algorithms is its ability to take advantage of very long distance
 redundancy. The well known deflate algorithm used in gzip uses a
 maximum history buffer of 32k. The block sorting algorithm used in
-bzip2 is limited to 900k of history. The history buffer in lrzip can be
+bzip2 is limited to 900k of history. The history buffer in lrzip-next can be
 any size long, not even limited by available ram.
 .PP
 It is quite common these days to need to compress files that contain
@@ -344,7 +355,7 @@ of quite similar files. It is also common to have a single file that
 contains large duplicated chunks over long distances, such as pdf
 files containing repeated copies of the same image. Most compression
 programs won't be able to take advantage of this redundancy, and thus
-might achieve a much lower compression ratio than lrzip can achieve.
+might achieve a much lower compression ratio than lrzip-next can achieve.
 .\"
 .SH "FILES"
 .PP
@@ -352,15 +363,15 @@ LRZIP recognises a configuration file that contains default settings.
 This configuration is searched for in the current directory, /etc/lrzip,
 and $HOME/.lrzip. The configuration filename must be \fBlrzip.conf\fP.
 .SH "ENVIRONMENT"
-By default, lrzip will search for and use a configuration file, lrzip.conf.
+By default, lrzip-next will search for and use a configuration file, lrzip.conf.
 If the user wishes to bypass the file, a startup ENV variable may be set.
 .br
 .B LRZIP =
 .I "NOCONFIG "
-.B "[lrzip|lrunzip]"
+.B "[lrzip-next|lrunzip]"
 [OPTIONS] <file>
 .br
-which will force lrzip to ignore the configuration file.
+which will force lrzip-next to ignore the configuration file.
 .\"
 .SH "HISTORY - Notes on rzip by Andrew Tridgell"
 .PP
@@ -389,7 +400,7 @@ zip(1)
 .\"
 .SH "AUTHOR and CREDITS"
 .br
-lrzip is being extensively bastardised from rzip by Con Kolivas.
+lrzip-next is being extensively bastardised from rzip by Con Kolivas.
 .br
 from 2016 further extensions, enhancements, updates by Peter Hyman.
 .br
@@ -403,10 +414,10 @@ zpaq was written by Matt Mahoney.
 .br
 Peter Hyman added informational output, updated LZMA SDK,
 updated ZPAQ SDK added lzma multi-threading capabilities,
-and added filtering for all compression modes.
+and added filtering for all compression modes. All features in lrzip-next.
 .br
 If you wish to report a problem, or make a suggestion, then please email Con at
 kernel@kolivas.org or pete@peterhyman.com
 .br
-lrzip is released under the GNU General Public License version 2.
+lrzip-next is released under the GNU General Public License version 2.
 Please see the file COPYING for license details.
