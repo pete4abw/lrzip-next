@@ -54,7 +54,6 @@
 #include "lrzip_private.h"
 #include "util.h"
 #include <gcrypt.h>
-#include "aes.h"
 #ifdef HAVE_CTYPE_H
 # include <ctype.h>
 #endif
@@ -427,6 +426,7 @@ static void lrz_keygen(const rzip_control *control, const uchar *salt, uchar *ke
 	memcpy(buf + HASH_LEN, salt, SALT_LEN);
 	memcpy(buf + HASH_LEN + SALT_LEN, control->salt_pass, control->salt_pass_len);
 
+	/* No error checking for gcrypt key/iv hash functions */
 	gcry_md_open(&gcry_sha512_handle, GCRY_MD_SHA512, GCRY_MD_FLAG_SECURE);
 	gcry_md_write(gcry_sha512_handle, buf, HASH_LEN + SALT_LEN + control->salt_pass_len);
 	memcpy(key, gcry_md_read(gcry_sha512_handle, GCRY_MD_SHA512), HASH_LEN);
@@ -447,66 +447,92 @@ static void lrz_keygen(const rzip_control *control, const uchar *salt, uchar *ke
 
 bool lrz_crypt(const rzip_control *control, uchar *buf, i64 len, const uchar *salt, int encrypt)
 {
-	/* Encryption requires CBC_LEN blocks so we can use ciphertext
-	* stealing to not have to pad the block */
+	/* libgcrypt using cipher text stealing simplifies matters */
 	uchar key[HASH_LEN], iv[HASH_LEN];
 	uchar tmp0[CBC_LEN], tmp1[CBC_LEN];
-	aes_context aes_ctx;
-	i64 N, M;
+	gcry_cipher_hd_t gcry_aes_cbc_handle;
 	bool ret = false;
+	size_t gcry_error;
+	int M, N;
 
 	/* Generate unique key and IV for each block of data based on salt */
-	mlock(&aes_ctx, sizeof(aes_ctx));
 	mlock(key, HASH_LEN);
 	mlock(iv, HASH_LEN);
 
+	M=len % CBC_LEN;
+	N=len - M;
+
 	lrz_keygen(control, salt, key, iv);
 
-	M = len % CBC_LEN;
-	N = len - M;
+	/* Using libgcrypt and CBC/ECB methods. While we could use CTS mode to encrypt/decrypt
+	 * entrire buffer in one pass, this will preserve compatibility with older versions of
+	 * lrzip/lrzip-next.
+	 * Error checking may be superfluous, but inserted for clarity and proper coding standard.
+	 */
+	gcry_error=gcry_cipher_open(&gcry_aes_cbc_handle, GCRY_CIPHER_AES, GCRY_CIPHER_MODE_CBC, GCRY_CIPHER_SECURE);
+	if (unlikely(gcry_error))
+		failure_goto(("Unable to set AES CBC handle in lrz_crypt: %d\n", gcry_error), error);
+	gcry_error=gcry_cipher_setkey(gcry_aes_cbc_handle, key, CBC_LEN);
+	if (unlikely(gcry_error))
+		failure_goto(("Failed to set AES CBC key in lrz_crypt: %d\n", gcry_error), error);
+	gcry_error=gcry_cipher_setiv(gcry_aes_cbc_handle, iv, CBC_LEN);
+	if (unlikely(gcry_error))
+		failure_goto(("Failed to set AES CBC iv in lrz_crypt: %d\n", gcry_error), error);
 
 	if (encrypt == LRZ_ENCRYPT) {
 		print_maxverbose("Encrypting data        \n");
-		if (unlikely(aes_setkey_enc(&aes_ctx, key, 128)))
-			failure_goto(("Failed to aes_setkey_enc in lrz_crypt\n"), error);
-		aes_crypt_cbc(&aes_ctx, AES_ENCRYPT, N, iv, buf, buf);
-
+		/* Encrypt whole buffer */
+		gcry_error=gcry_cipher_encrypt(gcry_aes_cbc_handle, buf, N, NULL, 0);
+		if (unlikely(gcry_error))
+			failure_goto(("Failed to encrypt AES CBC data in lrz_crypt: %d\n", gcry_error), error);
 		if (M) {
 			memset(tmp0, 0, CBC_LEN);
 			memcpy(tmp0, buf + N, M);
-			aes_crypt_cbc(&aes_ctx, AES_ENCRYPT, CBC_LEN,
-				iv, tmp0, tmp1);
+			gcry_error=gcry_cipher_encrypt(gcry_aes_cbc_handle, tmp1, CBC_LEN, tmp0, CBC_LEN);
+			if (unlikely(gcry_error))
+				failure_goto(("Failed to encrypt AES CBC data in lrz_crypt: %d\n", gcry_error), error);
 			memcpy(buf + N, buf + N - CBC_LEN, M);
 			memcpy(buf + N - CBC_LEN, tmp1, CBC_LEN);
 		}
 	} else {
-		if (unlikely(aes_setkey_dec(&aes_ctx, key, 128)))
-			failure_goto(("Failed to aes_setkey_dec in lrz_crypt\n"), error);
 		print_maxverbose("Decrypting data        \n");
+		/* Final block not full */
 		if (M) {
-			aes_crypt_cbc(&aes_ctx, AES_DECRYPT, N - CBC_LEN,
-				      iv, buf, buf);
-			aes_crypt_ecb(&aes_ctx, AES_DECRYPT,
-				      buf + N - CBC_LEN, tmp0);
+			gcry_cipher_hd_t gcry_aes_ecb_handle;
+			gcry_error=gcry_cipher_open(&gcry_aes_ecb_handle, GCRY_CIPHER_AES, GCRY_CIPHER_MODE_ECB, GCRY_CIPHER_SECURE);
+			if (unlikely(gcry_error))
+				failure_goto(("Unable to set AES ECB handle in lrz_crypt: %d\n", gcry_error), error);
+			gcry_error=gcry_cipher_setkey(gcry_aes_ecb_handle,key,CBC_LEN);
+			if (unlikely(gcry_error))
+				failure_goto(("Failed to set AES ECB key in lrz_crypt: %d\n", gcry_error), error);
+			gcry_error=gcry_cipher_decrypt(gcry_aes_cbc_handle, buf, N-CBC_LEN, NULL, 0);
+			if (unlikely(gcry_error))
+				failure_goto(("Failed to decrypt AES CBC data in lrz_crypt: %d\n", gcry_error), error);
+			gcry_error=gcry_cipher_decrypt(gcry_aes_ecb_handle, tmp0, CBC_LEN, buf+N-CBC_LEN, CBC_LEN);
+			if (unlikely(gcry_error))
+				failure_goto(("Failed to decrypt AES ECB data in lrz_crypt: %d\n", gcry_error), error);
 			memset(tmp1, 0, CBC_LEN);
 			memcpy(tmp1, buf + N, M);
 			xor128(tmp0, tmp1);
 			memcpy(buf + N, tmp0, M);
 			memcpy(tmp1 + M, tmp0 + M, CBC_LEN - M);
-			aes_crypt_ecb(&aes_ctx, AES_DECRYPT, tmp1,
-				      buf + N - CBC_LEN);
-			xor128(buf + N - CBC_LEN, iv);
-		} else
-			aes_crypt_cbc(&aes_ctx, AES_DECRYPT, len,
-				      iv, buf, buf);
+			gcry_error=gcry_cipher_decrypt(gcry_aes_cbc_handle, buf+N-CBC_LEN, CBC_LEN, tmp1, CBC_LEN);
+			if (unlikely(gcry_error))
+				failure_goto(("Failed to decrypt final AES CBC block in lrz_crypt: %d\n", gcry_error), error);
+			gcry_cipher_close(gcry_aes_ecb_handle);
+		} else {
+			/* Decrypt whole buffer */
+			gcry_error=gcry_cipher_decrypt(gcry_aes_cbc_handle, buf, len, NULL, 0);
+			if (unlikely(gcry_error))
+				failure_goto(("Failed to decrypt AES CBC data in lrz_crypt: %d\n", gcry_error), error);
+		}
 	}
+	gcry_cipher_close(gcry_aes_cbc_handle);
 
 	ret = true;
 error:
-	memset(&aes_ctx, 0, sizeof(aes_ctx));
 	memset(iv, 0, HASH_LEN);
 	memset(key, 0, HASH_LEN);
-	munlock(&aes_ctx, sizeof(aes_ctx));
 	munlock(iv, HASH_LEN);
 	munlock(key, HASH_LEN);
 	return ret;

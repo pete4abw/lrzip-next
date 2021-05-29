@@ -10,14 +10,12 @@ libtmplrzip_next_la_SOURCES = \
 	runzip.c \
 	stream.c \
 	util.c \
-	aes.c \
 	include/lrzip_core.h \
 	include/lrzip_private.h \
 	include/rzip.h \
 	include/runzip.h \
 	include/stream.h \
 	include/util.h \
-	include/aes.h \
 	lzma/include/7zCrc.h \
 	lzma/include/LzmaDec.h \
 	lzma/include/LzmaLib.h
