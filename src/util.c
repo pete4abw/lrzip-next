@@ -53,7 +53,7 @@
 #include <fcntl.h>
 #include "lrzip_private.h"
 #include "util.h"
-#include "sha4.h"
+#include <gcrypt.h>
 #include "aes.h"
 #ifdef HAVE_CTYPE_H
 # include <ctype.h>
@@ -419,17 +419,27 @@ static void xor128 (void *pa, const void *pb)
 static void lrz_keygen(const rzip_control *control, const uchar *salt, uchar *key, uchar *iv)
 {
 	uchar buf [HASH_LEN + SALT_LEN + PASS_LEN];
+	gcry_md_hd_t gcry_sha512_handle;
+
 	mlock(buf, HASH_LEN + SALT_LEN + PASS_LEN);
 
 	memcpy(buf, control->hash, HASH_LEN);
 	memcpy(buf + HASH_LEN, salt, SALT_LEN);
 	memcpy(buf + HASH_LEN + SALT_LEN, control->salt_pass, control->salt_pass_len);
-	sha4(buf, HASH_LEN + SALT_LEN + control->salt_pass_len, key, 0);
+
+	gcry_md_open(&gcry_sha512_handle, GCRY_MD_SHA512, GCRY_MD_FLAG_SECURE);
+	gcry_md_write(gcry_sha512_handle, buf, HASH_LEN + SALT_LEN + control->salt_pass_len);
+	memcpy(key, gcry_md_read(gcry_sha512_handle, GCRY_MD_SHA512), HASH_LEN);
+
+	gcry_md_reset(gcry_sha512_handle);
 
 	memcpy(buf, key, HASH_LEN);
 	memcpy(buf + HASH_LEN, salt, SALT_LEN);
 	memcpy(buf + HASH_LEN + SALT_LEN, control->salt_pass, control->salt_pass_len);
-	sha4(buf, HASH_LEN + SALT_LEN + control->salt_pass_len, iv, 0);
+
+	gcry_md_write(gcry_sha512_handle, buf, HASH_LEN + SALT_LEN + control->salt_pass_len);
+	memcpy(iv, gcry_md_read(gcry_sha512_handle, GCRY_MD_SHA512), HASH_LEN);
+	gcry_md_close(gcry_sha512_handle);
 
 	memset(buf, 0, sizeof(buf));
 	munlock(buf, sizeof(buf));
@@ -504,20 +514,18 @@ error:
 
 void lrz_stretch(rzip_control *control)
 {
-	sha4_context ctx;
+	gcry_md_hd_t gcry_sha512_handle;
 	i64 j, n, counter;
 
-	mlock(&ctx, sizeof(ctx));
-	sha4_starts(&ctx, 0);
+	gcry_md_open(&gcry_sha512_handle, GCRY_MD_SHA512, GCRY_MD_FLAG_SECURE);
 
 	n = control->encloops * HASH_LEN / (control->salt_pass_len + sizeof(i64));
 	print_maxverbose("Hashing passphrase %lld (%lld) times \n", control->encloops, n);
 	for (j = 0; j < n; j ++) {
 		counter = htole64(j);
-		sha4_update(&ctx, (uchar *)&counter, sizeof(counter));
-		sha4_update(&ctx, control->salt_pass, control->salt_pass_len);
+		gcry_md_write(gcry_sha512_handle, (uchar *)&counter, sizeof(counter));
+		gcry_md_write(gcry_sha512_handle, control->salt_pass, control->salt_pass_len);
 	}
-	sha4_finish(&ctx, control->hash);
-	memset(&ctx, 0, sizeof(ctx));
-	munlock(&ctx, sizeof(ctx));
+	memcpy(control->hash, gcry_md_read(gcry_sha512_handle, GCRY_MD_SHA512), HASH_LEN);
+	gcry_md_close(gcry_sha512_handle);
 }

@@ -11,7 +11,6 @@ libtmplrzip_next_la_SOURCES = \
 	stream.c \
 	util.c \
 	aes.c \
-	sha4.c \
 	include/lrzip_core.h \
 	include/lrzip_private.h \
 	include/rzip.h \
@@ -19,7 +18,6 @@ libtmplrzip_next_la_SOURCES = \
 	include/stream.h \
 	include/util.h \
 	include/aes.h \
-	include/sha4.h \
 	lzma/include/7zCrc.h \
 	lzma/include/LzmaDec.h \
 	lzma/include/LzmaLib.h
