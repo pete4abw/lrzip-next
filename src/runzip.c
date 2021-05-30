@@ -40,13 +40,16 @@
 # include <arpa/inet.h>
 #endif
 
-#include "md5.h"
 #include "runzip.h"
 #include "stream.h"
 #include "util.h"
 #include "lrzip_core.h"
 /* needed for CRC routines */
 #include "7zCrc.h"
+#include <gcrypt.h>
+
+/* Work Function to compute md5 of a file stream */
+int md5_stream ( FILE *, uchar * );
 
 static inline uchar read_u8(rzip_control *control, void *ss, int stream, bool *err)
 {
@@ -173,7 +176,7 @@ static i64 unzip_literal(rzip_control *control, void *ss, i64 len, uint32 *cksum
 	if (!HAS_MD5)
 		*cksum = CrcUpdate(*cksum, buf, stream_read);
 	if (!NO_MD5)
-		md5_process_bytes(buf, stream_read, &control->ctx);
+		gcry_md_write(control->gcry_md5_handle, buf, stream_read);
 
 	dealloc(buf);
 	return stream_read;
@@ -234,7 +237,7 @@ static i64 unzip_match(rzip_control *control, void *ss, i64 len, uint32 *cksum, 
 		if (!HAS_MD5)
 			*cksum = CrcUpdate(*cksum, off_buf, n);
 		if (!NO_MD5)
-			md5_process_bytes(off_buf, n, &control->ctx);
+			gcry_md_write(control->gcry_md5_handle, off_buf, n);
 
 		len -= n;
 		off_buf += n;
@@ -398,8 +401,11 @@ i64 runzip_fd(rzip_control *control, int fd_in, int fd_out, int fd_hist, i64 exp
 	i64 total = 0, u;
 	double tdiff;
 
-	if (!NO_MD5)
-		md5_init_ctx (&control->ctx);
+	if (!NO_MD5) {
+		gcry_md_open(&control->gcry_md5_handle, GCRY_MD_MD5, GCRY_MD_FLAG_SECURE);
+		if ((unlikely(control->gcry_md5_handle == NULL)))
+			failure("Unable to set md5 handle in runzip_fd\n");
+	}
 	gettimeofday(&start,NULL);
 
 	do {
@@ -444,7 +450,7 @@ i64 runzip_fd(rzip_control *control, int fd_in, int fd_out, int fd_hist, i64 exp
 	if (!NO_MD5) {
 		int i,j;
 
-		md5_finish_ctx (&control->ctx, control->md5_resblock);
+		memcpy(control->gcry_md5_resblock, gcry_md_read(control->gcry_md5_handle, GCRY_MD_MD5), MD5_DIGEST_SIZE);
 		if (HAS_MD5) {
 			i64 fdinend = seekto_fdinend(control);
 
@@ -459,13 +465,13 @@ i64 runzip_fd(rzip_control *control, int fd_in, int fd_out, int fd_hist, i64 exp
 				if (unlikely(!lrz_decrypt(control, md5_stored, MD5_DIGEST_SIZE, control->salt_pass)))
 					return -1;
 			for (i = 0; i < MD5_DIGEST_SIZE; i++)
-				if (md5_stored[i] != control->md5_resblock[i]) {
+				if (md5_stored[i] != control->gcry_md5_resblock[i]) {
 					print_output("MD5 CHECK FAILED.\nStored:");
 					for (j = 0; j < MD5_DIGEST_SIZE; j++)
-						print_output("%02x", md5_stored[j] & 0xFF);
+						print_output("%02x", md5_stored[j]);
 					print_output("\nOutput file:");
 					for (j = 0; j < MD5_DIGEST_SIZE; j++)
-						print_output("%02x", control->md5_resblock[j] & 0xFF);
+						print_output("%02x", control->gcry_md5_resblock[j]);
 					failure_return(("\n"), -1);
 				}
 		}
@@ -473,7 +479,7 @@ i64 runzip_fd(rzip_control *control, int fd_in, int fd_out, int fd_hist, i64 exp
 		if (HASH_CHECK || MAX_VERBOSE) {
 			print_output("MD5: ");
 			for (i = 0; i < MD5_DIGEST_SIZE; i++)
-				print_output("%02x", control->md5_resblock[i] & 0xFF);
+				print_output("%02x", control->gcry_md5_resblock[i]);
 			print_output("\n");
 		}
 
@@ -483,22 +489,22 @@ i64 runzip_fd(rzip_control *control, int fd_in, int fd_out, int fd_hist, i64 exp
 
 			if (TMP_OUTBUF)
 				close_tmpoutbuf(control);
-			memcpy(md5_stored, control->md5_resblock, MD5_DIGEST_SIZE);
+			memcpy(md5_stored, control->gcry_md5_resblock, MD5_DIGEST_SIZE);
 			if (unlikely(seekto_fdhist(control, 0) == -1))
 				fatal_return(("Failed to seekto_fdhist in runzip_fd\n"), -1);
 			if (unlikely((md5_fstream = fdopen(fd_hist, "r")) == NULL))
 				fatal_return(("Failed to fdopen fd_hist in runzip_fd\n"), -1);
-			if (unlikely(md5_stream(md5_fstream, control->md5_resblock)))
+			if (unlikely(md5_stream(md5_fstream, control->gcry_md5_resblock)))
 				fatal_return(("Failed to md5_stream in runzip_fd\n"), -1);
 			/* We don't close the file here as it's closed in main */
 			for (i = 0; i < MD5_DIGEST_SIZE; i++)
-				if (md5_stored[i] != control->md5_resblock[i]) {
+				if (md5_stored[i] != control->gcry_md5_resblock[i]) {
 					print_output("MD5 CHECK FAILED.\nStored:");
 					for (j = 0; j < MD5_DIGEST_SIZE; j++)
-						print_output("%02x", md5_stored[j] & 0xFF);
+						print_output("%02x", md5_stored[j]);
 					print_output("\nOutput file:");
 					for (j = 0; j < MD5_DIGEST_SIZE; j++)
-						print_output("%02x", control->md5_resblock[j] & 0xFF);
+						print_output("%02x", control->gcry_md5_resblock[j]);
 					failure_return(("\n"), -1);
 				}
 			print_output("MD5 integrity of written file matches archive\n");
@@ -510,4 +516,65 @@ i64 runzip_fd(rzip_control *control, int fd_in, int fd_out, int fd_hist, i64 exp
 	}
 
 	return total;
+}
+
+
+/* Work Function to compute an md5 from a file stream
+ * Taken from the old md5.c file and updated to use gcrypt
+ */
+
+/* Compute MD5 message digest for bytes read from STREAM.  The
+   resulting message digest number will be written into the 16 bytes
+   beginning at RESBLOCK.  */
+#define BLOCKSIZE 32768
+int md5_stream (FILE *stream, uchar *resblock)
+{
+	gcry_md_hd_t gcry_md5_handle;
+	size_t sum;
+
+	char *buffer = malloc (BLOCKSIZE + 72);
+	if (!buffer)
+		return 1;
+
+	gcry_md_open(&gcry_md5_handle, GCRY_MD_MD5, GCRY_MD_FLAG_SECURE);
+
+	/* Iterate over full file contents.  */
+	while (1)
+	{
+		size_t n;
+		sum = 0;
+
+		/* Read block.  Take care for partial reads.  */
+		while (1)
+		{
+			n = fread (buffer + sum, 1, BLOCKSIZE - sum, stream);
+			sum += n;
+			if (sum == BLOCKSIZE)
+				break;
+
+			if (n == 0)
+			{
+				if (ferror (stream))
+				{
+					free (buffer);
+					return 1;
+				}
+				goto process_partial_block;
+			}
+			if (feof (stream))
+				goto process_partial_block;
+		}
+		gcry_md_write(gcry_md5_handle, buffer, BLOCKSIZE);
+	}
+
+process_partial_block:
+	/* Process any remaining bytes.  */
+	if (sum > 0)
+		gcry_md_write(gcry_md5_handle, buffer, sum);
+
+	/* Construct result in desired memory.  */
+	memcpy(resblock, gcry_md_read(gcry_md5_handle, GCRY_MD_MD5), MD5_DIGEST_SIZE);
+	gcry_md_close(gcry_md5_handle);
+	free (buffer);
+	return 0;
 }

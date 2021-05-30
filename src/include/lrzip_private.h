@@ -31,6 +31,7 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <semaphore.h>
+#include <gcrypt.h>
 
 #ifdef HAVE_PTHREAD_H
 # include <pthread.h>
@@ -152,7 +153,6 @@ typedef int64_t i64;
 typedef uint32_t u32;
 
 typedef struct rzip_control rzip_control;
-typedef struct md5_ctx md5_ctx;
 
 /* ck specific unnamed semaphore implementations to cope with osx not
  * implementing them. */
@@ -336,19 +336,6 @@ typedef sem_t cksem_t;
 #define FILTER_MASK		0b00000111			// decode magic
 #define DELTA_OFFSET_MASK	0b11111000
 
-/* Structure to save state of computation between the single steps.  */
-struct md5_ctx
-{
-	uint32_t A;
-	uint32_t B;
-	uint32_t C;
-	uint32_t D;
-
-	uint32_t total[2];
-	uint32_t buflen;
-	uint32_t buffer[32];
-};
-
 struct sliding_buffer {
 	uchar *buf_low;	/* The low window buffer */
 	uchar *buf_high;/* "" high "" */
@@ -476,8 +463,8 @@ struct rzip_control {
 	bool lzma_prop_set;
 
 	cksem_t cksumsem;
-	md5_ctx ctx;
-	uchar md5_resblock[MD5_DIGEST_SIZE];
+	gcry_md_hd_t gcry_md5_handle;
+	uchar gcry_md5_resblock[MD5_DIGEST_SIZE];
 	i64 md5_read;			// How far into the file the md5 has done so far
 	struct checksum checksum;
 

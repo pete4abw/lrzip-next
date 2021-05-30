@@ -49,7 +49,6 @@
 #include <utime.h>
 #include <inttypes.h>
 
-#include "md5.h"
 #include "rzip.h"
 #include "runzip.h"
 #include "util.h"
@@ -1198,7 +1197,7 @@ done:
 	} /* end if (INFO) */
 
 	if (HAS_MD5) {
-		char md5_stored[MD5_DIGEST_SIZE];
+		unsigned char md5_stored[MD5_DIGEST_SIZE];
 		int i;
 
 		if (unlikely(lseek(fd_in, -MD5_DIGEST_SIZE, SEEK_END) == -1))
@@ -1209,7 +1208,7 @@ done:
 			print_output("MD5 used for integrity testing\n");
 			print_output("MD5: ");
 			for (i = 0; i < MD5_DIGEST_SIZE; i++)
-				print_output("%02x", md5_stored[i] & 0xFF);
+				print_output("%02x", md5_stored[i]);
 			print_output("\n");
 		}
 	} else {

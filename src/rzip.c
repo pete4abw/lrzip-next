@@ -52,12 +52,12 @@
 #endif
 #include <inttypes.h>
 
-#include "md5.h"
 #include "stream.h"
 #include "util.h"
 #include "lrzip_core.h"
 /* needed for CRC routines */
 #include "7zCrc.h"
+#include <gcrypt.h>
 
 #ifndef MAP_ANONYMOUS
 # define MAP_ANONYMOUS MAP_ANON
@@ -587,7 +587,7 @@ static void *cksumthread(void *data)
 
 	*control->checksum.cksum = CrcUpdate(*control->checksum.cksum, control->checksum.buf, control->checksum.len);
 	if (!NO_MD5)
-		md5_process_bytes(control->checksum.buf, control->checksum.len, &control->ctx);
+		gcry_md_write(control->gcry_md5_handle, control->checksum.buf, control->checksum.len);
 	dealloc(control->checksum.buf);
 	cksem_post(control, &control->cksumsem);
 	return NULL;
@@ -758,13 +758,13 @@ static inline void hash_search(rzip_control *control, struct rzip_state *st,
 			cksum_limit += cksum_len;
 			st->cksum = CrcUpdate(st->cksum, control->checksum.buf, cksum_len);
 			if (!NO_MD5)
-				md5_process_bytes(control->checksum.buf, cksum_len, &control->ctx);
+				gcry_md_write(control->gcry_md5_handle, control->checksum.buf, control->checksum.len);
 		}
 		/* Process end of the checksum buffer */
 		control->do_mcpy(control, control->checksum.buf, cksum_limit, cksum_remains);
 		st->cksum = CrcUpdate(st->cksum, control->checksum.buf, cksum_remains);
 		if (!NO_MD5)
-			md5_process_bytes(control->checksum.buf, cksum_remains, &control->ctx);
+			gcry_md_write(control->gcry_md5_handle, control->checksum.buf, control->checksum.len);
 		dealloc(control->checksum.buf);
 		cksem_post(control, &control->cksumsem);
 	} else {
@@ -954,8 +954,11 @@ void rzip_fd(rzip_control *control, int fd_in, int fd_out)
 	i64 free_space;
 
 	init_mutex(control, &control->control_lock);
-	if (!NO_MD5)
-		md5_init_ctx(&control->ctx);
+	if (!NO_MD5) {
+		gcry_md_open(&control->gcry_md5_handle, GCRY_MD_MD5, GCRY_MD_FLAG_SECURE);
+		if (unlikely(control->gcry_md5_handle == NULL))
+			failure("Cannot create MD5 Handle in rzip_fd\n");
+	}
 	cksem_init(control, &control->cksumsem);
 	cksem_post(control, &control->cksumsem);
 
@@ -1202,20 +1205,20 @@ retry:
 
 	if (!NO_MD5) {
 		/* Temporary workaround till someone fixes apple md5 */
-		md5_finish_ctx(&control->ctx, control->md5_resblock);
+		memcpy(control->gcry_md5_resblock, gcry_md_read(control->gcry_md5_handle, GCRY_MD_MD5), MD5_DIGEST_SIZE);
 		if (HASH_CHECK || MAX_VERBOSE) {
 			print_output("MD5: ");
 			for (j = 0; j < MD5_DIGEST_SIZE; j++)
-				print_output("%02x", control->md5_resblock[j] & 0xFF);
+				print_output("%02x", control->gcry_md5_resblock[j]);
 			print_output("\n");
 		}
 		/* When encrypting data, we encrypt the MD5 value as well */
 		if (ENCRYPT)
-			if (unlikely(!lrz_encrypt(control, control->md5_resblock, MD5_DIGEST_SIZE, control->salt_pass))) {
+			if (unlikely(!lrz_encrypt(control, control->gcry_md5_resblock, MD5_DIGEST_SIZE, control->salt_pass))) {
 				dealloc(st);
 				failure("Failed to lrz_encrypt in rzip_fd\n");
 			}
-		if (unlikely(write_1g(control, control->md5_resblock, MD5_DIGEST_SIZE) != MD5_DIGEST_SIZE)) {
+		if (unlikely(write_1g(control, control->gcry_md5_resblock, MD5_DIGEST_SIZE) != MD5_DIGEST_SIZE)) {
 			dealloc(st);
 			failure("Failed to write md5 in rzip_fd\n");
 		}
@@ -1254,6 +1257,7 @@ retry:
 		       1.0 * s.st_size / s2.st_size, chunkmbs);
 
 	clear_sslist(st);
+	gcry_md_close(control->gcry_md5_handle);
 	dealloc(st);
 }
 
