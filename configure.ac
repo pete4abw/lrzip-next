@@ -93,6 +93,7 @@ AC_CHECK_HEADERS(fcntl.h sys/time.h unistd.h sys/mman.h)
 AC_CHECK_HEADERS(ctype.h errno.h sys/resource.h)
 AC_CHECK_HEADERS(endian.h sys/endian.h arpa/inet.h)
 AC_CHECK_HEADERS(alloca.h pthread.h)
+AC_CHECK_HEADERS(gcrypt.h, gpg-error.h)
 
 AC_TYPE_OFF_T
 AC_TYPE_SIZE_T
@@ -126,7 +127,10 @@ AC_CHECK_LIB(lzo2, lzo1x_1_compress, ,
         AC_MSG_ERROR([Could not find lzo2 library - please install liblzo2-dev]))
 AC_CHECK_LIB(lz4, LZ4_compress_default, ,
 	AC_MSG_ERROR([Could not find lz4 library - please install liblz4-dev]))
-
+AC_CHECK_LIB(gpg-error, gpg_err_code_to_errno, ,
+	AC_MSG_ERROR([Could not find gpg-error library - please install libgpg-error-dev]))
+AC_CHECK_LIB(gcrypt, gcry_md_open, ,
+	AC_MSG_ERROR([Could not find gcrypt library - please install libgcrypt-dev]))
 AC_CHECK_FUNCS(mmap strerror)
 AC_CHECK_FUNCS(getopt_long)
 
@@ -193,4 +197,8 @@ echo "  LDFLAGS..............: $LDFLAGS"
 echo
 echo "Installation...........: make install (as root if needed, with 'su' or 'sudo')"
 echo "  prefix...............: $prefix"
+if test x"$static" = x"yes"; then
+gver=$(ldd --version | head -n1 | rev | cut -f1 -d\ | rev)
+	echo "WARNING: Static Binary will require runtime glibc libraries of the same version used to link it here: $gver. Therefore static binary may not be portable to other systems."
+fi
 echo
