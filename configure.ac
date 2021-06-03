@@ -93,7 +93,7 @@ AC_CHECK_HEADERS(fcntl.h sys/time.h unistd.h sys/mman.h)
 AC_CHECK_HEADERS(ctype.h errno.h sys/resource.h)
 AC_CHECK_HEADERS(endian.h sys/endian.h arpa/inet.h)
 AC_CHECK_HEADERS(alloca.h pthread.h)
-AC_CHECK_HEADERS(gcrypt.h, gpg-error.h)
+AC_CHECK_HEADERS(gcrypt.h gpg-error.h)
 
 AC_TYPE_OFF_T
 AC_TYPE_SIZE_T
