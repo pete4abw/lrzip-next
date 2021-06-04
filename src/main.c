@@ -829,23 +829,13 @@ recursion:
 		gettimeofday(&start_time, NULL);
 
 		if (unlikely(STDIN && ENCRYPT && control->passphrase == NULL))
-			failure("Unable to work from STDIO while reading password. Use -e passphrase.\n");
+			failure("Unable to work from STDIN while reading password. Use -e passphrase.\n");
 		if (unlikely(STDOUT && !(DECOMPRESS || INFO || TEST_ONLY) && ENCRYPT))
 			failure("Unable to encrypt while writing to STDOUT.\n");
 
 		memcpy(&local_control, &base_control, sizeof(rzip_control));
-		if (DECOMPRESS || TEST_ONLY) {
-			// vailidate file on decompression or test
-			if (STDIN)
-				print_err("Can't validate a file from STDIN. To validate, check file directly.");
-			else {
-				if (unlikely((get_fileinfo(&local_control)) == false)) {
-					print_err("Corrupt lrzip archive. Cannot continue\n",-1);
-					return -1;
-				}
-			}
+		if (DECOMPRESS || TEST_ONLY)
 			decompress_file(&local_control);
-		}
 		else if (INFO)
 			get_fileinfo(&local_control);
 		else

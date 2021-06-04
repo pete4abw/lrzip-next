@@ -17,6 +17,8 @@ Many new changes, not in the main branch, including:
 * many bug fixes including validating a file prior to decompression (prevents corrupt file decompression before it starts!)
 * use of git describe to present current version without changing configure.ac
 * lz4 Threshold testing (replaces lzo)
+* File info `lrzip-next -i` will now fetch info from encrypted files
+* `lrzip-next -i` will not print percent info when file size is not known
 * Substitute libgcrypt functions for separate sources for **md5** and **sha512** hash functions, and **aes 128 bit** encryption.  
 (This will allow for future bug fixes and possibly using different encryption methods through a standard library.)
 

@@ -1,3 +1,6 @@
+lrzip-next 0.7.60
+Get file info from encrypted files using lrzip-next -i.
+
 lrzip-next 0.7.55
 
 Use libgcrypt for mdd5, sha4, aes.

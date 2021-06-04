@@ -494,9 +494,9 @@ bool lrz_crypt(const rzip_control *control, uchar *buf, i64 len, const uchar *sa
 			memcpy(buf + N, buf + N - CBC_LEN, M);
 			memcpy(buf + N - CBC_LEN, tmp1, CBC_LEN);
 		}
-	} else {
-		print_maxverbose("Decrypting data        \n");
-		/* Final block not full */
+	} else { //LRZ_DECRYPT or LRZ_VALIDATE
+		if (encrypt == LRZ_DECRYPT)	// don't print if validating or in info
+			print_maxverbose("Decrypting data        \n");
 		if (M) {
 			gcry_cipher_hd_t gcry_aes_ecb_handle;
 			gcry_error=gcry_cipher_open(&gcry_aes_ecb_handle, GCRY_CIPHER_AES, GCRY_CIPHER_MODE_ECB, GCRY_CIPHER_SECURE);
@@ -552,6 +552,27 @@ void lrz_stretch(rzip_control *control)
 		gcry_md_write(gcry_sha512_handle, (uchar *)&counter, sizeof(counter));
 		gcry_md_write(gcry_sha512_handle, control->salt_pass, control->salt_pass_len);
 	}
-	memcpy(control->hash, gcry_md_read(gcry_sha512_handle, GCRY_MD_SHA512), HASH_LEN);
-	gcry_md_close(gcry_sha512_handle);
+}
+
+/* The block headers are all encrypted so we read the data and salt associated
+ * with them, decrypt the data, then return the decrypted version of the
+ * values */
+bool decrypt_header(rzip_control *control, uchar *head, uchar *c_type,
+			   i64 *c_len, i64 *u_len, i64 *last_head, int dec_or_validate)
+{
+	uchar *buf = head + SALT_LEN;
+
+	memcpy(buf, c_type, 1);
+	memcpy(buf + 1, c_len, 8);
+	memcpy(buf + 9, u_len, 8);
+	memcpy(buf + 17, last_head, 8);
+
+	if (unlikely(!lrz_decrypt(control, buf, 25, head, dec_or_validate)))
+		return false;
+
+	memcpy(c_type, buf, 1);
+	memcpy(c_len, buf + 1, 8);
+	memcpy(u_len, buf + 9, 8);
+	memcpy(last_head, buf + 17, 8);
+	return true;
 }

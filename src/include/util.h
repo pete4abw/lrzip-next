@@ -31,6 +31,19 @@ void register_outfile(rzip_control *control, const char *name, char delete);
 void unlink_files(rzip_control *control);
 void register_outputfile(rzip_control *control, FILE *f);
 void fatal_exit(rzip_control *control);
+void setup_overhead(rzip_control *control);
+void setup_ram(rzip_control *control);
+void round_to_page(i64 *size);
+size_t round_up_page(rzip_control *control, size_t len);
+bool get_rand(rzip_control *control, uchar *buf, int len);
+bool read_config(rzip_control *control);
+void lrz_stretch(rzip_control *control);
+void lrz_stretch2(rzip_control *control);
+bool lrz_crypt(const rzip_control *control, uchar *buf, i64 len, const uchar *salt, int encrypt);
+/* decrypt_header will take a final variable for either decrypt or validate.
+ * Valdidate will suppress printing message during validation or info
+ */
+bool decrypt_header(rzip_control *control, uchar *head, uchar *c_type, i64 *c_len, i64 *u_len, i64 *last_head, int decompress_type);
 /* Failure when there is likely to be a meaningful error in perror */
 static inline void fatal(const rzip_control *control, unsigned int line, const char *file, const char *func, const char *format, ...)
 {
@@ -83,27 +96,15 @@ static inline void failure(const rzip_control *control, unsigned int line, const
 	failure stuff; \
 	goto label; \
 } while (0)
-void setup_overhead(rzip_control *control);
-void setup_ram(rzip_control *control);
-void round_to_page(i64 *size);
-size_t round_up_page(rzip_control *control, size_t len);
-bool get_rand(rzip_control *control, uchar *buf, int len);
-bool read_config(rzip_control *control);
-void lrz_stretch(rzip_control *control);
-void lrz_stretch2(rzip_control *control);
-bool lrz_crypt(const rzip_control *control, uchar *buf, i64 len, const uchar *salt, int encrypt);
-
-#define LRZ_DECRYPT	(0)
-#define LRZ_ENCRYPT	(1)
 
 static inline bool lrz_encrypt(const rzip_control *control, uchar *buf, i64 len, const uchar *salt)
 {
 	return lrz_crypt(control, buf, len, salt, LRZ_ENCRYPT);
 }
 
-static inline bool lrz_decrypt(const rzip_control *control, uchar *buf, i64 len, const uchar *salt)
+static inline bool lrz_decrypt(const rzip_control *control, uchar *buf, i64 len, const uchar *salt, int dec_or_validate)
 {
-	return lrz_crypt(control, buf, len, salt, LRZ_DECRYPT);
+	return lrz_crypt(control, buf, len, salt, dec_or_validate);
 }
 
 /* ck specific wrappers for true unnamed semaphore usage on platforms

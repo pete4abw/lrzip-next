@@ -1127,28 +1127,6 @@ retest_malloc:
 	return (void *)sinfo;
 }
 
-/* The block headers are all encrypted so we read the data and salt associated
- * with them, decrypt the data, then return the decrypted version of the
- * values */
-static bool decrypt_header(rzip_control *control, uchar *head, uchar *c_type,
-			   i64 *c_len, i64 *u_len, i64 *last_head)
-{
-	uchar *buf = head + SALT_LEN;
-
-	memcpy(buf, c_type, 1);
-	memcpy(buf + 1, c_len, 8);
-	memcpy(buf + 9, u_len, 8);
-	memcpy(buf + 17, last_head, 8);
-
-	if (unlikely(!lrz_decrypt(control, buf, 25, head)))
-		return false;
-
-	memcpy(c_type, buf, 1);
-	memcpy(c_len, buf + 1, 8);
-	memcpy(u_len, buf + 9, 8);
-	memcpy(last_head, buf + 17, 8);
-	return true;
-}
 
 /* prepare a set of n streams for reading on file descriptor f */
 void *open_stream_in(rzip_control *control, int f, int n, char chunk_bytes)
@@ -1274,7 +1252,8 @@ again:
 		sinfo->total_read += header_length;
 
 		if (ENCRYPT) {
-			if (unlikely(!decrypt_header(control, enc_head, &c, &v1, &v2, &sinfo->s[i].last_head)))
+			// pass decrypt flag instead of validate flag
+			if (unlikely(!decrypt_header(control, enc_head, &c, &v1, &v2, &sinfo->s[i].last_head, LRZ_DECRYPT)))
 				goto failed;
 			sinfo->total_read += SALT_LEN;
 		}
@@ -1837,7 +1816,8 @@ fill_another:
 	sinfo->total_read += header_length;
 
 	if (ENCRYPT) {
-		if (unlikely(!decrypt_header(control, enc_head, &c_type, &c_len, &u_len, &last_head)))
+		// pass decrypt flag
+		if (unlikely(!decrypt_header(control, enc_head, &c_type, &c_len, &u_len, &last_head, LRZ_DECRYPT)))
 			return -1;
 		if (unlikely(read_buf(control, sinfo->fd, blocksalt, SALT_LEN)))
 			return -1;
@@ -1893,7 +1873,8 @@ fill_another:
 		return -1;
 	}
 
-	if (unlikely(ENCRYPT && !lrz_decrypt(control, s_buf, padded_len, blocksalt))) {
+	// pass decrypt flag
+	if (unlikely(ENCRYPT && !lrz_decrypt(control, s_buf, padded_len, blocksalt, LRZ_DECRYPT))) {
 		dealloc(s_buf);
 		return -1;
 	}

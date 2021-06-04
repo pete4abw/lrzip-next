@@ -252,6 +252,10 @@ typedef sem_t cksem_t;
 #define SALT_LEN 8
 #define CBC_LEN 16
 
+#define LRZ_DECRYPT	(0)
+#define LRZ_ENCRYPT	(1)
+#define LRZ_VALIDATE	(2)	//to suppress printing decompress message when showing info or validating a file
+
 #define one_g (1000 * 1024 * 1024)
 
 #if defined(NOTHREAD) || !defined(_SC_NPROCESSORS_ONLN)

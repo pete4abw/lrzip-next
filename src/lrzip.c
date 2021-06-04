@@ -696,212 +696,16 @@ static void release_hashes(rzip_control *control)
 	dealloc(control->hash);
 }
 
-/*
-  decompress one file from the command line
-*/
-bool decompress_file(rzip_control *control)
-{
-	char *tmp, *tmpoutfile, *infilecopy = NULL;
-	int fd_in, fd_out = -1, fd_hist = -1;
-	i64 expected_size = 0, free_space;
-	struct statvfs fbuf;
-
-	if ( !STDIN ) {
-		struct stat fdin_stat;
-		/* make sure infile has an extension. If not, add it
-		 * because manipulations may be made to input filename, set local ptr
-		*/
-		tmp = strrchr(control->infile, '.');
-		if (strcmp(tmp,control->suffix)) {
-			infilecopy = alloca(strlen(control->infile) + strlen(control->suffix) + 1);
-			strcpy(infilecopy, control->infile);
-			strcat(infilecopy, control->suffix);
-		} else
-			infilecopy = strdupa(control->infile);
-		stat(infilecopy, &fdin_stat);
-		if (!S_ISREG(fdin_stat.st_mode))
-			failure("lrzip only works on regular FILES\n");
-		/* regardless, infilecopy has the input filename */
-	}
-
-	if (!STDOUT && !TEST_ONLY) {
-		/* if output name already set, use it */
-		if (control->outname)
-			control->outfile = strdup(control->outname);
-		else {
-			/* default output name from infilecopy
-			 * test if outdir specified. If so, strip path from filename of
-			 * infilecopy, then remove suffix.
-			*/
-			if (control->outdir && (tmp = strrchr(infilecopy, '/')))
-				tmpoutfile = strdupa(tmp + 1);
-			else
-				tmpoutfile = strdupa(infilecopy);
-
-			/* remove suffix to make outfile name */
-			if ((tmp = strrchr(tmpoutfile, '.')) && !strcmp(tmp, control->suffix))
-				*tmp='\0';
-
-			control->outfile = malloc((control->outdir == NULL? 0: strlen(control->outdir)) + strlen(tmpoutfile) + 1);
-			if (unlikely(!control->outfile))
-				fatal_return(("Failed to allocate outfile name\n"), false);
-
-			if (control->outdir) {	/* prepend control->outdir */
-				strcpy(control->outfile, control->outdir);
-				strcat(control->outfile, tmpoutfile);
-			} else
-				strcpy(control->outfile, tmpoutfile);
-		}
-
-		if (!STDOUT)
-			print_progress("Output filename is: %s\n", control->outfile);
-	}
-
-	if (STDIN) {
-		fd_in = open_tmpinfile(control);
-		read_tmpinmagic(control);
-		if (ENCRYPT && control->passphrase == NULL)
-			failure_return(("Cannot decompress encrypted file from STDIN. Use -e passphrase.\n"), false);
-		if (ENCRYPT)
-			expected_size = 0;
-		else
-			expected_size = control->st_size;
-		if (unlikely(!open_tmpinbuf(control)))
-			return false;
-	} else {
-		fd_in = open(infilecopy, O_RDONLY);
-		if (unlikely(fd_in == -1)) {
-			fatal_return(("Failed to open %s\n", infilecopy), false);
-		}
-	}
-	control->fd_in = fd_in;
-
-	if (!(TEST_ONLY | STDOUT)) {
-		fd_out = open(control->outfile, O_WRONLY | O_CREAT | O_EXCL, 0666);
-		if (FORCE_REPLACE && (-1 == fd_out) && (EEXIST == errno)) {
-			if (unlikely(unlink(control->outfile)))
-				fatal_return(("Failed to unlink an existing file: %s\n", control->outfile), false);
-			fd_out = open(control->outfile, O_WRONLY | O_CREAT | O_EXCL, 0666);
-		}
-		if (unlikely(fd_out == -1)) {
-			/* We must ensure we don't delete a file that already
-			 * exists just because we tried to create a new one */
-			control->flags |= FLAG_KEEP_BROKEN;
-			fatal_return(("Failed to create %s\n", control->outfile), false);
-		}
-		fd_hist = open(control->outfile, O_RDONLY);
-		if (unlikely(fd_hist == -1))
-			fatal_return(("Failed to open history file %s\n", control->outfile), false);
-
-		/* Can't copy permissions from STDIN */
-		if (!STDIN)
-			if (unlikely(!preserve_perms(control, fd_in, fd_out)))
-				return false;
-	} else {
-		fd_out = open_tmpoutfile(control);
-		if (fd_out == -1) {
-			fd_hist = -1;
-		} else {
-			fd_hist = open(control->outfile, O_RDONLY);
-			if (unlikely(fd_hist == -1))
-				fatal_return(("Failed to open history file %s\n", control->outfile), false);
-			/* Unlink temporary file as soon as possible */
-			if (unlikely(unlink(control->outfile)))
-				fatal_return(("Failed to unlink tmpfile: %s\n", control->outfile), false);
-		}
-	}
-
-// check for STDOUT removed. In memory compression speedup. No memory leak.
-	if (unlikely(!open_tmpoutbuf(control)))
-		return false;
-
-	if (!STDIN) {
-		if (unlikely(!read_magic(control, fd_in, &expected_size)))
-			return false;
-		if (unlikely(expected_size < 0))
-			fatal_return(("Invalid expected size %lld\n", expected_size), false);
-	}
-
-	if (!STDOUT) {
-		/* Check if there's enough free space on the device chosen to fit the
-		* decompressed or test file. */
-		if (unlikely(fstatvfs(fd_out, &fbuf)))
-			fatal_return(("Failed to fstatvfs in decompress_file\n"), false);
-		free_space = (i64)fbuf.f_bsize * (i64)fbuf.f_bavail;
-		if (free_space < expected_size) {
-			if (FORCE_REPLACE && !TEST_ONLY)
-				print_err("Warning, inadequate free space detected, but attempting to decompress file due to -f option being used.\n");
-			else
-				failure_return(("Inadequate free space to %s. Space needed: %ld. Space available: %ld.\nTry %s and \
-select a larger volume.\n",
-					TEST_ONLY ? "test file" : "decompress file. Use -f to override", expected_size, free_space,
-					TEST_ONLY ? "setting `TMP=dirname`" : "using `-O dirname` or `-o [dirname/]filename` options"),
-						false);
-		}
-	}
-	control->fd_out = fd_out;
-	control->fd_hist = fd_hist;
-
-	if (NO_MD5)
-		print_verbose("Not performing MD5 hash check\n");
-	if (HAS_MD5)
-		print_verbose("MD5 ");
-	else
-		print_verbose("CRC32 ");
-	print_verbose("being used for integrity testing.\n");
-
-	if (ENCRYPT)
-		if (unlikely(!get_hash(control, 0)))
-			return false;
-
-	print_progress("Decompressing...\n");
-
-	if (unlikely(runzip_fd(control, fd_in, fd_out, fd_hist, expected_size) < 0))
-		return false;
-
-	if (STDOUT && !TMP_OUTBUF) {
-		if (unlikely(!dump_tmpoutfile(control, fd_out)))
-			return false;
-	}
-
-	/* if we get here, no fatal_return(( errors during decompression */
-	print_progress("\r");
-	if (!(STDOUT | TEST_ONLY))
-		print_progress("Output filename is: %s: ", control->outfile);
-	if (!expected_size)
-		expected_size = control->st_size;
-	if (!ENCRYPT)
-		print_progress("[OK] - %lld bytes                                \n", expected_size);
-	else
-		print_progress("[OK]                                             \n");
-
-	if (TMP_OUTBUF)
-		close_tmpoutbuf(control);
-
-	if (fd_out > 0)
-		if (unlikely(close(fd_hist) || close(fd_out)))
-			fatal_return(("Failed to close files\n"), false);
-
-	if (unlikely(!STDIN && !STDOUT && !TEST_ONLY && !preserve_times(control, fd_in)))
-		return false;
-
-	if ( !STDIN )
-		close(fd_in);
-
-	if (!KEEP_FILES && !STDIN)
-		if (unlikely(unlink(control->infile)))
-			fatal_return(("Failed to unlink %s\n", infilecopy), false);
-
-	if (ENCRYPT)
-		release_hashes(control);
-
-	dealloc(control->outfile);
-	return true;
-}
-
 bool get_header_info(rzip_control *control, int fd_in, uchar *ctype, i64 *c_len,
 		     i64 *u_len, i64 *last_head, int chunk_bytes)
 {
+	uchar enc_head[25 + SALT_LEN];
+	if (ENCRYPT) {
+		// read in salt
+		// first 8 bytes, instead of chunk bytes and size
+		if (unlikely(read(fd_in, enc_head, SALT_LEN) != SALT_LEN))
+			fatal_return(("Failed to read encrypted header in get_header_info\n"), false);
+	}
 	if (unlikely(read(fd_in, ctype, 1) != 1))
 		fatal_return(("Failed to read in get_header_info\n"), false);
 
@@ -937,6 +741,11 @@ bool get_header_info(rzip_control *control, int fd_in, uchar *ctype, i64 *c_len,
 		*c_len = le64toh(*c_len);
 		*u_len = le64toh(*u_len);
 		*last_head = le64toh(*last_head);
+		if (ENCRYPT) {
+			// decrypt header suppressing printing max verbose message
+			if (unlikely(!decrypt_header(control, enc_head, ctype, c_len, u_len, last_head, LRZ_VALIDATE)))
+				fatal_return(("Failed to decrypt header in get_header_info\n"), false);
+		}
 	}
 	return true;
 }
@@ -1000,10 +809,9 @@ bool get_fileinfo(rzip_control *control)
 	if (unlikely(!read_magic(control, fd_in, &expected_size)))
 		goto error;
 
-	if (ENCRYPT) {
-		print_output("Encrypted lrzip archive. No further information available\n");
-		goto out;
-	}
+	if (ENCRYPT && !control->salt_pass_len)		// Only get password if needed
+		if (unlikely(!get_hash(control, 0)))
+			return false;
 
 	if (control->major_version == 0 && control->minor_version > 4) {
 		if (unlikely(read(fd_in, &chunk_byte, 1) != 1))
@@ -1013,11 +821,16 @@ bool get_fileinfo(rzip_control *control)
 		if (control->major_version == 0 && control->minor_version > 5) {
 			if (unlikely(read(fd_in, &control->eof, 1) != 1))
 				fatal_goto(("Failed to read eof in get_fileinfo\n"), error);
-			if (unlikely(read(fd_in, &chunk_size, chunk_byte) != chunk_byte))
-				fatal_goto(("Failed to read chunk_size in get_fileinfo\n"), error);
-			chunk_size = le64toh(chunk_size);
-			if (unlikely(chunk_size < 0))
-				failure_goto(("Invalid chunk size %lld\n", chunk_size), error);
+			if (!ENCRYPT) {
+				if (unlikely(read(fd_in, &chunk_size, chunk_byte) != chunk_byte))
+					fatal_goto(("Failed to read chunk_size in get_fileinfo\n"), error);
+				chunk_size = le64toh(chunk_size);
+				if (unlikely(chunk_size < 0))
+					failure_goto(("Invalid chunk size %lld\n", chunk_size), error);
+			} else {
+				chunk_byte=8;
+				chunk_size=0;
+			}
 		}
 	}
 
@@ -1030,7 +843,11 @@ bool get_fileinfo(rzip_control *control)
 	} else if (control->major_version == 0 && control->minor_version == 5) {
 		ofs = 25;
 		header_length = 25;
-	} else {
+	} else if (ENCRYPT) {
+		ofs=26;
+		header_length=33; // 25 + 8
+		// salt is first 8 bytes
+	} else { // 0.6 and 0.7
 		ofs = 26 + chunk_byte;
 		header_length = 1 + (chunk_byte * 3);
 	}
@@ -1042,14 +859,20 @@ next_chunk:
 	stream_head[0] = 0;
 	stream_head[1] = stream_head[0] + header_length;
 
-	chunk_total += chunk_size;
-	if (unlikely(chunk_byte && (chunk_byte > 8 || chunk_size <= 0)))
-		failure_goto(("Invalid chunk data\n"), error);
+	if (!ENCRYPT) {
+		chunk_total += chunk_size;
+		if (unlikely(chunk_byte && (chunk_byte > 8 || chunk_size <= 0)))
+			failure_goto(("Invalid chunk data\n"), error);
+	}
 
 	if (INFO) {
 		print_verbose("Rzip chunk %d:\n", ++chunk);
 		print_verbose("Chunk byte width: %d\n", chunk_byte);
-		print_verbose("Chunk size: %lld\n", chunk_size);
+		print_verbose("Chunk size: ");
+		if (!ENCRYPT)
+			print_verbose("%lld\n", chunk_size);
+		else
+			print_verbose("N/A Encrypted File\n");
 	}
 	while (stream < NUM_STREAMS) {
 		int block = 1;
@@ -1057,6 +880,7 @@ next_chunk:
 		second_last = 0;
 		if (unlikely(lseek(fd_in, stream_head[stream] + ofs, SEEK_SET) == -1))
 			fatal_goto(("Failed to seek to header data in get_fileinfo\n"), error);
+
 		if (unlikely(!get_header_info(control, fd_in, &ctype, &c_len, &u_len, &last_head, chunk_byte)))
 			return false;
 
@@ -1071,8 +895,14 @@ next_chunk:
 			if (unlikely(last_head && last_head < second_last))
 				failure_goto(("Invalid earlier last_head position, corrupt archive.\n"), error);
 			second_last = last_head;
-			if (unlikely(last_head + ofs > infile_size))
-				failure_goto(("Offset greater than archive size, likely corrupted/truncated archive.\n"), error);
+			if (!ENCRYPT) {
+				if (unlikely(last_head + ofs > infile_size))
+					failure_goto(("Offset greater than archive size, likely corrupted/truncated archive.\n"), error);
+			} else {
+				if (unlikely(last_head + ofs + header_length > infile_size))
+					failure_goto(("Offset greater than archive size, likely corrupted/truncated archive.\n"), error);
+			}
+
 			if (unlikely((head_off = lseek(fd_in, last_head + ofs, SEEK_SET)) == -1))
 				fatal_goto(("Failed to seek to header data in get_fileinfo\n"), error);
 			if (unlikely(!get_header_info(control, fd_in, &ctype, &c_len, &u_len,
@@ -1117,8 +947,12 @@ next_chunk:
 
 	if (ofs >= infile_size - (HAS_MD5 ? MD5_DIGEST_SIZE : 0))
 		goto done;
+	else if (ENCRYPT)
+		if (ofs+header_length > infile_size)
+			goto done;
+
 	/* Chunk byte entry */
-	if (control->major_version == 0 && control->minor_version > 4) {
+	if (control->major_version == 0 && control->minor_version > 4 && !ENCRYPT) {
 		if (unlikely(read(fd_in, &chunk_byte, 1) != 1))
 			fatal_goto(("Failed to read chunk_byte in get_fileinfo\n"), error);
 		if (unlikely(chunk_byte < 1 || chunk_byte > 8))
@@ -1135,7 +969,12 @@ next_chunk:
 			ofs += 1 + chunk_byte;
 			header_length = 1 + (chunk_byte * 3);
 		}
+	} else { // ENCRYPTED
+		// no change to chunk_byte
+		ofs+=10;
+		// no change to header_length
 	}
+
 	goto next_chunk;
 done:
 	cratio = (long double)expected_size / (long double)infile_size;
@@ -1143,17 +982,27 @@ done:
 		failure_goto(("Offset greater than archive size, likely corrupted/truncated archive.\n"), error);
 
 	if (INFO) {
-		print_verbose("Rzip compression: %.1f%% %lld / %lld\n",
-				percentage (utotal, expected_size),
-				utotal, expected_size);
-		print_verbose("Back end compression: %.1f%% %lld / %lld\n",
-				percentage(ctotal, utotal),
-				ctotal, utotal);
-		print_verbose("Overall compression: %.1f%% %lld / %lld\n",
-				percentage(ctotal, expected_size),
-				ctotal, expected_size);
+		/* If we can't show expected size, tailor output for it */
+		if (expected_size) {
+			print_verbose("Rzip compression: %.1f%% %lld / %lld\n",
+					percentage (utotal, expected_size),
+					utotal, expected_size);
+			print_verbose("Back end compression: %.1f%% %lld / %lld\n",
+					percentage(ctotal, utotal),
+					ctotal, utotal);
+			print_verbose("Overall compression: %.1f%% %lld / %lld\n",
+					percentage(ctotal, expected_size),
+					ctotal, expected_size);
+		} else {
+			print_verbose("Due to using %s, expected decompression size not available\n",
+					ENCRYPT ? "Encryption": "Compression to STDOUT");
+			print_verbose("Rzip compression: Unavailable\n");
+			print_verbose("Back end compression: %.1f%% %lld / %lld\n", percentage(ctotal, utotal),	ctotal, utotal);
+			print_verbose("Overall compression: Unavailable\n");
+		}
 
-		print_output("%s:\nlrzip version: %d.%d file\n", infilecopy, control->major_version, control->minor_version);
+		print_output("%s:\nlrzip version: %d.%d %sfile.\n", infilecopy,
+				control->major_version, control->minor_version, ENCRYPT ? "Encrypted " : "");
 
 		print_output("Compression: ");
 		if (save_ctype == CTYPE_NONE)
@@ -1191,9 +1040,15 @@ done:
 			print_output("\n");
 		}
 
-		print_output("Decompressed file size: %llu\n", expected_size);
-		print_output("Compressed file size: %llu\n", infile_size);
-		print_output("Compression ratio: %.3Lf\n", cratio);
+		if (expected_size) {
+			print_output("Decompressed file size: %llu\n", expected_size);
+			print_output("Compressed file size: %llu\n", infile_size);
+			print_output("Compression ratio: %.3Lf\n", cratio);
+		} else {
+			print_output("Decompressed file size: Unavailable\n");
+			print_output("Compressed file size: %llu\n", infile_size);
+			print_output("Compression ratio: Unavailable\n");
+		}
 	} /* end if (INFO) */
 
 	if (HAS_MD5) {
@@ -1358,6 +1213,215 @@ error:
 		close(fd_out);
 	return false;
 }
+
+/*
+  decompress one file from the command line
+*/
+bool decompress_file(rzip_control *control)
+{
+	char *tmp, *tmpoutfile, *infilecopy = NULL;
+	int fd_in, fd_out = -1, fd_hist = -1;
+	i64 expected_size = 0, free_space;
+	struct statvfs fbuf;
+
+	if ( !STDIN ) {
+		struct stat fdin_stat;
+		/* make sure infile has an extension. If not, add it
+		 * because manipulations may be made to input filename, set local ptr
+		*/
+		tmp = strrchr(control->infile, '.');
+		if (strcmp(tmp,control->suffix)) {
+			infilecopy = alloca(strlen(control->infile) + strlen(control->suffix) + 1);
+			strcpy(infilecopy, control->infile);
+			strcat(infilecopy, control->suffix);
+		} else
+			infilecopy = strdupa(control->infile);
+		stat(infilecopy, &fdin_stat);
+		if (!S_ISREG(fdin_stat.st_mode))
+			failure("lrzip only works on regular FILES\n");
+		/* regardless, infilecopy has the input filename */
+	}
+
+	if (!STDOUT && !TEST_ONLY) {
+		/* if output name already set, use it */
+		if (control->outname)
+			control->outfile = strdup(control->outname);
+		else {
+			/* default output name from infilecopy
+			 * test if outdir specified. If so, strip path from filename of
+			 * infilecopy, then remove suffix.
+			*/
+			if (control->outdir && (tmp = strrchr(infilecopy, '/')))
+				tmpoutfile = strdupa(tmp + 1);
+			else
+				tmpoutfile = strdupa(infilecopy);
+
+			/* remove suffix to make outfile name */
+			if ((tmp = strrchr(tmpoutfile, '.')) && !strcmp(tmp, control->suffix))
+				*tmp='\0';
+
+			control->outfile = malloc((control->outdir == NULL? 0: strlen(control->outdir)) + strlen(tmpoutfile) + 1);
+			if (unlikely(!control->outfile))
+				fatal_return(("Failed to allocate outfile name\n"), false);
+
+			if (control->outdir) {	/* prepend control->outdir */
+				strcpy(control->outfile, control->outdir);
+				strcat(control->outfile, tmpoutfile);
+			} else
+				strcpy(control->outfile, tmpoutfile);
+		}
+
+		if (!STDOUT)
+			print_progress("Output filename is: %s\n", control->outfile);
+	}
+
+	if (STDIN) {
+		fd_in = open_tmpinfile(control);
+		read_tmpinmagic(control);
+		if (ENCRYPT)
+			failure_return(("Cannot decompress encrypted file from STDIN\n"), false);
+		expected_size = control->st_size;
+		if (unlikely(!open_tmpinbuf(control)))
+			return false;
+	} else {
+		fd_in = open(infilecopy, O_RDONLY);
+		if (unlikely(fd_in == -1)) {
+			fatal_return(("Failed to open %s\n", infilecopy), false);
+		}
+	}
+	control->fd_in = fd_in;
+
+	if (!(TEST_ONLY | STDOUT)) {
+		fd_out = open(control->outfile, O_WRONLY | O_CREAT | O_EXCL, 0666);
+		if (FORCE_REPLACE && (-1 == fd_out) && (EEXIST == errno)) {
+			if (unlikely(unlink(control->outfile)))
+				fatal_return(("Failed to unlink an existing file: %s\n", control->outfile), false);
+			fd_out = open(control->outfile, O_WRONLY | O_CREAT | O_EXCL, 0666);
+		}
+		if (unlikely(fd_out == -1)) {
+			/* We must ensure we don't delete a file that already
+			 * exists just because we tried to create a new one */
+			control->flags |= FLAG_KEEP_BROKEN;
+			fatal_return(("Failed to create %s\n", control->outfile), false);
+		}
+		fd_hist = open(control->outfile, O_RDONLY);
+		if (unlikely(fd_hist == -1))
+			fatal_return(("Failed to open history file %s\n", control->outfile), false);
+
+		/* Can't copy permissions from STDIN */
+		if (!STDIN)
+			if (unlikely(!preserve_perms(control, fd_in, fd_out)))
+				return false;
+	} else {
+		fd_out = open_tmpoutfile(control);
+		if (fd_out == -1) {
+			fd_hist = -1;
+		} else {
+			fd_hist = open(control->outfile, O_RDONLY);
+			if (unlikely(fd_hist == -1))
+				fatal_return(("Failed to open history file %s\n", control->outfile), false);
+			/* Unlink temporary file as soon as possible */
+			if (unlikely(unlink(control->outfile)))
+				fatal_return(("Failed to unlink tmpfile: %s\n", control->outfile), false);
+		}
+	}
+
+// check for STDOUT removed. In memory compression speedup. No memory leak.
+	if (unlikely(!open_tmpoutbuf(control)))
+		return false;
+
+	if (!STDIN) {
+		if (unlikely(!read_magic(control, fd_in, &expected_size)))
+			return false;
+		if (unlikely(expected_size < 0))
+			fatal_return(("Invalid expected size %lld\n", expected_size), false);
+	}
+
+	if (!STDOUT) {
+		/* Check if there's enough free space on the device chosen to fit the
+		* decompressed or test file. */
+		if (unlikely(fstatvfs(fd_out, &fbuf)))
+			fatal_return(("Failed to fstatvfs in decompress_file\n"), false);
+		free_space = (i64)fbuf.f_bsize * (i64)fbuf.f_bavail;
+		if (free_space < expected_size) {
+			if (FORCE_REPLACE && !TEST_ONLY)
+				print_err("Warning, inadequate free space detected, but attempting to decompress file due to -f option being used.\n");
+			else
+				failure_return(("Inadequate free space to %s. Space needed: %ld. Space available: %ld.\nTry %s and \
+select a larger volume.\n",
+					TEST_ONLY ? "test file" : "decompress file. Use -f to override", expected_size, free_space,
+					TEST_ONLY ? "setting `TMP=dirname`" : "using `-O dirname` or `-o [dirname/]filename` options"),
+						false);
+		}
+	}
+	control->fd_out = fd_out;
+	control->fd_hist = fd_hist;
+
+	if (NO_MD5)
+		print_verbose("Not performing MD5 hash check\n");
+	if (HAS_MD5)
+		print_verbose("MD5 ");
+	else
+		print_verbose("CRC32 ");
+	print_verbose("being used for integrity testing.\n");
+
+	if (ENCRYPT && !control->salt_pass_len)		// Only get password if needed
+		if (unlikely(!get_hash(control, 0)))
+			return false;
+
+	// vailidate file on decompression or test
+	if (STDIN)
+		print_err("Unable to validate a file from STDIN. To validate, check file directly.");
+	else {
+		print_progress("Validating file for consistency...");
+		if (unlikely((get_fileinfo(control)) == false))
+			failure_return(("File validation failed. Corrupt lrzip archive. Cannot continue\n"),false);
+	}
+	print_progress("Decompressing...");
+
+	if (unlikely(runzip_fd(control, fd_in, fd_out, fd_hist, expected_size) < 0))
+		return false;
+
+	if (STDOUT && !TMP_OUTBUF) {
+		if (unlikely(!dump_tmpoutfile(control, fd_out)))
+			return false;
+	}
+
+	/* if we get here, no fatal_return(( errors during decompression */
+	print_progress("\r");
+	if (!(STDOUT | TEST_ONLY))
+		print_progress("Output filename is: %s: ", control->outfile);
+	if (!expected_size)
+		expected_size = control->st_size;
+	if (!ENCRYPT)
+		print_progress("[OK] - %lld bytes                                \n", expected_size);
+	else
+		print_progress("[OK]                                             \n");
+
+	if (TMP_OUTBUF)
+		close_tmpoutbuf(control);
+
+	if (fd_out > 0)
+		if (unlikely(close(fd_hist) || close(fd_out)))
+			fatal_return(("Failed to close files\n"), false);
+
+	if (unlikely(!STDIN && !STDOUT && !TEST_ONLY && !preserve_times(control, fd_in)))
+		return false;
+
+	if ( !STDIN )
+		close(fd_in);
+
+	if (!KEEP_FILES && !STDIN)
+		if (unlikely(unlink(control->infile)))
+			fatal_return(("Failed to unlink %s\n", infilecopy), false);
+
+	if (ENCRYPT)
+		release_hashes(control);
+
+	dealloc(control->outfile);
+	return true;
+}
+
 
 bool initialise_control(rzip_control *control)
 {

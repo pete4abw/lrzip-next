@@ -462,7 +462,8 @@ i64 runzip_fd(rzip_control *control, int fd_in, int fd_out, int fd_hist, i64 exp
 			if (unlikely(read_1g(control, fd_in, md5_stored, MD5_DIGEST_SIZE) != MD5_DIGEST_SIZE))
 				fatal_return(("Failed to read md5 data in runzip_fd\n"), -1);
 			if (ENCRYPT)
-				if (unlikely(!lrz_decrypt(control, md5_stored, MD5_DIGEST_SIZE, control->salt_pass)))
+				// pass decrypt flag
+				if (unlikely(!lrz_decrypt(control, md5_stored, MD5_DIGEST_SIZE, control->salt_pass, LRZ_DECRYPT)))
 					return -1;
 			for (i = 0; i < MD5_DIGEST_SIZE; i++)
 				if (md5_stored[i] != control->gcry_md5_resblock[i]) {
@@ -517,7 +518,6 @@ i64 runzip_fd(rzip_control *control, int fd_in, int fd_out, int fd_hist, i64 exp
 
 	return total;
 }
-
 
 /* Work Function to compute an md5 from a file stream
  * Taken from the old md5.c file and updated to use gcrypt
