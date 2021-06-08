@@ -5,7 +5,7 @@ ABSSRC = @abs_srcdir@/x86
 ASM_7z = 7zCrcOpt_asm
 ASM_H  = $(SRC)/7zAsm.asm
 ASM_S  = $(SRC)/$(ASM_7z).asm
-ASM_OPT += -I $(SRC)
+ASM_OPT += -g -F dwarf -I $(SRC)/
 ## For LZMA Assembler Decompressor
 if USE_X64
   ASM_De = LzmaDecOpt
