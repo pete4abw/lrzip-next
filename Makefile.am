@@ -41,6 +41,7 @@ EXTRA_DIST = \
 	description-pak \
 	autogen.sh \
 	INSTALL \
+	VERSION \
 	$(dist_doc_DATA)
 
 install-exec-hook:
