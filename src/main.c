@@ -834,12 +834,15 @@ recursion:
 			failure("Unable to encrypt while writing to STDOUT.\n");
 
 		memcpy(&local_control, &base_control, sizeof(rzip_control));
-		if (DECOMPRESS || TEST_ONLY)
-			decompress_file(&local_control);
-		else if (INFO)
-			get_fileinfo(&local_control);
-		else
-			compress_file(&local_control);
+		if (DECOMPRESS || TEST_ONLY) {
+			if (unlikely(!decompress_file(&local_control)))
+				return -1;
+		} else if (INFO) {
+			if (unlikely(!get_fileinfo(&local_control)))
+				return -1;
+		} else
+			if (unlikely(!compress_file(&local_control)))
+				return -1;
 
 		/* compute total time */
 		gettimeofday(&end_time, NULL);

@@ -787,13 +787,11 @@ bool get_fileinfo(rzip_control *control)
 	// Take out all STDIN checks
 	struct stat fdin_stat;
 
-	stat(control->infile, &fdin_stat);
-	if (!S_ISREG(fdin_stat.st_mode) && (tmp = strrchr(control->infile, '.')) &&
-	    strcmp(tmp,control->suffix)) {
-		infilecopy = alloca(strlen(control->infile) + strlen(control->suffix) + 1);
-		strcpy(infilecopy, control->infile);
-		strcat(infilecopy, control->suffix);
-	} else
+	if (unlikely(stat(control->infile, &fdin_stat)))
+		fatal_return(("File %s not found...\n", control->infile), false);
+	else if (unlikely(!S_ISREG(fdin_stat.st_mode)))
+		fatal_return(("File %s us not a regular file. lrzip-next cannot continue...\n", control->infile), false);
+	else
 		infilecopy = strdupa(control->infile);
 
 	fd_in = open(infilecopy, O_RDONLY);
@@ -1226,19 +1224,11 @@ bool decompress_file(rzip_control *control)
 
 	if ( !STDIN ) {
 		struct stat fdin_stat;
-		/* make sure infile has an extension. If not, add it
-		 * because manipulations may be made to input filename, set local ptr
-		*/
-		tmp = strrchr(control->infile, '.');
-		if (strcmp(tmp,control->suffix)) {
-			infilecopy = alloca(strlen(control->infile) + strlen(control->suffix) + 1);
-			strcpy(infilecopy, control->infile);
-			strcat(infilecopy, control->suffix);
-		} else
-			infilecopy = strdupa(control->infile);
-		stat(infilecopy, &fdin_stat);
-		if (!S_ISREG(fdin_stat.st_mode))
-			failure("lrzip only works on regular FILES\n");
+		infilecopy = strdupa(control->infile);
+		if (unlikely(stat(infilecopy, &fdin_stat)))
+			failure("File %s not found...\n", control->infile);
+		else if (unlikely(!S_ISREG(fdin_stat.st_mode)))
+			failure("lrzip-next only works on regular FILES\n");
 		/* regardless, infilecopy has the input filename */
 	}
 
@@ -1273,6 +1263,11 @@ bool decompress_file(rzip_control *control)
 
 		if (!STDOUT)
 			print_progress("Output filename is: %s\n", control->outfile);
+
+		if (unlikely(!strcmp(control->outfile, infilecopy))) {
+			control->flags |= FLAG_TEST_ONLY;	// stop and no more decompres or deleting files.
+			fatal_return(("Output and Input files are the same...Cannot continue\n"), false);
+		}
 	}
 
 	if (STDIN) {
