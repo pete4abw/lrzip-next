@@ -1053,11 +1053,14 @@ done:
 		unsigned char md5_stored[MD5_DIGEST_SIZE];
 		int i;
 
-		if (unlikely(lseek(fd_in, -MD5_DIGEST_SIZE, SEEK_END) == -1))
-			fatal_goto(("Failed to seek to md5 data in runzip_fd\n"), error);
-		if (unlikely(read(fd_in, md5_stored, MD5_DIGEST_SIZE) != MD5_DIGEST_SIZE))
-			fatal_goto(("Failed to read md5 data in runzip_fd\n"), error);
 		if (INFO) {
+			if (unlikely(lseek(fd_in, -MD5_DIGEST_SIZE, SEEK_END) == -1))
+				fatal_return(("Failed to seek to md5 data in get_fileinfo.\n"), false);
+			if (unlikely(read(fd_in, md5_stored, MD5_DIGEST_SIZE) != MD5_DIGEST_SIZE))
+				fatal_return(("Failed to read md5 data in get_fileinfo.\n"), false);
+			if (ENCRYPT)
+				if (unlikely(!lrz_decrypt(control, md5_stored, MD5_DIGEST_SIZE, control->salt_pass, LRZ_DECRYPT)))
+					fatal_return(("Failure decrypting MD5 in get_fileinfo.\n"), false);
 			print_output("MD5 used for integrity testing\n");
 			print_output("MD5: ");
 			for (i = 0; i < MD5_DIGEST_SIZE; i++)
