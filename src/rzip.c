@@ -758,13 +758,13 @@ static inline void hash_search(rzip_control *control, struct rzip_state *st,
 			cksum_limit += cksum_len;
 			st->cksum = CrcUpdate(st->cksum, control->checksum.buf, cksum_len);
 			if (!NO_MD5)
-				gcry_md_write(control->gcry_md5_handle, control->checksum.buf, control->checksum.len);
+				gcry_md_write(control->gcry_md5_handle, control->checksum.buf, cksum_len);
 		}
 		/* Process end of the checksum buffer */
 		control->do_mcpy(control, control->checksum.buf, cksum_limit, cksum_remains);
 		st->cksum = CrcUpdate(st->cksum, control->checksum.buf, cksum_remains);
 		if (!NO_MD5)
-			gcry_md_write(control->gcry_md5_handle, control->checksum.buf, control->checksum.len);
+			gcry_md_write(control->gcry_md5_handle, control->checksum.buf, cksum_remains);
 		dealloc(control->checksum.buf);
 		cksem_post(control, &control->cksumsem);
 	} else {
