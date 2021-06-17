@@ -125,7 +125,7 @@ Note: Since limit is optional, the short option must not have a space. e.g. -T75
 default chosen by heuristic dependent on ram and chosen compression\n");
 	print_output("Decompression Options:\n----------------------\n");
 	print_output("	-d, --decompress	decompress\n");
-	print_output("  -e, -f -o -O		Same a Compression Options\n");
+	print_output("	-e, -f -o -O		Same as Compression Options\n");
 	print_output("	-t, --test		test compressed file integrity\n");
 	if (compat)
 		print_output("	-C, --check		check integrity of file written on decompression\n");
