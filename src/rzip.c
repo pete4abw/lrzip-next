@@ -662,9 +662,7 @@ static inline void hash_search(rzip_control *control, struct rzip_state *st,
 				if (!STDIN || st->stdin_eof)
 					print_progress("Total: %2d%%  ", pct);
 				print_progress("Chunk: %2d%%\r", chunk_pct);
-				if (control->info_cb)
-					control->info_cb(control->info_data,
-						(!STDIN || st->stdin_eof) ? pct : -1, chunk_pct);
+				/* lrzip library callback code removed */
 				lastpct = pct;
 				last_chunkpct = chunk_pct;
 			}

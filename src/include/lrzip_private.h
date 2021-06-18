@@ -403,6 +403,7 @@ struct rzip_state {
 	} stats;
 };
 
+/* lrzip library callback code removed */
 struct rzip_control {
 	char *infile;
 	FILE *inFILE; 			// if a FILE is being read from
@@ -453,8 +454,6 @@ struct rzip_control {
 	int fd_hist;
 	i64 encloops;
 	i64 secs;
-	void (*pass_cb)(void *, char *, size_t);	// callback to get password in lib
-	void *pass_data;
 	uchar salt[SALT_LEN];
 	uchar *salt_pass;
 	int salt_pass_len;
@@ -477,12 +476,6 @@ struct rzip_control {
 	const char *util_outfile;
 	char delete_outfile;
 	FILE *outputfile;
-	char library_mode;
-	int log_level;
-	void (*info_cb)(void *data, int pct, int chunk_pct);
-	void *info_data;
-	void (*log_cb)(void *data, unsigned int level, unsigned int line, const char *file, const char *func, const char *format, va_list args);
-	void *log_data;
 
 	char chunk_bytes;
 	struct sliding_buffer sb;
@@ -539,11 +532,8 @@ extern bool progress_flag ; // print newline when verbose and last print was pro
 static inline void print_stuff(const rzip_control *control, int level, unsigned int line, const char *file, const char *func, const char *format, ...)
 {
 	va_list ap;
-	if (control->library_mode && control->log_cb && (control->log_level >= level)) {
-		va_start(ap, format);
-		control->log_cb(control->log_data, level, line, file, func, format, ap);
-		va_end(ap);
-	} else if (control->msgout) {
+	/* lrzip library callback code removed */
+	if (control->msgout) {
 		va_start(ap, format);
 		vfprintf(control->msgout, format, ap);
 		va_end(ap);
@@ -554,11 +544,8 @@ static inline void print_stuff(const rzip_control *control, int level, unsigned 
 static inline void print_err(const rzip_control *control, unsigned int line, const char *file, const char *func, const char *format, ...)
 {
 	va_list ap;
-	if (control->library_mode && control->log_cb && (control->log_level >= 0)) {
-		va_start(ap, format);
-		control->log_cb(control->log_data, 0, line, file, func, format, ap);
-		va_end(ap);
-	} else if (control->msgerr) {
+	/* lrzip library callback code removed */
+	if (control->msgerr) {
 		va_start(ap, format);
 		vfprintf(control->msgerr, format, ap);
 		va_end(ap);

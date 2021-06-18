@@ -48,16 +48,12 @@ bool decrypt_header(rzip_control *control, uchar *head, uchar *c_type, i64 *c_le
 static inline void fatal(const rzip_control *control, unsigned int line, const char *file, const char *func, const char *format, ...)
 {
 	va_list ap;
-
+	/* lrzip library callback code removed */
 	va_start(ap, format);
-	if (!control->log_cb) {
-		vfprintf(stderr, format, ap);
-		perror(NULL);
-	} else
-		control->log_cb(control->log_data, 0, line, file, func, format, ap);
+	vfprintf(stderr, format, ap);
+	perror(NULL);
 	va_end(ap);
-	if (!control->library_mode)
-		fatal_exit((rzip_control*)control);
+	fatal_exit((rzip_control*)control);
 }
 #ifdef fatal
 # undef fatal
@@ -76,13 +72,10 @@ static inline void failure(const rzip_control *control, unsigned int line, const
 	va_list ap;
 
 	va_start(ap, format);
-	if (!control->log_cb)
-		vfprintf(stderr, format, ap);
-	else
-		control->log_cb(control->log_data, 0, line, file, func, format, ap);
+	/* lrzip library callback code removed */
+	vfprintf(stderr, format, ap);
 	va_end(ap);
-	if (!control->library_mode)
-		fatal_exit((rzip_control*)control);
+	fatal_exit((rzip_control*)control);
 }
 #ifdef failure
 # undef failure
