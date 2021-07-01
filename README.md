@@ -1,10 +1,10 @@
 lrzip-next - Long Range ZIP
 ======================
 
-## NEW, LZMA SDK 19.00, ZPAQ 7.15
+## NEW, LZMA SDK 21.02, ZPAQ 7.15
 
 Many new changes, not in the main branch, including:
-* latest LZMA and ZPAQ libraries
+* latest LZMA and ZPAQ libraries (**ABI Compatible** with earlier versions. No need to re-compress files).
 * more helpful usage messages
 * filters for x86 and other processors, and delta
 * ASM DeCompressor (up to 40% faster. x86_64 only)
@@ -25,13 +25,13 @@ Many new changes, not in the main branch, including:
 (See original README for more historical info)
 
 ### Download and Build
-`$ git clone https://github.com/pete4abw/lrzip-next`\
+`$ git clone -b lzma-sdk-21.02 https://github.com/pete4abw/lrzip-next`\
 or if you desire to also download the **lrzip-fe** front end\
-`$ git clone --recurse-submodules https://github.com/pete4abw/lrzip-next`
+`$ git clone -b lzma-sdk-21.02 --recurse-submodules https://github.com/pete4abw/lrzip-next`
 
 If you forget use --recurse-submodules and want to download lrzip-fe separately, use these commands:
 ```
-$ git clone https://github.com/pete4abw/lrzip-next
+$ git clone -b lzma-sdk-21.02 https://github.com/pete4abw/lrzip-next
 $ cd lrzip-next
 $ git submodule update --init (to download lrzip-fe)
 ```
@@ -186,7 +186,7 @@ Sun, 04 Jan 2009, README\
 Mon, 28 Apr 2021: README.md
 
 For **lrzip**\
-Con Kolivas (`ckolivas` on GitHub) <kernel@kolivas.org>\
+Con Kolivas (ckolivas` on GitHub) <kernel@kolivas.org>\
 Fri, 10 June 2016: README
 
 Mostly Rewritten + GFMified:\
