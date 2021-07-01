@@ -36,8 +36,4 @@ liblzma_la_SOURCES = \
 	LzmaEnc.c 	../include/LzmaEnc.h \
 	LzmaLib.c 	../include/LzmaLib.h \
 	Threads.c 	../include/Threads.h \
-	../include/Precomp.h \
-	../include/basetyps.h \
-	../include/MyGuidDef.h \
-	../include/MyWindows.h \
-	../include/windows.h
+	../include/Precomp.h
