@@ -80,6 +80,8 @@ if test x"$ASM" = x"yes"; then
 			ASM=no
 			;;
 	esac
+else
+	ASM_PROG=no
 fi
 
 static=no
