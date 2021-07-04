@@ -67,11 +67,11 @@ if test x"$ASM" = x"yes"; then
 ## only for x86 and x86_64
 	case $host in
 		i?86-*)
-			ASM_OPT="-f elf -g -F dwarf"
+			ASM_OPT="-f elf"
 			USE_64=no
 			;;
 		x86_64-*)
-			ASM_OPT="-Dx64 -f elf64 -g -F dwarf"
+			ASM_OPT="-Dx64 -f elf64"
 			USE_64=yes
 			;;
 		*) 
@@ -80,6 +80,8 @@ if test x"$ASM" = x"yes"; then
 			ASM=no
 			;;
 	esac
+else
+	ASM_PROG=no
 fi
 
 static=no
