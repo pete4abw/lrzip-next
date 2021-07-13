@@ -552,6 +552,8 @@ void lrz_stretch(rzip_control *control)
 		gcry_md_write(gcry_sha512_handle, (uchar *)&counter, sizeof(counter));
 		gcry_md_write(gcry_sha512_handle, control->salt_pass, control->salt_pass_len);
 	}
+	memcpy(control->hash, gcry_md_read(gcry_sha512_handle, GCRY_MD_SHA512), HASH_LEN);
+	gcry_md_close(gcry_sha512_handle);
 }
 
 /* The block headers are all encrypted so we read the data and salt associated
