@@ -869,6 +869,9 @@ next_chunk:
 		if (unlikely(!get_header_info(control, fd_in, &ctype, &c_len, &u_len, &last_head, chunk_byte)))
 			return false;
 
+		if (ENCRYPT && ctype != CTYPE_NONE)
+			failure_goto(("Invalid stream ctype (%02x) for encrypted file. Bad Password?\n", ctype), error);
+
 		if (INFO) {
 			print_verbose("Stream: %d\n", stream);
 			print_maxverbose("Offset: %lld\n", ofs);
