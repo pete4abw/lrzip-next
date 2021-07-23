@@ -1,7 +1,11 @@
 lrzip-next - Long Range ZIP
 ======================
 
-## NEW, LZMA SDK 21.02, ZPAQ 7.15
+v 0.7.99
+
+## This is a development branch. Not for production use!
+
+## NEW: LZMA SDK 21.02, ZPAQ 7.15, SCRYPT Bitcoin style key derivation
 
 Many new changes, not in the main branch, including:
 * latest LZMA and ZPAQ libraries (**ABI Compatible** with earlier versions. No need to re-compress files).
@@ -20,6 +24,8 @@ Many new changes, not in the main branch, including:
 * File info `lrzip-next -i` will now fetch info from encrypted files
 * `lrzip-next -i` will not print percent info when file size is not known
 * Substitute libgcrypt functions for separate sources for **md5** and **sha512** hash functions, and **aes 128 bit** encryption.  
+* SCRYPT Key Derivation.
+
 (This will allow for future bug fixes and possibly using different encryption methods through a standard library.)
 
 (See original README for more historical info)
