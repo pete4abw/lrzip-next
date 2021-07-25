@@ -38,7 +38,6 @@ size_t round_up_page(rzip_control *control, size_t len);
 bool get_rand(rzip_control *control, uchar *buf, int len);
 bool read_config(rzip_control *control);
 void lrz_stretch(rzip_control *control);
-void lrz_stretch2(rzip_control *control);
 bool lrz_crypt(const rzip_control *control, uchar *buf, i64 len, const uchar *salt, int encrypt);
 /* decrypt_header will take a final variable for either decrypt or validate.
  * Valdidate will suppress printing message during validation or info
