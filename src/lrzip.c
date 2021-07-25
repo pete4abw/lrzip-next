@@ -1064,9 +1064,9 @@ done:
 out:
 	if (unlikely(close(fd_in)))
 		fatal_return(("Failed to close fd_in in get_fileinfo\n"), false);
-	dealloc(control->outfile);
 	return true;
 error:
+	dealloc(control->outfile);
 	return false;
 }
 
@@ -1279,7 +1279,7 @@ bool decompress_file(rzip_control *control)
 	}
 	control->fd_in = fd_in;
 
-	if (!(TEST_ONLY | STDOUT)) {
+	if (!(TEST_ONLY || STDOUT)) {
 		fd_out = open(control->outfile, O_WRONLY | O_CREAT | O_EXCL, 0666);
 		if (FORCE_REPLACE && (-1 == fd_out) && (EEXIST == errno)) {
 			if (unlikely(unlink(control->outfile)))
