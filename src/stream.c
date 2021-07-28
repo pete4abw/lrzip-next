@@ -1373,7 +1373,7 @@ static void *compthread(void *data)
 	 * to write the lzma properties which are effectively always starting
 	 * with 93.= 0x5D. lc=3, lp=0, pb=2 */
 	if (TMP_OUTBUF && LZMA_COMPRESS)
-		control->lzma_properties[0] = 93;
+		control->lzma_properties[0] = LZMA_LC_LP_PB;
 retry:
 	/* Filters are used ragrdless of compression type */
 	if (FILTER_USED && cti->streamno == 1) {	// stream 0 is for matches, stream 1+ is for literals

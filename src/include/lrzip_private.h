@@ -211,6 +211,22 @@ typedef sem_t cksem_t;
 #endif
 #endif
 
+#define LZMA_LC_LP_PB		0x5D
+#define LZMA_LC			3
+#define LZMA_LP			0
+#define LZMA_PB			2
+/* from Lzma2Dec.c. Decode Dictionary */
+#define LZMA2_DIC_SIZE_FROM_PROP(p) (p == 40 ? 0xFFFFFFFF : (((u32)2 | ((p) & 1)) << ((p) / 2 + 11)))
+/* from Lzma2Enc.c. Convert Dicsize to lzma2 encoding */
+static inline unsigned char lzma2_prop_from_dic(u32 dicSize)
+{
+	unsigned i;
+	for (i = 0; i <= 40; i++)
+		if (dicSize <= LZMA2_DIC_SIZE_FROM_PROP(i))
+			break;
+	return (unsigned char)i;
+}
+
 #define FLAG_SHOW_PROGRESS	(1 << 0)
 #define FLAG_KEEP_FILES		(1 << 1)
 #define FLAG_TEST_ONLY		(1 << 2)
