@@ -11,7 +11,7 @@ if USE_ASM
   AM_CFLAGS += -D_7ZIP_ASM
 if USE_X64
 ## For LZMA Assembler Decompressor
-  AM_CFLAGS += -D_LZMA_DEC_OPT
+  AM_CFLAGS += -D_LZMA_DEC_OPT -DMFMT_GM_INLINE
 endif
 else
   C_S += 7zCrcOpt.c
@@ -27,7 +27,7 @@ liblzma_la_SOURCES = \
 	Bra.c \
 	BraIA64.c \
 	../include/Compiler.h \
-	../include/CpuArch.h \
+	CpuArch.c	../include/CpuArch.h \
 	Delta.c		../include/Delta.h \
 	LzFind.c 	../include/LzFind.h \
 	LzFindMt.c 	../include/LzFindMt.h \

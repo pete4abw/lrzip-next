@@ -1,14 +1,13 @@
 /* Alloc.c -- Memory allocation functions
-   2020-10-29 : Igor Pavlov : Public domain 
-   2021-06-20 : Peter Hyman, lrzip-next edits. Remove WIN stuff */
+   2021-07-13 : Igor Pavlov : Public domain */
 
 #include "Precomp.h"
 
 #include <stdio.h>
 
-// #ifdef _WIN32
-// #include <Windows.h>
-// #endif
+#ifdef _WIN32
+#include <Windows.h>
+#endif
 #include <stdlib.h>
 
 #include "Alloc.h"
@@ -152,26 +151,25 @@ void MyFree(void *address)
 	free(address);
 }
 
-/*
 #ifdef _WIN32
 
 void *MidAlloc(size_t size)
 {
-if (size == 0)
-return NULL;
+	if (size == 0)
+		return NULL;
 
-PRINT_ALLOC("Alloc-Mid", g_allocCountMid, size, NULL);
+	PRINT_ALLOC("Alloc-Mid", g_allocCountMid, size, NULL);
 
-return VirtualAlloc(NULL, size, MEM_COMMIT, PAGE_READWRITE);
+	return VirtualAlloc(NULL, size, MEM_COMMIT, PAGE_READWRITE);
 }
 
 void MidFree(void *address)
 {
-PRINT_FREE("Free-Mid", g_allocCountMid, address);
+	PRINT_FREE("Free-Mid", g_allocCountMid, address);
 
-if (!address)
-return;
-VirtualFree(address, 0, MEM_RELEASE);
+	if (!address)
+		return;
+	VirtualFree(address, 0, MEM_RELEASE);
 }
 
 #ifdef _7ZIP_LARGE_PAGES
@@ -192,45 +190,45 @@ typedef SIZE_T (WINAPI *GetLargePageMinimumP)(VOID);
 void SetLargePageSize()
 {
 #ifdef _7ZIP_LARGE_PAGES
-SIZE_T size;
-GetLargePageMinimumP largePageMinimum = (GetLargePageMinimumP)
-GetProcAddress(GetModuleHandle(TEXT("kernel32.dll")), "GetLargePageMinimum");
-if (!largePageMinimum)
-return;
-size = largePageMinimum();
-if (size == 0 || (size & (size - 1)) != 0)
-return;
-g_LargePageSize = size;
+	SIZE_T size;
+	GetLargePageMinimumP largePageMinimum = (GetLargePageMinimumP)
+		GetProcAddress(GetModuleHandle(TEXT("kernel32.dll")), "GetLargePageMinimum");
+	if (!largePageMinimum)
+		return;
+	size = largePageMinimum();
+	if (size == 0 || (size & (size - 1)) != 0)
+		return;
+	g_LargePageSize = size;
 #endif
 }
 
 
 void *BigAlloc(size_t size)
 {
-if (size == 0)
-return NULL;
+	if (size == 0)
+		return NULL;
 
-PRINT_ALLOC("Alloc-Big", g_allocCountBig, size, NULL);
+	PRINT_ALLOC("Alloc-Big", g_allocCountBig, size, NULL);
 
 #ifdef _7ZIP_LARGE_PAGES
-{
-SIZE_T ps = g_LargePageSize;
-if (ps != 0 && ps <= (1 << 30) && size > (ps / 2))
-{
-size_t size2;
-ps--;
-size2 = (size + ps) & ~ps;
-if (size2 >= size)
-{
-void *res = VirtualAlloc(NULL, size2, MEM_COMMIT | MY__MEM_LARGE_PAGES, PAGE_READWRITE);
-if (res)
-	return res;
+	{
+		SIZE_T ps = g_LargePageSize;
+		if (ps != 0 && ps <= (1 << 30) && size > (ps / 2))
+		{
+			size_t size2;
+			ps--;
+			size2 = (size + ps) & ~ps;
+			if (size2 >= size)
+			{
+				void *res = VirtualAlloc(NULL, size2, MEM_COMMIT | MY__MEM_LARGE_PAGES, PAGE_READWRITE);
+				if (res)
+					return res;
+			}
+		}
 	}
-}
-}
 #endif
 
-return VirtualAlloc(NULL, size, MEM_COMMIT, PAGE_READWRITE);
+	return VirtualAlloc(NULL, size, MEM_COMMIT, PAGE_READWRITE);
 }
 
 void BigFree(void *address)
@@ -243,35 +241,34 @@ void BigFree(void *address)
 }
 
 #endif
-*/ // _WIN32
 
 
 static void *SzAlloc(ISzAllocPtr p, size_t size) { UNUSED_VAR(p); return MyAlloc(size); }
 static void SzFree(ISzAllocPtr p, void *address) { UNUSED_VAR(p); MyFree(address); }
 const ISzAlloc g_Alloc = { SzAlloc, SzFree };
 
+#ifdef _WIN32
 static void *SzMidAlloc(ISzAllocPtr p, size_t size) { UNUSED_VAR(p); return MidAlloc(size); }
 static void SzMidFree(ISzAllocPtr p, void *address) { UNUSED_VAR(p); MidFree(address); }
-const ISzAlloc g_MidAlloc = { SzMidAlloc, SzMidFree };
-
 static void *SzBigAlloc(ISzAllocPtr p, size_t size) { UNUSED_VAR(p); return BigAlloc(size); }
 static void SzBigFree(ISzAllocPtr p, void *address) { UNUSED_VAR(p); BigFree(address); }
+const ISzAlloc g_MidAlloc = { SzMidAlloc, SzMidFree };
 const ISzAlloc g_BigAlloc = { SzBigAlloc, SzBigFree };
-
+#endif
 
 /*
 uintptr_t : <stdint.h> C99 (optional)
 : unsupported in VS6
 */
 
-// #ifdef _WIN32
-//  typedef UINT_PTR UIntPtr;
-// #else
+#ifdef _WIN32
+typedef UINT_PTR UIntPtr;
+#else
 /*
    typedef uintptr_t UIntPtr;
    */
 typedef ptrdiff_t UIntPtr;
-// #endif
+#endif
 
 
 #define ADJUST_ALLOC_SIZE 0

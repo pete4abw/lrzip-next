@@ -1,10 +1,195 @@
 /* Threads.c -- multithreading library
-   2021-04-25 : Igor Pavlov : Public domain 
-   2021-06-30 : Peter Hyman, lrzip-next edits */
+   2021-07-12 : Igor Pavlov : Public domain */
 
 #include "Precomp.h"
 
-// All Windows code removed
+#ifdef _WIN32
+
+#ifndef UNDER_CE
+#include <process.h>
+#endif
+
+#include "Threads.h"
+
+static WRes GetError()
+{
+	DWORD res = GetLastError();
+	return res ? (WRes)res : 1;
+}
+
+static WRes HandleToWRes(HANDLE h) { return (h != NULL) ? 0 : GetError(); }
+static WRes BOOLToWRes(BOOL v) { return v ? 0 : GetError(); }
+
+WRes HandlePtr_Close(HANDLE *p)
+{
+	if (*p != NULL)
+	{
+		if (!CloseHandle(*p))
+			return GetError();
+		*p = NULL;
+	}
+	return 0;
+}
+
+WRes Handle_WaitObject(HANDLE h)
+{
+	DWORD dw = WaitForSingleObject(h, INFINITE);
+	/*
+	   (dw) result:
+	   WAIT_OBJECT_0  // 0
+	   WAIT_ABANDONED // 0x00000080 : is not compatible with Win32 Error space
+	   WAIT_TIMEOUT   // 0x00000102 : is     compatible with Win32 Error space
+	   WAIT_FAILED    // 0xFFFFFFFF
+	   */
+	if (dw == WAIT_FAILED)
+	{
+		dw = GetLastError();
+		if (dw == 0)
+			return WAIT_FAILED;
+	}
+	return (WRes)dw;
+}
+
+#define Thread_Wait(p) Handle_WaitObject(*(p))
+
+WRes Thread_Wait_Close(CThread *p)
+{
+	WRes res = Thread_Wait(p);
+	WRes res2 = Thread_Close(p);
+	return (res != 0 ? res : res2);
+}
+
+WRes Thread_Create(CThread *p, THREAD_FUNC_TYPE func, LPVOID param)
+{
+	/* Windows Me/98/95: threadId parameter may not be NULL in _beginthreadex/CreateThread functions */
+
+#ifdef UNDER_CE
+
+	DWORD threadId;
+	*p = CreateThread(0, 0, func, param, 0, &threadId);
+
+#else
+
+	unsigned threadId;
+	*p = (HANDLE)(_beginthreadex(NULL, 0, func, param, 0, &threadId));
+
+#endif
+
+	/* maybe we must use errno here, but probably GetLastError() is also OK. */
+	return HandleToWRes(*p);
+}
+
+
+WRes Thread_Create_With_Affinity(CThread *p, THREAD_FUNC_TYPE func, LPVOID param, CAffinityMask affinity)
+{
+#ifdef UNDER_CE
+
+	UNUSED_VAR(affinity)
+		return Thread_Create(p, func, param);
+
+#else
+
+	/* Windows Me/98/95: threadId parameter may not be NULL in _beginthreadex/CreateThread functions */
+	HANDLE h;
+	WRes wres;
+	unsigned threadId;
+	h = (HANDLE)(_beginthreadex(NULL, 0, func, param, CREATE_SUSPENDED, &threadId));
+	*p = h;
+	wres = HandleToWRes(h);
+	if (h)
+	{
+		{
+			// DWORD_PTR prevMask =
+			SetThreadAffinityMask(h, (DWORD_PTR)affinity);
+			/*
+			   if (prevMask == 0)
+			   {
+			// affinity change is non-critical error, so we can ignore it
+			// wres = GetError();
+			}
+			*/
+		}
+		{
+			DWORD prevSuspendCount = ResumeThread(h);
+			/* ResumeThread() returns:
+0 : was_not_suspended
+1 : was_resumed
+-1 : error
+*/
+			if (prevSuspendCount == (DWORD)-1)
+				wres = GetError();
+		}
+	}
+
+	/* maybe we must use errno here, but probably GetLastError() is also OK. */
+	return wres;
+
+#endif
+}
+
+
+static WRes Event_Create(CEvent *p, BOOL manualReset, int signaled)
+{
+	*p = CreateEvent(NULL, manualReset, (signaled ? TRUE : FALSE), NULL);
+	return HandleToWRes(*p);
+}
+
+WRes Event_Set(CEvent *p) { return BOOLToWRes(SetEvent(*p)); }
+WRes Event_Reset(CEvent *p) { return BOOLToWRes(ResetEvent(*p)); }
+
+WRes ManualResetEvent_Create(CManualResetEvent *p, int signaled) { return Event_Create(p, TRUE, signaled); }
+WRes AutoResetEvent_Create(CAutoResetEvent *p, int signaled) { return Event_Create(p, FALSE, signaled); }
+WRes ManualResetEvent_CreateNotSignaled(CManualResetEvent *p) { return ManualResetEvent_Create(p, 0); }
+WRes AutoResetEvent_CreateNotSignaled(CAutoResetEvent *p) { return AutoResetEvent_Create(p, 0); }
+
+
+WRes Semaphore_Create(CSemaphore *p, UInt32 initCount, UInt32 maxCount)
+{
+	// negative ((LONG)maxCount) is not supported in WIN32::CreateSemaphore()
+	*p = CreateSemaphore(NULL, (LONG)initCount, (LONG)maxCount, NULL);
+	return HandleToWRes(*p);
+}
+
+WRes Semaphore_OptCreateInit(CSemaphore *p, UInt32 initCount, UInt32 maxCount)
+{
+	// if (Semaphore_IsCreated(p))
+	{
+		WRes wres = Semaphore_Close(p);
+		if (wres != 0)
+			return wres;
+	}
+	return Semaphore_Create(p, initCount, maxCount);
+}
+
+static WRes Semaphore_Release(CSemaphore *p, LONG releaseCount, LONG *previousCount)
+{ return BOOLToWRes(ReleaseSemaphore(*p, releaseCount, previousCount)); }
+WRes Semaphore_ReleaseN(CSemaphore *p, UInt32 num)
+{ return Semaphore_Release(p, (LONG)num, NULL); }
+WRes Semaphore_Release1(CSemaphore *p) { return Semaphore_ReleaseN(p, 1); }
+
+WRes CriticalSection_Init(CCriticalSection *p)
+{
+	/* InitializeCriticalSection() can raise exception:
+	   Windows XP, 2003 : can raise a STATUS_NO_MEMORY exception
+	   Windows Vista+   : no exceptions */
+#ifdef _MSC_VER
+	__try
+#endif
+	{
+		InitializeCriticalSection(p);
+		/* InitializeCriticalSectionAndSpinCount(p, 0); */
+	}
+#ifdef _MSC_VER
+	__except (EXCEPTION_EXECUTE_HANDLER) { return ERROR_NOT_ENOUGH_MEMORY; }
+#endif
+	return 0;
+}
+
+
+
+
+#else // _WIN32
+
 // ---------- POSIX ----------
 
 #ifndef __APPLE__
@@ -234,6 +419,27 @@ WRes Semaphore_Create(CSemaphore *p, UInt32 initCount, UInt32 maxCount)
 	return 0;
 }
 
+
+WRes Semaphore_OptCreateInit(CSemaphore *p, UInt32 initCount, UInt32 maxCount)
+{
+	if (Semaphore_IsCreated(p))
+	{
+		/*
+		   WRes wres = Semaphore_Close(p);
+		   if (wres != 0)
+		   return wres;
+		   */
+		if (initCount > maxCount || maxCount < 1)
+			return EINVAL;
+		// return EINVAL; // for debug
+		p->_count = initCount;
+		p->_maxCount = maxCount;
+		return 0;
+	}
+	return Semaphore_Create(p, initCount, maxCount);
+}
+
+
 WRes Semaphore_ReleaseN(CSemaphore *p, UInt32 releaseCount)
 {
 	UInt32 newCount;
@@ -330,3 +536,5 @@ LONG InterlockedIncrement(LONG volatile *addend)
 	return __sync_add_and_fetch(addend, 1);
 #endif
 }
+
+#endif // _WIN32
