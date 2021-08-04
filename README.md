@@ -6,6 +6,7 @@ v 0.8.1
 ## This is a development branch. Not for production use!
 
 ## NEW: LZMA SDK 21.03beta, ZPAQ 7.15, SCRYPT Bitcoin style key derivation
+(*Still some work to do on lzma code cleanup, remove Windows cruft, etc.*)
 
 Many new changes, not in the main branch, including:
 * latest LZMA and ZPAQ libraries (**ABI Compatible** with earlier versions. No need to re-compress files).
@@ -38,7 +39,7 @@ or if you desire to also download the **lrzip-fe** front end\
 
 If you forget use --recurse-submodules and want to download lrzip-fe separately, use these commands:
 ```
-$ git clone -b lzma-21.023beta https://github.com/pete4abw/lrzip-next
+$ git clone -b lzma-21.03beta https://github.com/pete4abw/lrzip-next
 $ cd lrzip-next
 $ git submodule update --init (to download lrzip-fe)
 ```

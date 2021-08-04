@@ -1,3 +1,8 @@
+lrzip-next 0.8.0
+SCRYPT Key Derivation. Breaks ability to read older encrypted files.
+lzma finder ASM module (x86_64 only)
+LZMA 21.03beta SDK
+
 lrzip-next 0.7.60
 Get file info from encrypted files using lrzip-next -i.
 
