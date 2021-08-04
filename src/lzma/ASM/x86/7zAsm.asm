@@ -2,9 +2,11 @@
 ; 2009-12-12 : Igor Pavlov : Public domain
 ; 2018-02-03 : Igor Pavlov : Public domain
 ; 2021-02-07 : Igor Pavlov : Public domain
+; 2021-07-13 : Igor Pavlov : Public domain
 ; 2011-10-12 : P7ZIP       : Public domain
 ; 2020-01-02 : Peter Hyman (integrating 2018 updates)
 ; 2021-06-28 : Peter Hyman (integrating 2021 updates)
+; 2021-08-01 : Peter Hyman (integrating 2021 updates)
 
 ; Assumes x64 defined or not on entry
 ; ABI_CECDL is 1 if not x64
@@ -138,12 +140,14 @@
 
 %define REG_PARAM_0_x  x1
 %define REG_PARAM_0    r1
+%define REG_PARAM_1_x  x2
 %define REG_PARAM_1    r2
 
 %ifndef x64
 
 	%define REG_ABI_PARAM_0_x REG_PARAM_0x
 	%define REG_ABI_PARAM_0   REG_PARAM_0
+	%define REG_ABI_PARAM_1_x REG_PARAM_1_x
 	%define REG_ABI_PARAM_1   REG_PARAM_1
 
 %else ; x64 and for LZMA Decompress
@@ -152,15 +156,23 @@
 
 	%define REG_LINUX_PARAM_0_x  x7
 	%define REG_LINUX_PARAM_0    r7
+	%define REG_LINUX_PARAM_1_x  x6
 	%define REG_LINUX_PARAM_1    r6
 	%define REG_LINUX_PARAM_2    r2
 	%define REG_LINUX_PARAM_3    r1
+	%define REG_LINUX_PARAM_4_x  x8
+	%define REG_LINUX_PARAM_4    r8
+	%define REG_LINUX_PARAM_5    r9
 
 	%define REG_ABI_PARAM_0_x REG_LINUX_PARAM_0_x
 	%define REG_ABI_PARAM_0   REG_LINUX_PARAM_0
+	%define REG_ABI_PARAM_1_x REG_LINUX_PARAM_1_x
 	%define REG_ABI_PARAM_1   REG_LINUX_PARAM_1
 	%define REG_ABI_PARAM_2   REG_LINUX_PARAM_2
 	%define REG_ABI_PARAM_3   REG_LINUX_PARAM_3
+	%define REG_ABI_PARAM_4_x REG_LINUX_PARAM_4_x
+	%define REG_ABI_PARAM_4   REG_LINUX_PARAM_4
+	%define REG_ABI_PARAM_5   REG_LINUX_PARAM_5
 
 ; skip ABI_LINUX_TO_WIN 2/3/4 macros. Not needed
 
