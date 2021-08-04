@@ -3,9 +3,10 @@ lrzip-next - Long Range ZIP
 
 ## Announcement
 
+LZMA SDK updated to 21.03beta. 
 The Development Branch is now testing out the Version 0.8 Magic Header, enhanced encryption using SCRYPT for key derivation.
 
-Please help test and shake it out at [21.02dev Version 0.8 Development Branch](https://github.com/pete4abw/lrzip-next/tree/21.02dev).
+Please help test and shake it out at [21.03beta Version 0.8 Development Branch](https://github.com/pete4abw/lrzip-next/tree/lzma-21.03beta).
 
 ## NEW, LZMA SDK 19.00, ZPAQ 7.15
 
