@@ -538,22 +538,29 @@ error:
 	return ret;
 }
 
+/* now use scrypt for key generation and hashing
+ * same code used in some Bitcoins */
+
 void lrz_stretch(rzip_control *control)
 {
-	gcry_md_hd_t gcry_sha512_handle;
-	i64 j, n, counter;
+	gpg_error_t error;
+	const int parallelization = 1;
+	i64 costfactor;
+	int i;
 
-	gcry_md_open(&gcry_sha512_handle, GCRY_MD_SHA512, GCRY_MD_FLAG_SECURE);
+	for (i = 1; i <= 30; i++)
+		if ( control->encloops < (1 << i) ) break;
 
-	n = control->encloops * HASH_LEN / (control->salt_pass_len + sizeof(i64));
-	print_maxverbose("Hashing passphrase %lld (%lld) times \n", control->encloops, n);
-	for (j = 0; j < n; j ++) {
-		counter = htole64(j);
-		gcry_md_write(gcry_sha512_handle, (uchar *)&counter, sizeof(counter));
-		gcry_md_write(gcry_sha512_handle, control->salt_pass, control->salt_pass_len);
-	}
-	memcpy(control->hash, gcry_md_read(gcry_sha512_handle, GCRY_MD_SHA512), HASH_LEN);
-	gcry_md_close(gcry_sha512_handle);
+	costfactor = (1 << i-1);
+
+	print_maxverbose("SCRYPTing password: Cost factor %d, Parallelization Factor: %d\n", costfactor , parallelization);
+
+	error = gcry_kdf_derive(control->salt_pass, control->salt_pass_len, GCRY_KDF_SCRYPT, costfactor,
+			control->salt, SALT_LEN, parallelization,
+			HASH_LEN, control->hash);
+
+	if (unlikely(error))
+		fatal("Unable to hash password. Not enough memory? Error: %d\n");
 }
 
 /* The block headers are all encrypted so we read the data and salt associated
