@@ -249,8 +249,6 @@ static void show_summary(void)
 				print_verbose("Using Unlimited Window size\n");
 			print_maxverbose("Storage time in seconds %lld\n", control->secs);
 		}
-		if (ENCRYPT)
-			print_maxverbose("Encryption hash loops %lld\n", control->encloops);
 	}
 }
 
@@ -627,7 +625,7 @@ int main(int argc, char *argv[])
 							failure("Extra characters after dictionary size: \'%s\'\n", endptr);
 						if (ds< 0 || ds > 40)
 							failure("Dictionary Size must be between 0 and 40 for 2^12 (4KB) to 2^31 (4GB)");
-						control->dictSize = ((ds == 40) ? 0xFFFFFFFF : (((u32)2 | (ds & 1)) << (ds / 2 + 11)));	// Slight modification to lzma2 spec 2^31 OK
+						control->dictSize = LZMA2_DIC_SIZE_FROM_PROP(ds);
 						break;
 						/* Filtering */
 					case 37:

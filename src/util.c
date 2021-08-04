@@ -406,15 +406,6 @@ bool read_config(rzip_control *control)
 	return true;
 }
 
-static void xor128 (void *pa, const void *pb)
-{
-	i64 *a = pa;
-	const i64 *b = pb;
-
-	a [0] ^= b [0];
-	a [1] ^= b [1];
-}
-
 static void lrz_keygen(const rzip_control *control, const uchar *salt, uchar *key, uchar *iv)
 {
 	uchar buf [HASH_LEN + SALT_LEN + PASS_LEN];
@@ -453,23 +444,18 @@ bool lrz_crypt(const rzip_control *control, uchar *buf, i64 len, const uchar *sa
 	gcry_cipher_hd_t gcry_aes_cbc_handle;
 	bool ret = false;
 	size_t gcry_error;
-	int M, N;
 
 	/* Generate unique key and IV for each block of data based on salt */
 	mlock(key, HASH_LEN);
 	mlock(iv, HASH_LEN);
 
-	M=len % CBC_LEN;
-	N=len - M;
-
 	lrz_keygen(control, salt, key, iv);
 
-	/* Using libgcrypt and CBC/ECB methods. While we could use CTS mode to encrypt/decrypt
-	 * entrire buffer in one pass, this will preserve compatibility with older versions of
-	 * lrzip/lrzip-next.
+	/* Using libgcrypt using CTS mode to encrypt/decrypt
+	 * entrire buffer in one pass. Breaks compatibiity with prior versions.
 	 * Error checking may be superfluous, but inserted for clarity and proper coding standard.
 	 */
-	gcry_error=gcry_cipher_open(&gcry_aes_cbc_handle, GCRY_CIPHER_AES, GCRY_CIPHER_MODE_CBC, GCRY_CIPHER_SECURE);
+	gcry_error=gcry_cipher_open(&gcry_aes_cbc_handle, GCRY_CIPHER_AES, GCRY_CIPHER_MODE_CBC, GCRY_CIPHER_SECURE | GCRY_CIPHER_CBC_CTS);
 	if (unlikely(gcry_error))
 		failure_goto(("Unable to set AES CBC handle in lrz_crypt: %d\n", gcry_error), error);
 	gcry_error=gcry_cipher_setkey(gcry_aes_cbc_handle, key, CBC_LEN);
@@ -482,50 +468,16 @@ bool lrz_crypt(const rzip_control *control, uchar *buf, i64 len, const uchar *sa
 	if (encrypt == LRZ_ENCRYPT) {
 		print_maxverbose("Encrypting data        \n");
 		/* Encrypt whole buffer */
-		gcry_error=gcry_cipher_encrypt(gcry_aes_cbc_handle, buf, N, NULL, 0);
+		gcry_error=gcry_cipher_encrypt(gcry_aes_cbc_handle, buf, len, NULL, 0);
 		if (unlikely(gcry_error))
 			failure_goto(("Failed to encrypt AES CBC data in lrz_crypt: %d\n", gcry_error), error);
-		if (M) {
-			memset(tmp0, 0, CBC_LEN);
-			memcpy(tmp0, buf + N, M);
-			gcry_error=gcry_cipher_encrypt(gcry_aes_cbc_handle, tmp1, CBC_LEN, tmp0, CBC_LEN);
-			if (unlikely(gcry_error))
-				failure_goto(("Failed to encrypt AES CBC data in lrz_crypt: %d\n", gcry_error), error);
-			memcpy(buf + N, buf + N - CBC_LEN, M);
-			memcpy(buf + N - CBC_LEN, tmp1, CBC_LEN);
-		}
 	} else { //LRZ_DECRYPT or LRZ_VALIDATE
 		if (encrypt == LRZ_DECRYPT)	// don't print if validating or in info
 			print_maxverbose("Decrypting data        \n");
-		if (M) {
-			gcry_cipher_hd_t gcry_aes_ecb_handle;
-			gcry_error=gcry_cipher_open(&gcry_aes_ecb_handle, GCRY_CIPHER_AES, GCRY_CIPHER_MODE_ECB, GCRY_CIPHER_SECURE);
-			if (unlikely(gcry_error))
-				failure_goto(("Unable to set AES ECB handle in lrz_crypt: %d\n", gcry_error), error);
-			gcry_error=gcry_cipher_setkey(gcry_aes_ecb_handle,key,CBC_LEN);
-			if (unlikely(gcry_error))
-				failure_goto(("Failed to set AES ECB key in lrz_crypt: %d\n", gcry_error), error);
-			gcry_error=gcry_cipher_decrypt(gcry_aes_cbc_handle, buf, N-CBC_LEN, NULL, 0);
-			if (unlikely(gcry_error))
+		/* Decrypt whole buffer */
+		gcry_error=gcry_cipher_decrypt(gcry_aes_cbc_handle, buf, len, NULL, 0);
+		if (unlikely(gcry_error))
 				failure_goto(("Failed to decrypt AES CBC data in lrz_crypt: %d\n", gcry_error), error);
-			gcry_error=gcry_cipher_decrypt(gcry_aes_ecb_handle, tmp0, CBC_LEN, buf+N-CBC_LEN, CBC_LEN);
-			if (unlikely(gcry_error))
-				failure_goto(("Failed to decrypt AES ECB data in lrz_crypt: %d\n", gcry_error), error);
-			memset(tmp1, 0, CBC_LEN);
-			memcpy(tmp1, buf + N, M);
-			xor128(tmp0, tmp1);
-			memcpy(buf + N, tmp0, M);
-			memcpy(tmp1 + M, tmp0 + M, CBC_LEN - M);
-			gcry_error=gcry_cipher_decrypt(gcry_aes_cbc_handle, buf+N-CBC_LEN, CBC_LEN, tmp1, CBC_LEN);
-			if (unlikely(gcry_error))
-				failure_goto(("Failed to decrypt final AES CBC block in lrz_crypt: %d\n", gcry_error), error);
-			gcry_cipher_close(gcry_aes_ecb_handle);
-		} else {
-			/* Decrypt whole buffer */
-			gcry_error=gcry_cipher_decrypt(gcry_aes_cbc_handle, buf, len, NULL, 0);
-			if (unlikely(gcry_error))
-				failure_goto(("Failed to decrypt AES CBC data in lrz_crypt: %d\n", gcry_error), error);
-		}
 	}
 	gcry_cipher_close(gcry_aes_cbc_handle);
 

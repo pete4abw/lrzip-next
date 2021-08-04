@@ -1,3 +1,63 @@
+lrzip-0.8x file format
+July 2021
+get rid of dead space
+encryption is only bytes 6-13 since encryption loops are first
+two bytes of salt.
+Use lzma2 byte encoding for dictionary size 0-40
+Dictionary size will be decoded to fit into the old LZMA Properties
+lc, lp, pb will be constants and not needed to be stored. 0x5D, 93
+lc = 3, lp = 0, pb = 2
+control field and encoded prior to writing the Magic Header.
+move up fields for md5sum and encoding.
+
+Byte	Content
+0-17	Magic
+----
+20+	RZip Chunk Data (RCD)
+RCD+	Compressed Data Blocks
+end-16 or 2	MD5 hash or CRC
+
+Magic Data
+----------
+0-3	LRZI
+4	LRZIP-NEXT Major Version
+5	LRZIP-NEXT Minor Version
+6-13	Source File Decompressed Size
+or	If encrypted, Encryption Hash Loops + Salt (2 bytes + 6 bytes)
+14	>=1 = md5sum hash is stored at end of the archive, otherwise CRC
+	(only 0 and 1 used now, but for possible future expansion)
+15	>=1 = archive is encrypted (only 1 used now, but for possible future
+	expansion)
+16	Filtering. 0=none, x86, ARM, ARMT, PPC, SPARC, IA64, DELTA (1..7)
+	high order 5 bits will contain delta offset, 0..31
+	Filtering is for all compression methods.
+17	LZMA Properties using LZMA2 encoding for dictionary size only
+
+Encrypted salt (bytes 6->13 in magic if encrypted):
+0->1	Encoded number of loops to hash password
+2->7	Random data
+(RCD0 is set to 8 bytes always on encrypted files)
+
+Rzip Chunk Data:
+0	Data offsets byte width (meaning length is < (2 * 8)^RCD0)
+1	Flag that there is no chunk beyond this
+(RCD0 bytes)	Chunk decompressed size (not stored in encrypted file)
+(Header data is also encrypted in encrypted files)
+XX	Stream 0 header data
+XX	Stream 1 header data
+
+Stream Header Data:
+Byte:
+0	Compressed data type
+(RCD0 bytes)	Compressed data length
+(RCD0 bytes)	Uncompressed data length
+(RCD0 bytes)	Next block head
+
+Data blocks:
+0->(end-2) data
+(end-1)->end crc data
+(end - hash size) for md5
+
 lrzip-0.7x file format
 December 2019
 Peter Hyman
@@ -16,7 +76,7 @@ Magic data:
 4	LRZIP Major Version Number
 5	LRZIP Minor Version Number
 6->13	Source File Size or 0 if unknown
-6->15	if Encrypted, bytes 6 and 7 are hash loops, 8-15 are salt
+6->13	if Encrypted, bytes 6 and 7 are hash loops, 6-13 are salt
 16	Filtering. 0=none, x86, ARM, ARMT, PPC, SPARC, IA64, DELTA (1..7)
 	high order 5 bits will contain delta offset, 0..31
 17->21	LZMA Properties Encoded (lc,lp,pb and dictionary size)
