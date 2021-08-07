@@ -169,6 +169,19 @@ bool write_magic(rzip_control *control)
 	/* save LZMA dictionary size */
 	if (LZMA_COMPRESS)
 		magic[17] = lzma2_prop_from_dic(control->dictSize);
+	else if (ZPAQ_COMPRESS) {
+		/* Save zpaq compression level and block size as one byte */
+		/* High order bits = 128 + (16 * Compression Level 3-5)
+		 * Low order bits = Block Size 1-11
+		 * 128 necessary to distinguish in decoding LZMA which is 1-40
+		 * 1CCC BBBB in binary */
+		magic[17] = 0b10000000 + (control->zpaq_level << 4) + control->zpaq_bs;
+		/* Decoding would be
+		 * magic byte & 127 (clear high bit)
+		 * zpaq_bs = magic byte & 0X0F
+		 * zpaq_level = magic_byte >> 4
+		 */
+	}
 
 	if (unlikely(fdout_seekto(control, 0)))
 		fatal_return(("Failed to seek to BOF to write Magic Header\n"), false);
@@ -342,13 +355,19 @@ static void get_magic_v8(rzip_control *control, unsigned char *magic)
 	if (magic[16])
 		get_filter(control, &magic[16]);
 
-	if (magic[17])	// lzma dictionary
+	if (magic[17] > 0 && magic[17] <= 40)	// lzma dictionary
 	{
 		control->dictSize = LZMA2_DIC_SIZE_FROM_PROP(magic[17]);	// decode dictionary
 		control->lzma_properties[0] = LZMA_LC_LP_PB;			// constant for lc, lp, pb 0x5D
 		/* from LzmaDec.c */
 		for (i = 0; i < 4; i++)						// lzma2 to lzma dictionary expansion
 			control->lzma_properties[1 + i] = (Byte)(control->dictSize >> (8 * i));
+	}
+	else if (magic[17] && 0b10000000)	// zpaq block and compression level stored
+	{
+		control->zpaq_bs = magic[17] & 0b00001111;	// low order bits are block size
+		magic[17] &= 0b01110000;			// strip high bit
+		control->zpaq_level = magic[17] >> 4;		// divide by 16
 	}
 
 	get_md5(control, &magic[14]);
@@ -1157,8 +1176,13 @@ done:
 		}
 		else if (save_ctype == CTYPE_GZIP)
 			print_output("rzip + gzip\n");
-		else if (save_ctype == CTYPE_ZPAQ)
-			print_output("rzip + zpaq\n");
+		else if (save_ctype == CTYPE_ZPAQ) {
+			print_output("rzip + zpaq ");
+			if (control->zpaq_level)	// update magic with zpaq coding.
+				print_output("-- Compression Level = %d, Block Size = %d\n", control->zpaq_level, control->zpaq_bs);
+			else	// early 0.8 or <0.8 file without zpaq coding in magic header
+				print_output("\n");
+		}
 		else
 			print_output("Dunno wtf\n");
 

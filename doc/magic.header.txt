@@ -8,6 +8,11 @@ Dictionary size will be decoded to fit into the old LZMA Properties
 lc, lp, pb will be constants and not needed to be stored. 0x5D, 93
 lc = 3, lp = 0, pb = 2
 control field and encoded prior to writing the Magic Header.
+zpaq level and block size will be encoded in byte 17 also
+high order bit will be set (128, 0b10000000) to indicate zpaq encoded
+zpaq block size will be lower 4 bits (magic & 15)
+zpaq level will be bits 5,6, and 7 (only levels 3, 4, and 5 used)
+(magic & (01110000)) >> 4 (divide by 16)
 move up fields for md5sum and encoding.
 
 Byte	Content
@@ -32,6 +37,9 @@ or	If encrypted, Encryption Hash Loops + Salt (2 bytes + 6 bytes)
 	high order 5 bits will contain delta offset, 0..31
 	Filtering is for all compression methods.
 17	LZMA Properties using LZMA2 encoding for dictionary size only
+or
+17	ZPAQ Properties. 0b1CCCBBBB where CCC is compression level, BBBB is
+	block size.
 
 Encrypted salt (bytes 6->13 in magic if encrypted):
 0->1	Encoded number of loops to hash password

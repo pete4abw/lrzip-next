@@ -1,7 +1,12 @@
+lrzip-next v0.8.2
+Store ZPAQ compression level and block size in magic header.
+See write_magic() function and magic.header.txt for details.
+
 lrzip-next 0.8.0
 SCRYPT Key Derivation. Breaks ability to read older encrypted files.
 lzma finder ASM module (x86_64 only)
 LZMA 21.03beta SDK
+All new Magic Header. 18 bytes vs 24.
 
 lrzip-next 0.7.60
 Get file info from encrypted files using lrzip-next -i.
