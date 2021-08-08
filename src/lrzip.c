@@ -56,6 +56,8 @@
 
 #include "LzmaDec.h"		// decode for get_fileinfo
 
+#include <gcrypt.h>		// for rng
+
 #define MAGIC_LEN	(18)	// new v 0.8 magic header
 #define OLD_MAGIC_LEN	(24)	// Just to read older versions
 #define MAGIC_HEADER	(6)	// to validate file initially
@@ -1622,8 +1624,7 @@ bool initialise_control(rzip_control *control)
 	now_t = T_ZERO + tdiff;
 	control->secs = now_t;
 	control->encloops = nloops(control->secs, control->salt, control->salt + 1);
-	if (unlikely(!get_rand(control, control->salt + 2, 6)))
-		return false;
+	gcry_create_nonce(control->salt + 2, 6);
 
 	/* Get Temp Dir. Try variations on canonical unix environment variable */
 	eptr = getenv("TMPDIR");

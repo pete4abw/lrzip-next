@@ -205,23 +205,6 @@ size_t round_up_page(rzip_control *control, size_t len)
 	return len;
 }
 
-bool get_rand(rzip_control *control, uchar *buf, int len)
-{
-	int fd, i;
-
-	fd = open("/dev/urandom", O_RDONLY);
-	if (fd == -1) {
-		for (i = 0; i < len; i++)
-			buf[i] = (uchar)random();
-	} else {
-		if (unlikely(read(fd, buf, len) != len))
-			fatal_return(("Failed to read fd in get_rand\n"), false);
-		if (unlikely(close(fd)))
-			fatal_return(("Failed to close fd in get_rand\n"), false);
-	}
-	return true;
-}
-
 bool read_config(rzip_control *control)
 {
 	/* check for lrzip.conf in ., $HOME/.lrzip and /etc/lrzip */

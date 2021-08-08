@@ -65,6 +65,8 @@
 #include "Bra.h"	//Filters
 #include "Delta.h"	//Delta Filter
 
+#include <gcrypt.h>	// for rng
+
 #define STREAM_BUFSIZE (1024 * 1024 * 10)
 
 static struct compress_thread {
@@ -1313,8 +1315,7 @@ static bool rewrite_encrypted(rzip_control *control, struct stream_info *sinfo, 
 	if (unlikely(!head))
 		fatal_return(("Failed to malloc head in rewrite_encrypted\n"), false);
 	buf = head + SALT_LEN;
-	if (unlikely(!get_rand(control, head, SALT_LEN)))
-		goto error;
+	gcry_create_nonce(head, SALT_LEN);
 	if (unlikely(seekto(control, sinfo, ofs - SALT_LEN)))
 		failure_goto(("Failed to seekto buf ofs in rewrite_encrypted\n"), error);
 	if (unlikely(write_buf(control, head, SALT_LEN)))
@@ -1439,8 +1440,7 @@ retry:
 		cti->s_buf = realloc(cti->s_buf, MIN_SIZE);
 		if (unlikely(!cti->s_buf))
 			fatal_goto(("Failed to realloc s_buf in compthread\n"), error);
-		if (unlikely(!get_rand(control, cti->s_buf + cti->c_len, MIN_SIZE - cti->c_len)))
-			goto error;
+		gcry_create_nonce(cti->s_buf + cti->c_len, MIN_SIZE - cti->c_len);
 	}
 
 	/* If compression fails for whatever reason multithreaded, then wait
@@ -1582,8 +1582,7 @@ retry:
 	ctis->cur_pos += 1 + (write_len * 3);
 
 	if (ENCRYPT) {
-		if (unlikely(!get_rand(control, cti->salt, SALT_LEN)))
-			goto error;
+		gcry_create_nonce(cti->salt, SALT_LEN);
 		if (unlikely(write_buf(control, cti->salt, SALT_LEN)))
 			fatal_goto(("Failed to write_buf block salt in compthread %d\n", current_thread), error);
 		if (unlikely(!lrz_encrypt(control, cti->s_buf, padded_len, cti->salt)))
