@@ -642,16 +642,28 @@ int open_tmpinfile(rzip_control *control)
 
 static bool read_tmpinmagic(rzip_control *control)
 {
-	char magic[MAGIC_LEN];
+	/* just in case < 0.8 file */
+	char magic[OLD_MAGIC_LEN];
 	int i, tmpchar;
 
 	memset(magic, 0, sizeof(magic));
-	for (i = 0; i < 24; i++) {
+	/* first read in MAGIC_LEN bytes. 0.8+ */
+	for (i = 0; i < MAGIC_LEN; i++) {
 		tmpchar = getchar();
 		if (unlikely(tmpchar == EOF))
 			failure_return(("Reached end of file on STDIN prematurely on v05 magic read\n"), false);
 		magic[i] = (char)tmpchar;
 	}
+	/* if < 0.8 read in last bytes */
+	if (magic[4] == 0 && magic[5] < 8) {
+		for ( ; i < OLD_MAGIC_LEN; i++) {
+			tmpchar = getchar();
+			if (unlikely(tmpchar == EOF))
+				failure_return(("Reached end of file on STDIN prematurely on v05 magic read\n"), false);
+			magic[i] = (char)tmpchar;
+		}
+	}
+
 	return get_magic(control, magic);
 }
 
