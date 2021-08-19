@@ -47,9 +47,7 @@ tagopt="--tags"
 # v#.#.#-#-g#######
 init() {
 	if [ -d '.git' ] ; then
-		describe_tag=$(git describe $tagopt --long --abbrev=7)
-		describe_tag=${describe_tag/v/}
-		describe_tag=${describe_tag/g/}
+		describe_tag=$(git describe $tagopt --long --abbrev=7 | sed -E 's/^v(.*?-)g(.*)$/\1\2/')
 		commit=$(echo $describe_tag | cut -d- -f3)
 		tagrev=$(echo $describe_tag | cut -d- -f2)
 		version=$(echo $describe_tag | cut -d- -f1)
