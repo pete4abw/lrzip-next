@@ -1,3 +1,6 @@
+Enhance compatibility of gitdesc.sh for MacOS and small systems.
+Thanks Lucas Rademaker
+
 lrzip-next v0.8.2
 Store ZPAQ compression level and block size in magic header.
 See write_magic() function and magic.header.txt for details.
