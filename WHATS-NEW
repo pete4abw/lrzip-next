@@ -1,3 +1,6 @@
+Enhance compatibility of gitdesc.sh for MacOS and small systems.
+Thanks Lucas Rademaker
+
 lrzip-next 0.7.60
 Get file info from encrypted files using lrzip-next -i.
 
