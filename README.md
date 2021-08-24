@@ -1,7 +1,7 @@
 lrzip-next - Long Range ZIP
 ======================
 
-v 0.8.1
+v 0.8.3
 
 ## This is a development branch. Not for production use!
 
@@ -16,7 +16,7 @@ Many new changes, not in the main branch, including:
 * ability to set rzip pre-compression level independently of compression level
 * variable compressibility threshold testing
 * ability to set specific LZMA Dictionary Size
-* improved info reporting
+* improved info reporting, column alignment, improved formatting.
 * improved memory management favoring large chunk and dictionary sizes over maxmizing number of threads
 * improved ZPAQ processing by analyzing data prior to sending to compressor
 * many bug fixes including validating a file prior to decompression (prevents corrupt file decompression before it starts!)

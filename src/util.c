@@ -380,11 +380,11 @@ bool read_config(rzip_control *control)
 	if (unlikely(fclose(fp)))
 		fatal_return(("Failed to fclose fp in read_config\n"), false);
 
-/*	fprintf(stderr, "\nWindow = %d \
-		\nCompression Level = %d \
+/*	fprintf(stderr, "\nWindow = %'d \
+		\nCompression Level = %'d \
 		\nThreshold = %1.2f \
 		\nOutput Directory = %s \
-		\nFlags = %d\n", control->window,control->compression_level, control->threshold, control->outdir, control->flags);
+		\nFlags = %'d\n", control->window,control->compression_level, control->threshold, control->outdir, control->flags);
 */
 	return true;
 }
@@ -440,27 +440,27 @@ bool lrz_crypt(const rzip_control *control, uchar *buf, i64 len, const uchar *sa
 	 */
 	gcry_error=gcry_cipher_open(&gcry_aes_cbc_handle, GCRY_CIPHER_AES, GCRY_CIPHER_MODE_CBC, GCRY_CIPHER_SECURE | GCRY_CIPHER_CBC_CTS);
 	if (unlikely(gcry_error))
-		failure_goto(("Unable to set AES CBC handle in lrz_crypt: %d\n", gcry_error), error);
+		failure_goto(("Unable to set AES CBC handle in lrz_crypt: %'d\n", gcry_error), error);
 	gcry_error=gcry_cipher_setkey(gcry_aes_cbc_handle, key, CBC_LEN);
 	if (unlikely(gcry_error))
-		failure_goto(("Failed to set AES CBC key in lrz_crypt: %d\n", gcry_error), error);
+		failure_goto(("Failed to set AES CBC key in lrz_crypt: %'d\n", gcry_error), error);
 	gcry_error=gcry_cipher_setiv(gcry_aes_cbc_handle, iv, CBC_LEN);
 	if (unlikely(gcry_error))
-		failure_goto(("Failed to set AES CBC iv in lrz_crypt: %d\n", gcry_error), error);
+		failure_goto(("Failed to set AES CBC iv in lrz_crypt: %'d\n", gcry_error), error);
 
 	if (encrypt == LRZ_ENCRYPT) {
 		print_maxverbose("Encrypting data        \n");
 		/* Encrypt whole buffer */
 		gcry_error=gcry_cipher_encrypt(gcry_aes_cbc_handle, buf, len, NULL, 0);
 		if (unlikely(gcry_error))
-			failure_goto(("Failed to encrypt AES CBC data in lrz_crypt: %d\n", gcry_error), error);
+			failure_goto(("Failed to encrypt AES CBC data in lrz_crypt: %'d\n", gcry_error), error);
 	} else { //LRZ_DECRYPT or LRZ_VALIDATE
 		if (encrypt == LRZ_DECRYPT)	// don't print if validating or in info
 			print_maxverbose("Decrypting data        \n");
 		/* Decrypt whole buffer */
 		gcry_error=gcry_cipher_decrypt(gcry_aes_cbc_handle, buf, len, NULL, 0);
 		if (unlikely(gcry_error))
-				failure_goto(("Failed to decrypt AES CBC data in lrz_crypt: %d\n", gcry_error), error);
+				failure_goto(("Failed to decrypt AES CBC data in lrz_crypt: %'d\n", gcry_error), error);
 	}
 	gcry_cipher_close(gcry_aes_cbc_handle);
 
@@ -488,14 +488,14 @@ void lrz_stretch(rzip_control *control)
 
 	costfactor = (1 << i-1);
 
-	print_maxverbose("SCRYPTing password: Cost factor %d, Parallelization Factor: %d\n", costfactor , parallelization);
+	print_maxverbose("SCRYPTing password: Cost factor %'d, Parallelization Factor: %'d\n", costfactor , parallelization);
 
 	error = gcry_kdf_derive(control->salt_pass, control->salt_pass_len, GCRY_KDF_SCRYPT, costfactor,
 			control->salt, SALT_LEN, parallelization,
 			HASH_LEN, control->hash);
 
 	if (unlikely(error))
-		fatal("Unable to hash password. Not enough memory? Error: %d\n");
+		fatal("Unable to hash password. Not enough memory? Error: %'d\n");
 }
 
 /* The block headers are all encrypted so we read the data and salt associated

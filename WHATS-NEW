@@ -1,3 +1,8 @@
+lrzip-next v0.8.3
+Use ` printf flag to print thousands separators.
+Improve info format. Align columns.
+Replace printf %lld, llum ld, lu with PRId64,d32,u32
+
 Enhance compatibility of gitdesc.sh for MacOS and small systems.
 Thanks Lucas Rademaker
 

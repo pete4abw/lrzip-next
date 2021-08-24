@@ -47,7 +47,6 @@
 #endif
 #include <math.h>
 #include <utime.h>
-#include <inttypes.h>
 
 #include "rzip.h"
 #include "runzip.h"
@@ -70,7 +69,7 @@ static i64 fdout_seekto(rzip_control *control, i64 pos)
 		pos -= control->out_relofs;
 		control->out_ofs = pos;
 		if (unlikely(pos > control->out_len || pos < 0)) {
-			print_err("Trying to seek to %lld outside tmp outbuf in fdout_seekto\n", pos);
+			print_err("Trying to seek to %'"PRId64" outside tmp outbuf in fdout_seekto\n", pos);
 			return -1;
 		}
 
@@ -101,7 +100,7 @@ i64 get_ram(rzip_control *control)
 		if(!(meminfo = fopen("/proc/meminfo", "r")))
 			fatal_return(("Failed to open /proc/meminfo\n"), -1);
 
-		while(!feof(meminfo) && !fscanf(meminfo, "MemTotal: %"PRId64" kB", &ramsize)) {
+		while(!feof(meminfo) && !fscanf(meminfo, "MemTotal: %'"PRId64" kB", &ramsize)) {
 			if (unlikely(fgets(aux, sizeof(aux), meminfo) == NULL)) {
 				fclose(meminfo);
 				fatal_return(("Failed to fgets in get_ram\n"), -1);
@@ -239,7 +238,7 @@ static void get_encryption(rzip_control *control, unsigned char *magic, unsigned
 		memcpy(&control->salt, salt, 8);
 		control->st_size = 0;
 		control->encloops = enc_loops(control->salt[0], control->salt[1]);
-		print_maxverbose("Encryption hash loops %lld\n", control->encloops);
+		print_maxverbose("Encryption hash loops %'"PRId64"\n", control->encloops);
 	} else if (ENCRYPT) {
 		print_output("Asked to decrypt a non-encrypted archive. Bypassing decryption.\n");
 		control->flags &= ~FLAG_ENCRYPT;
@@ -382,7 +381,7 @@ static bool get_magic(rzip_control *control, unsigned char *magic)
 	memcpy(&control->major_version, &magic[4], 1);
 	memcpy(&control->minor_version, &magic[5], 1);
 
-	print_verbose("Detected lrzip version %d.%d file.\n", control->major_version, control->minor_version);
+	print_verbose("Detected lrzip version %'d.%'d file.\n", control->major_version, control->minor_version);
 
 	if (control->major_version == 0) {
 		if (control->minor_version < 4)
@@ -399,7 +398,7 @@ static bool get_magic(rzip_control *control, unsigned char *magic)
 
 	if (control->major_version > LRZIP_MAJOR_VERSION ||
 	    (control->major_version == LRZIP_MAJOR_VERSION && control->minor_version > LRZIP_MINOR_VERSION))
-		print_output("Attempting to work with file produced by newer lrzip version %d.%d file.\n", control->major_version, control->minor_version);
+		print_output("Attempting to work with file produced by newer lrzip version %'d.%'d file.\n", control->major_version, control->minor_version);
 
 	if (control->major_version == 0 && control->minor_version < 6)
 		control->eof = 1;
@@ -500,7 +499,7 @@ static bool fwrite_stdout(rzip_control *control, void *buf, i64 len)
 		nmemb = MIN(len, one_g);
 		ret = fwrite(offset_buf, 1, nmemb, control->outFILE);
 		if (unlikely(ret != nmemb))
-			fatal_return(("Failed to fwrite %ld bytes in fwrite_stdout\n", nmemb), false);
+			fatal_return(("Failed to fwrite %'"PRId32" bytes in fwrite_stdout\n", nmemb), false);
 		len -= ret;
 		offset_buf += ret;
 		total += ret;
@@ -518,7 +517,7 @@ bool write_fdout(rzip_control *control, void *buf, i64 len)
 		nmemb = MIN(len, one_g);
 		ret = write(control->fd_out, offset_buf, (size_t)nmemb);
 		if (unlikely(ret != nmemb))
-			fatal_return(("Failed to write %ld bytes to fd_out in write_fdout\n", nmemb), false);
+			fatal_return(("Failed to write %'"PRId32" bytes to fd_out in write_fdout\n", nmemb), false);
 		len -= ret;
 		offset_buf += ret;
 	}
@@ -700,7 +699,7 @@ static bool open_tmpoutbuf(rzip_control *control)
 		round_to_page(&maxlen);
 		buf = malloc(maxlen);
 		if (buf) {
-			print_maxverbose("Malloced %"PRId64" for tmp_outbuf\n", maxlen);
+			print_maxverbose("Malloced %'"PRId64" for tmp_outbuf\n", maxlen);
 			break;
 		}
 		maxlen = maxlen / 3 * 2;
@@ -971,7 +970,7 @@ bool get_fileinfo(rzip_control *control)
 			if (unlikely(read(fd_in, &chunk_byte, 1) != 1))
 				fatal_goto(("Failed to read chunk_byte in get_fileinfo\n"), error);
 			if (unlikely(chunk_byte < 1 || chunk_byte > 8))
-				failure_goto(("Invalid chunk bytes %d\n", chunk_byte), error);
+				failure_goto(("Invalid chunk bytes %'d\n", chunk_byte), error);
 			if (control->minor_version > 5) {
 				if (unlikely(read(fd_in, &control->eof, 1) != 1))
 					fatal_goto(("Failed to read eof in get_fileinfo\n"), error);
@@ -980,7 +979,7 @@ bool get_fileinfo(rzip_control *control)
 						fatal_goto(("Failed to read chunk_size in get_fileinfo\n"), error);
 					chunk_size = le64toh(chunk_size);
 					if (unlikely(chunk_size < 0))
-						failure_goto(("Invalid chunk size %lld\n", chunk_size), error);
+						failure_goto(("Invalid chunk size %'"PRId64"\n", chunk_size), error);
 				} else {
 					chunk_byte=8;
 					chunk_size=0;
@@ -1029,11 +1028,11 @@ next_chunk:
 	}
 
 	if (INFO) {
-		print_verbose("Rzip chunk %d:\n", ++chunk);
-		print_verbose("Chunk byte width: %d\n", chunk_byte);
-		print_verbose("Chunk size: ");
+		print_verbose("Rzip chunk:       %'d\n", ++chunk);
+		print_verbose("Chunk byte width: %'d\n", chunk_byte);
+		print_verbose("Chunk size:       ");
 		if (!ENCRYPT)
-			print_verbose("%lld\n", chunk_size);
+			print_verbose("%'"PRId64"\n", chunk_size);
 		else
 			print_verbose("N/A Encrypted File\n");
 	}
@@ -1051,9 +1050,9 @@ next_chunk:
 			failure_goto(("Invalid stream ctype (%02x) for encrypted file. Bad Password?\n", ctype), error);
 
 		if (INFO) {
-			print_verbose("Stream: %d\n", stream);
-			print_maxverbose("Offset: %lld\n", ofs);
-			print_verbose("Block\tComp\tPercent\tSize\n");
+			print_verbose("Stream: %'d\n", stream);
+			print_maxverbose("Offset: %'"PRId64"\n", ofs);
+			print_verbose("%s\t%s\t%s\t%16s / %12s\n", "Block","Comp","Percent","Comp Size", "UComp Size");
 		}
 		do {
 			i64 head_off;
@@ -1076,7 +1075,7 @@ next_chunk:
 				return false;
 			if (unlikely(last_head < 0 || c_len < 0 || u_len < 0))
 				failure_goto(("Entry negative, likely corrupted archive.\n"), error);
-			if (INFO) print_verbose("%d\t", block);
+			if (INFO) print_verbose("%'d\t", block);
 			if (ctype == CTYPE_NONE) {
 				if (INFO) print_verbose("none");
 			} else if (ctype == CTYPE_BZIP2) {
@@ -1090,7 +1089,7 @@ next_chunk:
 			} else if (ctype == CTYPE_ZPAQ) {
 				if (INFO) print_verbose("zpaq");
 			} else
-				failure_goto(("Unknown Compression Type: %d\n", ctype), error);
+				failure_goto(("Unknown Compression Type: %'d\n", ctype), error);
 			if (save_ctype == 255)
 				save_ctype = ctype; /* need this for lzma when some chunks could have no compression
 						     * and info will show rzip + none on info display if last chunk
@@ -1099,8 +1098,8 @@ next_chunk:
 			utotal += u_len;
 			ctotal += c_len;
 			if (INFO) {
-				print_verbose("\t%.1f%%\t%lld / %lld", percentage(c_len, u_len), c_len, u_len);
-				print_maxverbose("\tOffset: %lld\tHead: %lld", head_off, last_head);
+				print_verbose("\t%.1f%%\t%'16"PRId64" / %'12"PRId64"", percentage(c_len, u_len), c_len, u_len);
+				print_maxverbose("\tOffset: %'12"PRId64"\tHead: %'12"PRId64"", head_off, last_head);
 				print_verbose("\n");
 			}
 			block++;
@@ -1123,7 +1122,7 @@ next_chunk:
 			if (unlikely(read(fd_in, &chunk_byte, 1) != 1))
 				fatal_goto(("Failed to read chunk_byte in get_fileinfo\n"), error);
 			if (unlikely(chunk_byte < 1 || chunk_byte > 8))
-				failure_goto(("Invalid chunk bytes %d\n", chunk_byte), error);
+				failure_goto(("Invalid chunk bytes %'d\n", chunk_byte), error);
 			ofs++;
 			if (control->minor_version > 5) {
 				if (unlikely(read(fd_in, &control->eof, 1) != 1))
@@ -1132,7 +1131,7 @@ next_chunk:
 					fatal_goto(("Failed to read chunk_size in get_fileinfo\n"), error);
 				chunk_size = le64toh(chunk_size);
 				if (unlikely(chunk_size < 0))
-					failure_goto(("Invalid chunk size %lld\n", chunk_size), error);
+					failure_goto(("Invalid chunk size %'"PRId64"\n", chunk_size), error);
 				ofs += 1 + chunk_byte;
 				header_length = 1 + (chunk_byte * 3);
 			}
@@ -1152,26 +1151,27 @@ done:
 		failure_goto(("Offset greater than archive size, likely corrupted/truncated archive.\n"), error);
 
 	if (INFO) {
+		print_output("\nSummary\n=======\n");
 		/* If we can't show expected size, tailor output for it */
 		if (expected_size) {
-			print_verbose("Rzip compression: %.1f%% %lld / %lld\n",
+			print_verbose("Rzip compression:     %4.1f%% %'14"PRId64" / %'14"PRId64"\n",
 					percentage (utotal, expected_size),
 					utotal, expected_size);
-			print_verbose("Back end compression: %.1f%% %lld / %lld\n",
+			print_verbose("Back end compression: %4.1f%% %'14"PRId64" / %'14"PRId64"\n",
 					percentage(ctotal, utotal),
 					ctotal, utotal);
-			print_verbose("Overall compression: %.1f%% %lld / %lld\n",
+			print_verbose("Overall compression:  %4.1f%% %'14"PRId64" / %'14"PRId64"\n",
 					percentage(ctotal, expected_size),
 					ctotal, expected_size);
 		} else {
 			print_verbose("Due to using %s, expected decompression size not available\n",
 					ENCRYPT ? "Encryption": "Compression to STDOUT");
-			print_verbose("Rzip compression: Unavailable\n");
-			print_verbose("Back end compression: %.1f%% %lld / %lld\n", percentage(ctotal, utotal),	ctotal, utotal);
-			print_verbose("Overall compression: Unavailable\n");
+			print_verbose("Rzip compression:     Unavailable\n");
+			print_verbose("Back end compression: %4.1f%% %'"PRId64" / %'"PRId64"\n", percentage(ctotal, utotal),	ctotal, utotal);
+			print_verbose("Overall compression:  Unavailable\n");
 		}
 
-		print_output("%s:\nlrzip version: %d.%d %sfile.\n", infilecopy,
+		print_output("%s:\nlrzip version: %'d.%'d %sfile.\n", infilecopy,
 				control->major_version, control->minor_version, ENCRYPT ? "Encrypted " : "");
 
 		print_output("Compression: ");
@@ -1184,7 +1184,7 @@ done:
 		else if (save_ctype == CTYPE_LZMA) {
 			print_output("rzip + lzma -- ");
 			if (lzma_ret=LzmaProps_Decode(&p, control->lzma_properties, sizeof(control->lzma_properties))==SZ_OK)
-				print_output("lc = %d, lp = %d, pb = %d, Dictionary Size = %d\n", p.lc, p.lp, p.pb, p.dicSize);
+				print_output("lc = %'d, lp = %'d, pb = %'d, Dictionary Size = %'d\n", p.lc, p.lp, p.pb, p.dicSize);
 			else
 				print_err("Corrupt LZMA Properties\n");
 		}
@@ -1193,7 +1193,7 @@ done:
 		else if (save_ctype == CTYPE_ZPAQ) {
 			print_output("rzip + zpaq ");
 			if (control->zpaq_level)	// update magic with zpaq coding.
-				print_output("-- Compression Level = %d, Block Size = %d\n", control->zpaq_level, control->zpaq_bs);
+				print_output("-- Compression Level = %'d, Block Size = %'d\n", control->zpaq_level, control->zpaq_bs);
 			else	// early 0.8 or <0.8 file without zpaq coding in magic header
 				print_output("\n");
 		}
@@ -1211,18 +1211,18 @@ done:
 					((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
 					((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf?"))))))));
 			if (control->filter_flag == FILTER_FLAG_DELTA)
-				print_output(", offset - %d", control->delta);
+				print_output(", offset - %'d", control->delta);
 			print_output("\n");
 		}
 
 		if (expected_size) {
-			print_output("Decompressed file size: %llu\n", expected_size);
-			print_output("Compressed file size: %llu\n", infile_size);
-			print_output("Compression ratio: %.3Lf\n", cratio);
+			print_output("Decompressed file size: %'14"PRIu64"\n", expected_size);
+			print_output("Compressed file size:   %'14"PRIu64"\n", infile_size);
+			print_output("Compression ratio:      %.3Lf\n", cratio);
 		} else {
 			print_output("Decompressed file size: Unavailable\n");
-			print_output("Compressed file size: %llu\n", infile_size);
-			print_output("Compression ratio: Unavailable\n");
+			print_output("Compressed file size:   %'"PRIu64"\n", infile_size);
+			print_output("Compression ratio:      Unavailable\n");
 		}
 	} /* end if (INFO) */
 
@@ -1509,7 +1509,7 @@ bool decompress_file(rzip_control *control)
 		if (unlikely(!read_magic(control, fd_in, &expected_size)))
 			return false;
 		if (unlikely(expected_size < 0))
-			fatal_return(("Invalid expected size %lld\n", expected_size), false);
+			fatal_return(("Invalid expected size %'"PRId64"\n", expected_size), false);
 	}
 
 	if (!STDOUT) {
@@ -1522,7 +1522,7 @@ bool decompress_file(rzip_control *control)
 			if (FORCE_REPLACE && !TEST_ONLY)
 				print_err("Warning, inadequate free space detected, but attempting to decompress file due to -f option being used.\n");
 			else
-				failure_return(("Inadequate free space to %s. Space needed: %ld. Space available: %ld.\nTry %s and \
+				failure_return(("Inadequate free space to %s. Space needed: %'"PRId32". Space available: %'"PRId32".\nTry %s and \
 select a larger volume.\n",
 					TEST_ONLY ? "test file" : "decompress file. Use -f to override", expected_size, free_space,
 					TEST_ONLY ? "setting `TMP=dirname`" : "using `-O dirname` or `-o [dirname/]filename` options"),
@@ -1569,7 +1569,7 @@ select a larger volume.\n",
 	if (!expected_size)
 		expected_size = control->st_size;
 	if (!ENCRYPT)
-		print_progress("[OK] - %lld bytes                                \n", expected_size);
+		print_progress("[OK] - %'"PRId64" bytes                                \n", expected_size);
 	else
 		print_progress("[OK]                                             \n");
 

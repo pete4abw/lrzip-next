@@ -57,7 +57,7 @@
 #include "lrzip_core.h"
 #include "util.h"
 #include "stream.h"
-#include <inttypes.h>
+#include <locale.h>
 
 /* needed for CRC routines */
 #include "7zCrc.h"
@@ -114,7 +114,7 @@ static void usage(bool compat)
 	print_output("	-O, --outdir directory	specify the output directory when -o is not used\n");
 	print_output("	-S, --suffix suffix	specify compressed suffix (default '.lrz')\n");
 	print_output("    Low level Compression Options:\n");
-	print_output("	-N, --nice-level value	Set nice value to value (default %d)\n", compat ? 0 : 19);
+	print_output("	-N, --nice-level value	Set nice value to value (default %'d)\n", compat ? 0 : 19);
 	print_output("	-m, --maxram size	Set maximum available ram in hundreds of MB\n\t\t\t\tOverrides detected amount of available ram. \
 Useful for testing\n");
 	print_output("	-R, --rzip-level level	Set independent RZIP Compression Level (1-9) for pre-processing (default=compression level)\n");
@@ -179,10 +179,10 @@ static void show_summary(void)
 	if (!INFO) {
 		print_verbose("The following options are in effect for this %s.\n",
 			      DECOMPRESS ? "DECOMPRESSION" : TEST_ONLY ? "INTEGRITY TEST" : "COMPRESSION");
-		print_verbose("Threading is %s. Number of CPUs detected: %d\n", control->threads > 1? "ENABLED" : "DISABLED",
+		print_verbose("Threading is %s. Number of CPUs detected: %'d\n", control->threads > 1? "ENABLED" : "DISABLED",
 			      control->threads);
-		print_verbose("Detected %lld bytes ram\n", control->ramsize);
-		print_verbose("Nice Value: %d\n", control->nice_val);
+		print_verbose("Detected %'"PRId64" bytes ram\n", control->ramsize);
+		print_verbose("Nice Value: %'d\n", control->nice_val);
 		print_verbose("Show Progress\n");
 		print_maxverbose("Max ");
 		print_verbose("Verbose\n");
@@ -211,13 +211,13 @@ static void show_summary(void)
 			if (!LZO_COMPRESS && !ZLIB_COMPRESS)
 				print_verbose(". LZ4 Compressibility testing %s\n", (LZ4_TEST? "enabled" : "disabled"));
 			if (LZ4_TEST && control->threshold != 100)
-				print_verbose("Threshhold limit = %d\%\n", control->threshold);
-			print_verbose("Compression level %d\n", control->compression_level);
-			print_verbose("RZIP Compression level %d\n", control->rzip_compression_level);
+				print_verbose("Threshhold limit = %'d\%\n", control->threshold);
+			print_verbose("Compression level %'d\n", control->compression_level);
+			print_verbose("RZIP Compression level %'d\n", control->rzip_compression_level);
 			if (LZMA_COMPRESS)
-				print_verbose("Initial LZMA Dictionary Size: %"PRIu32"\n", control->dictSize );
+				print_verbose("Initial LZMA Dictionary Size: %'"PRIu32"\n", control->dictSize );
 			if (ZPAQ_COMPRESS)
-				print_verbose("ZPAQ Compression Level: %d, ZPAQ initial Block Size: %d\n",
+				print_verbose("ZPAQ Compression Level: %'d, ZPAQ initial Block Size: %'d\n",
 					       control->zpaq_level, control->zpaq_bs);
 			if (FILTER_USED) {
 				print_output("Filter Used: %s",
@@ -229,11 +229,11 @@ static void show_summary(void)
 					((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
 					((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf?"))))))));
 				if (control->filter_flag == FILTER_FLAG_DELTA)
-					print_output(", offset - %d", control->delta);
+					print_output(", offset - %'d", control->delta);
 				print_output("\n");
 			}
 			if (control->window)
-				print_verbose("Compression Window: %lld = %lldMB\n", control->window, control->window * 100ull);
+				print_verbose("Compression Window: %'"PRId64" = %'"PRId64"MB\n", control->window, control->window * 100ull);
 			/* show heuristically computed window size */
 			if (!control->window && !UNLIMITED) {
 				i64 temp_chunk, temp_window;
@@ -243,11 +243,11 @@ static void show_summary(void)
 				else
 					temp_chunk = control->ramsize * 2 / 3;
 				temp_window = temp_chunk / (100 * 1024 * 1024);
-				print_verbose("Heuristically Computed Compression Window: %lld = %lldMB\n", temp_window, temp_window * 100ull);
+				print_verbose("Heuristically Computed Compression Window: %'"PRId64" = %'"PRId64"MB\n", temp_window, temp_window * 100ull);
 			}
 			if (UNLIMITED)
 				print_verbose("Using Unlimited Window size\n");
-			print_maxverbose("Storage time in seconds %lld\n", control->secs);
+			print_maxverbose("Storage time in seconds %'"PRId64"\n", control->secs);
 		}
 	}
 }
@@ -357,6 +357,8 @@ int main(int argc, char *argv[])
 	extern int optind;
 	char *eptr, *av; /* for environment */
 	char *endptr = NULL;
+
+	setlocale(LC_ALL, "");	/* for printf features */
 
         control = &base_control;
 
@@ -498,7 +500,7 @@ int main(int argc, char *argv[])
 			if (*endptr)
 				failure("Extra characters after nice level: \'%s\'\n", endptr);
 			if (control->nice_val < PRIO_MIN || control->nice_val > PRIO_MAX)
-				failure("Invalid nice value (must be %d...%d)\n", PRIO_MIN, PRIO_MAX);
+				failure("Invalid nice value (must be %'d...%'d)\n", PRIO_MIN, PRIO_MAX);
 			break;
 		case 'o':
 			if (control->outdir)
@@ -711,13 +713,13 @@ int main(int argc, char *argv[])
 		if (!NO_COMPRESS) {
 			/* If niceness can't be set. just reset process priority */
 			if (unlikely(setpriority(PRIO_PROCESS, 0, control->nice_val/2) == -1)) {
-				print_err("Warning, unable to set nice value %d...Resetting to %d\n",
+				print_err("Warning, unable to set nice value %'d...Resetting to %'d\n",
 					control->nice_val, control->current_priority);
 				setpriority(PRIO_PROCESS, 0, (control->nice_val=control->current_priority));
 			}
 		} else {
 			if (unlikely(setpriority(PRIO_PROCESS, 0, control->nice_val) == -1)) {
-				print_err("Warning, unable to set nice value %d...Resetting to %d\n",
+				print_err("Warning, unable to set nice value %'d...Resetting to %'d\n",
 					control->nice_val, control->current_priority);
 				setpriority(PRIO_PROCESS, 0, (control->nice_val=control->current_priority));
 			}

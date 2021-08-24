@@ -1,6 +1,6 @@
 /*
    Copyright (C) 2006-2016,2018 Con Kolivas
-   Copyright (C) 2011 Peter Hyman
+   Copyright (C) 2011, 2019-2021  Peter Hyman
    Copyright (C) 1998-2003 Andrew Tridgell
 
    This program is free software; you can redistribute it and/or modify
@@ -32,6 +32,7 @@
 #include <stdarg.h>
 #include <semaphore.h>
 #include <gcrypt.h>
+#include <inttypes.h>
 
 #ifdef HAVE_PTHREAD_H
 # include <pthread.h>

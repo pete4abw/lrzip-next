@@ -50,7 +50,6 @@
 #ifdef HAVE_ARPA_INET_H
 # include <arpa/inet.h>
 #endif
-#include <inttypes.h>
 
 #include "stream.h"
 #include "util.h"
@@ -105,7 +104,7 @@ static void remap_low_sb(rzip_control *control, struct sliding_buffer *sb)
 
 	new_offset = sb->offset_search;
 	round_to_page(&new_offset);
-	print_maxverbose("Sliding main buffer to offset %lld\n", new_offset);
+	print_maxverbose("Sliding main buffer to offset %'"PRId64"\n", new_offset);
 	if (unlikely(munmap(sb->buf_low, sb->size_low)))
 		failure("Failed to munmap in remap_low_sb\n");
 	if (new_offset + sb->size_low > sb->orig_size)
@@ -380,7 +379,7 @@ static inline tag clean_one_from_hash(rzip_control *control, struct rzip_state *
 again:
 	better_than_min = increase_mask(st->minimum_tag_mask);
 	if (!st->tag_clean_ptr)
-		print_maxverbose("Starting sweep for mask %u\n", (unsigned int)st->minimum_tag_mask);
+		print_maxverbose("Starting sweep for mask %'u\n", (unsigned int)st->minimum_tag_mask);
 
 	for (; st->tag_clean_ptr < (1U << st->hash_bits); st->tag_clean_ptr++) {
 		he = &st->hash_table[st->tag_clean_ptr];
@@ -568,12 +567,12 @@ static void show_distrib(rzip_control *control, struct rzip_state *st)
 	}
 
 	if (total != st->hash_count)
-		print_err("WARNING: hash_count says total %lld\n", st->hash_count);
+		print_err("WARNING: hash_count says total %'"PRId64"\n", st->hash_count);
 
 	if (!total)
 		print_output("0 total hashes\n");
 	else {
-		print_output("%lld total hashes -- %lld in primary bucket (%-2.3f%%)\n",
+		print_output("%'"PRId64" total hashes -- %'"PRId64" in primary bucket (%-2.3f%%)\n",
 			     total, primary, primary * 100.0 / total);
 	}
 }
@@ -620,7 +619,7 @@ static inline void hash_search(rzip_control *control, struct rzip_state *st,
 				(1024 * 1024 / sizeof(st->hash_table[0]));
 		for (st->hash_bits = 0; (1U << st->hash_bits) < hashsize; st->hash_bits++);
 
-		print_maxverbose("hashsize = %lld.  bits = %lld. %luMB\n",
+		print_maxverbose("hashsize = %'"PRId64".  bits = %'"PRId64". %'"PRIu32"MB\n",
 				 hashsize, st->hash_bits, st->level->mb_used);
 
 		/* 66% full at max. */
@@ -735,7 +734,7 @@ static inline void hash_search(rzip_control *control, struct rzip_state *st,
 			round_to_page(&cksum_len);
 			buf = malloc(cksum_len);
 			if (buf) {
-				print_maxverbose("Malloced %"PRId64" for checksum ckbuf\n", cksum_len);
+				print_maxverbose("Malloced %'"PRId64" for checksum ckbuf\n", cksum_len);
 				break;
 			}
 			cksum_len = cksum_len / 3 * 2;
@@ -827,7 +826,7 @@ static inline void mmap_stdin(rzip_control *control, uchar *buf,
 		total += ret;
 		if (ret == 0) {
 			/* Should be EOF */
-			print_maxverbose("Shrinking chunk to %lld\n", total);
+			print_maxverbose("Shrinking chunk to %'"PRId64"\n", total);
 			if (likely(total)) {
 				buf = (uchar *)mremap(buf, st->chunk_size, total, 0);
 				st->mmap_size = st->chunk_size = total;
@@ -978,7 +977,7 @@ void rzip_fd(rzip_control *control, int fd_in, int fd_out)
 
 	if (!STDIN) {
 		len = control->st_size = s.st_size;
-		print_verbose("File size: %lld\n", len);
+		print_verbose("File size: %'"PRId64"\n", len);
 	} else
 		control->st_size = 0;
 
@@ -1107,14 +1106,14 @@ retry:
 				goto retry;
 			}
 			if (st->mmap_size < st->chunk_size) {
-				print_maxverbose("Enabling sliding mmap mode and using mmap of %lld bytes with window of %lld bytes\n", st->mmap_size, st->chunk_size);
+				print_maxverbose("Enabling sliding mmap mode and using mmap of %'"PRId64" bytes with window of %'"PRId64" bytes\n", st->mmap_size, st->chunk_size);
 				control->do_mcpy = &sliding_mcpy;
 				control->next_tag = &sliding_next_tag;
 				control->full_tag = &sliding_full_tag;
 				control->match_len = &sliding_match_len;
 			}
 		}
-		print_maxverbose("Succeeded in testing %lld sized mmap for rzip pre-processing\n", st->mmap_size);
+		print_maxverbose("Succeeded in testing %'"PRId64" sized mmap for rzip pre-processing\n", st->mmap_size);
 
 		if (st->chunk_size > control->ramsize)
 			print_verbose("Compression window is larger than ram, will proceed with unlimited mode possibly much slower\n");
@@ -1124,11 +1123,11 @@ retry:
 			if (passes == 1)
 				print_verbose("Will take 1 pass\n");
 			else
-				print_verbose("Will take %d passes\n", passes);
+				print_verbose("Will take %'d passes\n", passes);
 		}
 
 		sb->orig_offset = offset;
-		print_maxverbose("Chunk size: %lld\n", st->chunk_size);
+		print_maxverbose("Chunk size: %'"PRId64"\n", st->chunk_size);
 
 		/* Determine the chunk byte width to write to the file
 		 * This allows archives of different chunk sizes to have
@@ -1140,7 +1139,7 @@ retry:
 		st->chunk_bytes = bits / 8;
 		if (bits % 8)
 			st->chunk_bytes++;
-		print_maxverbose("Byte width: %d\n", st->chunk_bytes);
+		print_maxverbose("Byte width: %'d\n", st->chunk_bytes);
 
 		if (STDIN)
 			pct_base = (100.0 * -len) / control->st_size;
@@ -1169,11 +1168,11 @@ retry:
 
 			chunkmbs = (last_chunk / 1024 / 1024) / (double)(current.tv_sec-last.tv_sec);
 			if (!STDIN || st->stdin_eof)
-				print_verbose("\nPass %d / %d -- Elapsed Time: %02d:%02d:%02d. ETA: %02d:%02d:%02d. Compress Speed: %3.3fMB/s.\n",
+				print_verbose("\nPass %'d / %'d -- Elapsed Time: %02d:%02d:%02d. ETA: %02d:%02d:%02d. Compress Speed: %3.3fMB/s.\n",
 					pass, passes, elapsed_hours, elapsed_minutes, elapsed_seconds,
 					eta_hours, eta_minutes, eta_seconds, chunkmbs);
 			else
-				print_verbose("\nPass %d -- Elapsed Time: %02d:%02d:%02d. Compress Speed: %3.3fMB/s.\n",
+				print_verbose("\nPass %'d -- Elapsed Time: %02d:%02d:%02d. Compress Speed: %3.3fMB/s.\n",
 					pass, elapsed_hours, elapsed_minutes, elapsed_seconds, chunkmbs);
 		}
 		last.tv_sec = current.tv_sec;
@@ -1239,13 +1238,13 @@ retry:
 
 	fstat(fd_out, &s2);
 
-	print_maxverbose("matches=%u match_bytes=%u\n",
+	print_maxverbose("matches=%'u match_bytes=%'u\n",
 	       (unsigned int)st->stats.matches, (unsigned int)st->stats.match_bytes);
-	print_maxverbose("literals=%u literal_bytes=%u\n",
+	print_maxverbose("literals=%'u literal_bytes=%'u\n",
 	       (unsigned int)st->stats.literals, (unsigned int)st->stats.literal_bytes);
-	print_maxverbose("true_tag_positives=%u false_tag_positives=%u\n",
+	print_maxverbose("true_tag_positives=%'u false_tag_positives=%'u\n",
 	       (unsigned int)st->stats.tag_hits, (unsigned int)st->stats.tag_misses);
-	print_maxverbose("inserts=%u match %.3f\n",
+	print_maxverbose("inserts=%'u match %.3f\n",
 	       (unsigned int)st->stats.inserts,
 	       (1.0 + st->stats.match_bytes) / st->stats.literal_bytes);
 
