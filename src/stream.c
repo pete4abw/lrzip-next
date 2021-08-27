@@ -978,10 +978,7 @@ void *open_stream_out(rzip_control *control, int f, unsigned int n, i64 chunk_li
 	 * of each compression back end. No 2nd buf is required when there is
 	 * no back end compression. We limit the total regardless to 1/3 ram
 	 * for when the OS lies due to heavy overcommit. */
-	if (NO_COMPRESS)
-		testbufs = 1;
-	else
-		testbufs = 2;
+	testbufs = NO_COMPRESS ? 1 : 2;
 
 	/* Reduce threads one by one and then reduce dictionary size
 	* This block only has to be done once since memory never
@@ -991,13 +988,16 @@ void *open_stream_out(rzip_control *control, int f, unsigned int n, i64 chunk_li
 		save_threads = control->threads;		// save threads for loops
 		limit = control->usable_ram/testbufs;		// this is max chunk limit based on ram and compression window
 		bool overhead_set = false;
-		int thread_limit = control->threads >= 4 ? 4 : control->threads;	// control thread loop
-		int exponent = 40;				// highest possible value for dictsize spec
+
+		int thread_limit = control->threads >= PROCESSORS / 2  ? (control->threads / 2) : control->threads;	// control thread loop
+		uchar exponent = lzma2_prop_from_dic(control->dictSize);	// lzma2 coding for dictsize spec
 		if (LZMA_COMPRESS) {
 			u32 save_dictSize = control->dictSize;	// save dictionary
 			u32 DICTSIZEMIN = (1 << 24);		// minimum dictionary size (16MB)
+			uchar save_exponent = exponent;		// save exponent
 retry_lzma:
 			control->dictSize = save_dictSize;	// start over
+			exponent = save_exponent;		// restore exponent
 			do {
 				for (control->threads = save_threads; control->threads >= thread_limit; control->threads--) {
 					if (limit >= (control->overhead * control->threads / testbufs)) {
@@ -1007,26 +1007,9 @@ retry_lzma:
 				}	// thread loop
 				if (overhead_set == true)
 					break;
-				else {
-					/* make dictionary LZMA friendly (from LzmaEnc)
-					 * using reduced set of dictionary sizes
-					 * 2^n, 3^n, 2^n+1, 3^n+1...
-					*/
-					for ( ; exponent >= 0; exponent-- ) {
-						if (!(exponent % 2)) {
-							control->dictSize = ((u32)3 << ((exponent-1) / 2 + 11));
-							break;
-						}
-						else
-						{
-							control->dictSize = ((u32)2 << (exponent / 2 + 11));
-							break;
-						}
-					}
-					exponent--;
-					if (exponent < 0)				// Just to be proper. Should never happen. NEVER!
-						failure_return(("Unexpected Fatal Error in open_stream_out dictSize. Cannot continue.\n"), false);
-				}
+				else
+					// reduce dictionary size 
+					control->dictSize = LZMA2_DIC_SIZE_FROM_PROP(--exponent);
 				setup_overhead(control);				// recompute overhead
 			} while (control->dictSize > DICTSIZEMIN);			// dictionary size loop
 			if (!overhead_set && thread_limit > 1) {			// try again and lower thread_limit
@@ -1100,8 +1083,10 @@ retest_malloc:
 		}
 		dealloc(testmalloc);
 		print_maxverbose("Succeeded in testing %'"PRId64" sized malloc for back end compression\n", testsize);
-		stream_bufsize = MIN(limit, MAX((limit + control->threads - 1) / control->threads,
-					STREAM_BUFSIZE));
+		/* Make the bufsize no smaller than STREAM_BUFSIZE. Round up the
+		 * bufsize to fit X threads into it */
+		stream_bufsize = round_up_page(control, MAX(limit/control->threads, STREAM_BUFSIZE));
+
 		if (control->threads > 1)
 			print_maxverbose("Using up to %'d threads to compress up to %'"PRId64" bytes each.\n",
 				control->threads, stream_bufsize);
@@ -1112,8 +1097,6 @@ retest_malloc:
 
 	control->threads = save_threads;				// restore threads. This is important!
 
-	/* Make the bufsize no smaller than STREAM_BUFSIZE. Round up the
-	 * bufsize to fit X threads into it */
 	sinfo->bufsize = stream_bufsize;
 
 	for (i = 0; i < n; i++) {
