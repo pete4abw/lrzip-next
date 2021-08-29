@@ -340,8 +340,9 @@ retry:
 		(size_t)cthread->s_len, lzma_properties, &prop_size,
 				control->compression_level,
 				control->dictSize, /* dict size. 0 = set default, otherwise control->dictSize */
-				-1, -1, -1, -1, /* lc, lp, pb, fb */
-				-1);
+				LZMA_LC, LZMA_LP, LZMA_PB, /* lc, lp, pb */
+				(control->compression_level < 7 ? 32 : 64), /* fb */
+				(control->threads > 1 ? 2 : 1));
 				/* LZMA spec has threads = 1 or 2 only. */
 	if (lzma_ret != SZ_OK) {
 		switch (lzma_ret) {
@@ -1008,7 +1009,7 @@ retry_lzma:
 				if (overhead_set == true)
 					break;
 				else
-					// reduce dictionary size 
+					// reduce dictionary size
 					control->dictSize = LZMA2_DIC_SIZE_FROM_PROP(--exponent);
 				setup_overhead(control);				// recompute overhead
 			} while (control->dictSize > DICTSIZEMIN);			// dictionary size loop
