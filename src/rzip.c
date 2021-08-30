@@ -55,7 +55,6 @@
 #include "util.h"
 #include "lrzip_core.h"
 /* needed for CRC routines */
-#include "7zCrc.h"
 #include <gcrypt.h>
 
 #ifndef MAP_ANONYMOUS
@@ -584,7 +583,8 @@ static void *cksumthread(void *data)
 
 	pthread_detach(pthread_self());
 
-	*control->checksum.cksum = CrcUpdate(*control->checksum.cksum, control->checksum.buf, control->checksum.len);
+//	*control->checksum.cksum = CrcUpdate(*control->checksum.cksum, control->checksum.buf, control->checksum.len);
+	gcry_md_write(control->gcry_crc_handle, control->checksum.buf, control->checksum.len);
 	if (!NO_MD5)
 		gcry_md_write(control->gcry_md5_handle, control->checksum.buf, control->checksum.len);
 	dealloc(control->checksum.buf);
@@ -714,7 +714,7 @@ static inline void hash_search(rzip_control *control, struct rzip_state *st,
 			if (unlikely(!control->checksum.buf))
 				failure("Failed to malloc ckbuf in hash_search\n");
 			control->do_mcpy(control, control->checksum.buf, cksum_limit, control->checksum.len);
-			control->checksum.cksum = &st->cksum;
+//			control->checksum.cksum = &st->cksum;
 			cksum_limit += control->checksum.len;
 			cksum_update(control);
 		}
@@ -753,13 +753,15 @@ static inline void hash_search(rzip_control *control, struct rzip_state *st,
 		for (i = 0; i < cksum_chunks; i++) {
 			control->do_mcpy(control, control->checksum.buf, cksum_limit, cksum_len);
 			cksum_limit += cksum_len;
-			st->cksum = CrcUpdate(st->cksum, control->checksum.buf, cksum_len);
+//			st->cksum = CrcUpdate(st->cksum, control->checksum.buf, cksum_len);
+			gcry_md_write(control->gcry_crc_handle, control->checksum.buf, cksum_len);
 			if (!NO_MD5)
 				gcry_md_write(control->gcry_md5_handle, control->checksum.buf, cksum_len);
 		}
 		/* Process end of the checksum buffer */
 		control->do_mcpy(control, control->checksum.buf, cksum_limit, cksum_remains);
-		st->cksum = CrcUpdate(st->cksum, control->checksum.buf, cksum_remains);
+//		st->cksum = CrcUpdate(st->cksum, control->checksum.buf, cksum_remains);
+		gcry_md_write(control->gcry_crc_handle, control->checksum.buf, cksum_remains);
 		if (!NO_MD5)
 			gcry_md_write(control->gcry_md5_handle, control->checksum.buf, cksum_remains);
 		dealloc(control->checksum.buf);
@@ -768,9 +770,11 @@ static inline void hash_search(rzip_control *control, struct rzip_state *st,
 		cksem_wait(control, &control->cksumsem);
 		cksem_post(control, &control->cksumsem);
 	}
+	memcpy(&st->cksum, gcry_md_read(control->gcry_crc_handle, GCRY_MD_CRC32), CRC32_LEN);
 
 	put_literal(control, st, 0, 0);
 	put_u32(control, st->ss, st->cksum);
+	gcry_md_reset(control->gcry_crc_handle);	// reset crc computation
 }
 
 
@@ -951,6 +955,10 @@ void rzip_fd(rzip_control *control, int fd_in, int fd_out)
 	i64 free_space;
 
 	init_mutex(control, &control->control_lock);
+	/* init CRC */
+	gcry_md_open(&control->gcry_crc_handle, GCRY_MD_CRC32, GCRY_MD_FLAG_SECURE);
+	if (unlikely(control->gcry_crc_handle == NULL))
+		failure("Cannot create MD5 Handle in rzip_fd\n");
 	if (!NO_MD5) {
 		gcry_md_open(&control->gcry_md5_handle, GCRY_MD_MD5, GCRY_MD_FLAG_SECURE);
 		if (unlikely(control->gcry_md5_handle == NULL))
@@ -1255,6 +1263,7 @@ retry:
 
 	clear_sslist(st);
 	gcry_md_close(control->gcry_md5_handle);
+	gcry_md_close(control->gcry_crc_handle);
 	dealloc(st);
 }
 

@@ -1,3 +1,6 @@
+Remove lzma CRC code. Use libgcrypt for CRC hashing.
+Allow Apple to compute MD5 hash. Revert 2011 restriction.
+
 lrzip-next v0.8.3
 Use ` printf flag to print thousands separators.
 Improve info format. Align columns.

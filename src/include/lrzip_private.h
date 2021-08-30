@@ -171,11 +171,15 @@ typedef sem_t cksem_t;
  #define mremap fake_mremap
 #endif
 
-#if defined(__APPLE__)
-# define MD5_RELIABLE (0)
-#else
-# define MD5_RELIABLE (1)
-#endif
+/* Since 2011 Apple was prohibited from
+ * computing MD5 because of some unknown
+ * fault. Not anymore using libgcrypt
+ */
+//#if defined(__APPLE__)
+//# define MD5_RELIABLE (0)
+//#else
+//# define MD5_RELIABLE (1)
+//#endif
 
 #define bswap_32(x) \
      ((((x) & 0xff000000) >> 24) | (((x) & 0x00ff0000) >>  8) |		      \
@@ -268,6 +272,7 @@ static inline unsigned char lzma2_prop_from_dic(u32 dicSize)
 #define HASH_LEN 64
 #define SALT_LEN 8
 #define CBC_LEN 16
+#define CRC32_LEN 4
 
 #define LRZ_DECRYPT	(0)
 #define LRZ_ENCRYPT	(1)
@@ -372,7 +377,7 @@ struct sliding_buffer {
 };
 
 struct checksum {
-	uint32_t *cksum;
+//	uint32_t *cksum;
 	uchar *buf;
 	i64 len;
 };
@@ -483,6 +488,7 @@ struct rzip_control {
 	bool lzma_prop_set;
 
 	cksem_t cksumsem;
+	gcry_md_hd_t gcry_crc_handle;
 	gcry_md_hd_t gcry_md5_handle;
 	uchar gcry_md5_resblock[MD5_DIGEST_SIZE];
 	i64 md5_read;			// How far into the file the md5 has done so far

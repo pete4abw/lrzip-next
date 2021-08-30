@@ -213,12 +213,10 @@ static void get_lzma_prop(rzip_control *control, unsigned char *magic)
 static void get_md5(rzip_control *control, unsigned char *magic)
 {
 	/* Whether this archive contains md5 data at the end or not */
-	if (*magic && MD5_RELIABLE) {
-		if (*magic == 1)
-			control->flags |= FLAG_MD5;
-		else
-			print_verbose("Unknown hash, falling back to CRC\n");
-	}
+	if (*magic == 1)
+		control->flags |= FLAG_MD5;
+	else
+		print_verbose("Unknown hash, falling back to CRC\n");
 
 	return;
 }
@@ -1268,8 +1266,7 @@ bool compress_file(rzip_control *control)
 	int fd_in = -1, fd_out = -1;
 	char header[MAGIC_LEN];
 
-	if (MD5_RELIABLE)
-		control->flags |= FLAG_MD5;
+	control->flags |= FLAG_MD5;	/* MD5 now the default */
 	if (ENCRYPT)
 		if (unlikely(!get_hash(control, 1)))
 			return false;

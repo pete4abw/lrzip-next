@@ -8,20 +8,14 @@ AM_CFLAGS = \
 
 C_S =
 if USE_ASM
-  AM_CFLAGS += -D_7ZIP_ASM
 if USE_X64
 ## For LZMA Assembler Decompressor
   AM_CFLAGS += -D_LZMA_DEC_OPT -DMFMT_GM_INLINE
 endif
-else
-  C_S += 7zCrcOpt.c
 endif
-
 
 noinst_LTLIBRARIES = liblzma.la
 liblzma_la_SOURCES = \
-	7zCrc.c		../include/7zCrc.h \
-	../include/7zTypes.h $(C_S) \
 	Alloc.c 	../include/Alloc.h \
 	Bra86.c		../include/Bra.h \
 	Bra.c \

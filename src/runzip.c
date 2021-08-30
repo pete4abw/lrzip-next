@@ -45,7 +45,6 @@
 #include "util.h"
 #include "lrzip_core.h"
 /* needed for CRC routines */
-#include "7zCrc.h"
 #include <gcrypt.h>
 
 /* Work Function to compute md5 of a file stream */
@@ -150,7 +149,7 @@ static i64 read_header(rzip_control *control, void *ss, uchar *head)
 	return read_vchars(control, ss, 0, control->chunk_bytes);
 }
 
-static i64 unzip_literal(rzip_control *control, void *ss, i64 len, uint32 *cksum)
+static i64 unzip_literal(rzip_control *control, void *ss, i64 len)
 {
 	i64 stream_read;
 	uchar *buf;
@@ -174,7 +173,8 @@ static i64 unzip_literal(rzip_control *control, void *ss, i64 len, uint32 *cksum
 	}
 
 	if (!HAS_MD5)
-		*cksum = CrcUpdate(*cksum, buf, stream_read);
+//		*cksum = CrcUpdate(*cksum, buf, stream_read);
+		gcry_md_write(control->gcry_crc_handle, buf, stream_read);
 	if (!NO_MD5)
 		gcry_md_write(control->gcry_md5_handle, buf, stream_read);
 
@@ -194,7 +194,7 @@ static i64 read_fdhist(rzip_control *control, void *buf, i64 len)
 	return len;
 }
 
-static i64 unzip_match(rzip_control *control, void *ss, i64 len, uint32 *cksum, int chunk_bytes)
+static i64 unzip_match(rzip_control *control, void *ss, i64 len, int chunk_bytes)
 {
 	i64 offset, n, total, cur_pos;
 	uchar *buf, *off_buf;
@@ -235,7 +235,8 @@ static i64 unzip_match(rzip_control *control, void *ss, i64 len, uint32 *cksum, 
 		}
 
 		if (!HAS_MD5)
-			*cksum = CrcUpdate(*cksum, off_buf, n);
+//			*cksum = CrcUpdate(*cksum, off_buf, n);
+			gcry_md_write(control->gcry_crc_handle, off_buf, n);
 		if (!NO_MD5)
 			gcry_md_write(control->gcry_md5_handle, off_buf, n);
 
@@ -339,7 +340,7 @@ static i64 runzip_chunk(rzip_control *control, int fd_in, i64 expected_size, i64
 			return -1;
 		switch (head) {
 			case 0:
-				u = unzip_literal(control, ss, len, &cksum);
+				u = unzip_literal(control, ss, len);
 				if (unlikely(u == -1)) {
 					close_stream_in(control, ss);
 					return -1;
@@ -348,7 +349,7 @@ static i64 runzip_chunk(rzip_control *control, int fd_in, i64 expected_size, i64
 				break;
 
 			default:
-				u = unzip_match(control, ss, len, &cksum, chunk_bytes);
+				u = unzip_match(control, ss, len, chunk_bytes);
 				if (unlikely(u == -1)) {
 					close_stream_in(control, ss);
 					return -1;
@@ -368,6 +369,7 @@ static i64 runzip_chunk(rzip_control *control, int fd_in, i64 expected_size, i64
 		}
 	}
 
+	memcpy(&cksum, gcry_md_read(control->gcry_crc_handle, GCRY_MD_CRC32), CRC32_LEN);
 	if (!HAS_MD5) {
 		good_cksum = read_u32(control, ss, 0, &err);
 		if (unlikely(err)) {
@@ -401,6 +403,7 @@ i64 runzip_fd(rzip_control *control, int fd_in, int fd_out, int fd_hist, i64 exp
 	i64 total = 0, u;
 	double tdiff;
 
+	gcry_md_open(&control->gcry_crc_handle, GCRY_MD_CRC32, GCRY_MD_FLAG_SECURE);
 	if (!NO_MD5) {
 		gcry_md_open(&control->gcry_md5_handle, GCRY_MD_MD5, GCRY_MD_FLAG_SECURE);
 		if ((unlikely(control->gcry_md5_handle == NULL)))

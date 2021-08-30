@@ -59,9 +59,6 @@
 #include "stream.h"
 #include <locale.h>
 
-/* needed for CRC routines */
-#include "7zCrc.h"
-
 #define MAX_PATH_LEN 4096
 
 // progress flag
@@ -378,9 +375,6 @@ int main(int argc, char *argv[])
 		long_options[1].name = "stdout";
 		long_options[11].name = "keep";
 	}
-
-	/* generate crc table */
-	CrcGenerateTable();
 
 	/* Get Preloaded Defaults from lrzip.conf
 	 * Look in ., $HOME/.lrzip/, /etc/lrzip.
