@@ -14,10 +14,7 @@ lzmadoc_DATA = \
 	doc/Methods.txt \
 	doc/README \
 	doc/README-Alloc \
-	doc/README.threading
-
-if USE_X64
-lzmadoc_DATA += doc/README.ASMDecompress
-endif
+	doc/README.threading \
+	doc/README.ASMDecompress
 
 EXTRA_DIST = $(lzmadoc_DATA)

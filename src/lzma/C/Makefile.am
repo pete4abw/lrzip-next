@@ -8,10 +8,8 @@ AM_CFLAGS = \
 
 C_S =
 if USE_ASM
-if USE_X64
 ## For LZMA Assembler Decompressor
   AM_CFLAGS += -D_LZMA_DEC_OPT -DMFMT_GM_INLINE
-endif
 endif
 
 noinst_LTLIBRARIES = liblzma.la
