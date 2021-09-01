@@ -57,32 +57,32 @@ AC_ARG_ENABLE(
 		[AC_HELP_STRING([--enable-asm],[Enable native Assembly code])],
 		ASM=$enableval,
 		ASM=yes
-             )
+	)
 
 if test x"$ASM" = x"yes"; then
 	AC_CHECK_PROGS( ASM_PROG, nasm yasm, no,  ) # Allow test for multiple Assemblers.
 	if test x"$ASM_PROG" = x"no"; then
 		ASM=no
 	fi
-## only for x86 and x86_64
+## only x86_64
 	case $host in
-		i?86-*)
-			ASM_OPT="-f elf"
-			USE_64=no
-			;;
 		x86_64-*)
 			ASM_OPT="-Dx64 -f elf64"
-			USE_64=yes
 			;;
 		*) 
-			ASM_PROG=
-			ASM_OPT=
 			ASM=no
 			;;
 	esac
-else
-	ASM_PROG=no
 fi
+
+if test x"$ASM" = x"no"; then
+	ASM_PROG=
+	ASM_OPT=
+	ASM=
+fi
+AM_CONDITIONAL([USE_ASM], [test x"$ASM" = x"yes"])
+AC_SUBST(ASM_OPT)
+AC_SUBST(ASM_PROG)
 
 static=no
 AC_ARG_ENABLE([static-bin],
@@ -151,9 +151,6 @@ case $host in
 		;;
 esac
 
-AM_CONDITIONAL([USE_ASM], [test x"$ASM" = x"yes"])
-AM_CONDITIONAL([USE_X64], [test x"$USE_64" = x"yes"])
-AC_SUBST([ASM_OPT])
 EFL_CHECK_DOXYGEN([build_doc="yes"], [build_doc="no"])
 
 AC_CONFIG_FILES([
@@ -161,11 +158,14 @@ Makefile
 src/Makefile
 src/lzma/Makefile
 src/lzma/C/Makefile
-src/lzma/ASM/Makefile
 src/lib/libzpaq/Makefile
 doc/Makefile
 man/Makefile
 ])
+
+AS_IF([test x"$ASM" = x"yes"],
+      AC_CONFIG_FILES([src/lzma/ASM/Makefile]),[echo "Not making ASM Makefile"])
+
 AC_OUTPUT
 
 echo
@@ -189,8 +189,8 @@ echo "  CPPFLAGS.............: $CPPFLAGS"
 echo "  CFLAGS...............: $CFLAGS"
 echo "  CXXFLAGS.............: $CXXFLAGS"
 echo -n "  ASM..................: "
-if test x"$ASM_PROG" = x"no"; then
-	echo "$ASM"
+if test x"$ASM" != x"yes"; then
+	echo "no"
 else
 	echo "$ASM, using $ASM_PROG Assembler"
 	echo "  ASMFLAGS.............: $ASM_OPT"
