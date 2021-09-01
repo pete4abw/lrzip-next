@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/env bash
 # Peter Hyman, pete@peterhyman.com
 # Lucas Rademaker for MacOS and small systems compatibility.
 # December 2020
@@ -50,7 +50,12 @@ tagopt="--tags"
 init() {
 	if [ -d '.git' ] ; then
 		# Lucas Rademaker
+		# If the below does not work using sed. comment the line
+		# amd uncomment the three descrive_tag= lines below it.
 		describe_tag=$(git describe $tagopt --long --abbrev=7 | sed -E 's/^v(.*?-)g(.*)$/\1\2/')
+#		describe_tag=$(git describe $tagopt --long --abbrev=7)
+#		describe_tag=${describe_tag/v/}
+#		describe_tag=${describe_tag/g/}
 		commit=$(echo $describe_tag | cut -d- -f3)
 		tagrev=$(echo $describe_tag | cut -d- -f2)
 		version=$(echo $describe_tag | cut -d- -f1)

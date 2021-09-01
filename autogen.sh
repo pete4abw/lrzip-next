@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/env bash
 cwd="$PWD"
 bs_dir="$(dirname $(readlink -f $0))"
 rm -rf "${bs_dir}"/autom4te.cache
