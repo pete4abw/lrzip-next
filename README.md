@@ -1,9 +1,17 @@
 lrzip-next - Long Range ZIP
 ======================
 
-v 0.8.3
+v 0.8.4
 
 ## This is a development branch. Not for production use!
+
+Way back in 2011, MD5 computation for Apple PCs was removed. It was just accepted, but never qualified.\
+This branch accomplishes three goals:
+1. Remove lzma's CRC code and replaces it with libgcrypt's CRC routines.
+2. Remove the restriction that Apple cannot compute MD5s.
+3. Limit ASM Compilation to x86_64 only.
+
+All `lrzip-next` files will now have MD5 as the default checksum -- regardless of platform. If you use a Mac, please help test this out!
 
 ## NEW: LZMA SDK 21.03beta, ZPAQ 7.15, SCRYPT Bitcoin style key derivation
 (*Still some work to do on lzma code cleanup, remove Windows cruft, etc.*)
@@ -16,7 +24,7 @@ Many new changes, not in the main branch, including:
 * ability to set rzip pre-compression level independently of compression level
 * variable compressibility threshold testing
 * ability to set specific LZMA Dictionary Size
-* improved info reporting, column alignment, improved formatting.
+* improved info reporting, column alignment, improved formatting, thousands separator.
 * improved memory management favoring large chunk and dictionary sizes over maxmizing number of threads
 * improved ZPAQ processing by analyzing data prior to sending to compressor
 * many bug fixes including validating a file prior to decompression (prevents corrupt file decompression before it starts!)

@@ -1,5 +1,10 @@
+lrzip-next v0.8.4
 Remove lzma CRC code. Use libgcrypt for CRC hashing.
 Allow Apple to compute MD5 hash. Revert 2011 restriction.
+Update autogen.sh and util/gitdesc.sh to use /bin/env bash
+to improve compatibility to MacOS and others.
+Remove ASM compatility check for 32 bit x86 systems. 64 bit only.
+Update and cleanups to configure.ac
 
 lrzip-next v0.8.3
 Use ` printf flag to print thousands separators.
