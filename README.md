@@ -8,6 +8,11 @@ The Development Branch is now testing out the Version 0.8 Magic Header, enhanced
 
 Please help test and shake it out at [21.03beta Version 0.8 Development Branch](https://github.com/pete4abw/lrzip-next/tree/lzma-21.03beta).
 
+* **This branch will sunset when the lzma 21 SDK is released out of beta.**
+* **Only major bugs will be addressed here.**
+* **New features will not be ported to the master branch.**
+* **See the [21.03beta WHATS-NEW file](https://github.com/pete4abw/lrzip-next/blob/lzma-21.03beta/WHATS-NEW) for new `lrzip-next` features!**
+
 ## NEW, LZMA SDK 19.00, ZPAQ 7.15
 
 Many new changes, not in the main branch, including:
