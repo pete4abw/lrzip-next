@@ -1050,7 +1050,9 @@ next_chunk:
 		if (INFO) {
 			print_verbose("Stream: %'d\n", stream);
 			print_maxverbose("Offset: %'"PRId64"\n", ofs);
-			print_verbose("%s\t%s\t%s\t%16s / %12s\n", "Block","Comp","Percent","Comp Size", "UComp Size");
+			print_verbose("%s\t%s\t%s\t%16s / %14s", "Block","Comp","Percent","Comp Size", "UComp Size");
+			print_maxverbose("%18s : %14s", "Offset", "Head");
+			print_verbose("\n");
 		}
 		do {
 			i64 head_off;
@@ -1096,8 +1098,8 @@ next_chunk:
 			utotal += u_len;
 			ctotal += c_len;
 			if (INFO) {
-				print_verbose("\t%.1f%%\t%'16"PRId64" / %'12"PRId64"", percentage(c_len, u_len), c_len, u_len);
-				print_maxverbose("\tOffset: %'12"PRId64"\tHead: %'12"PRId64"", head_off, last_head);
+				print_verbose("\t%5.1f%%\t%'16"PRId64" / %'14"PRId64"", percentage(c_len, u_len), c_len, u_len);
+				print_maxverbose("%'18"PRId64" : %'14"PRId64"", head_off, last_head);
 				print_verbose("\n");
 			}
 			block++;
@@ -1150,29 +1152,31 @@ done:
 
 	if (INFO) {
 		print_output("\nSummary\n=======\n");
+		print_output("File: %s\nlrzip-next version: %'d.%'d %sfile\n\n", infilecopy,
+				control->major_version, control->minor_version, ENCRYPT ? "Encrypted " : "");
+
+		if (!expected_size)
+			print_output("Due using %s, expected decompression size not available\n",
+				ENCRYPT ? "Encryption": "Compression to STDOUT");
+		print_verbose("  Stats         Percent       Compressed /   Uncompressed\n  -------------------------------------------------------\n");
 		/* If we can't show expected size, tailor output for it */
 		if (expected_size) {
-			print_verbose("Rzip compression:     %4.1f%% %'14"PRId64" / %'14"PRId64"\n",
+			print_verbose("  Rzip:         %5.1f%%\t%'16"PRId64" / %'14"PRId64"\n",
 					percentage (utotal, expected_size),
 					utotal, expected_size);
-			print_verbose("Back end compression: %4.1f%% %'14"PRId64" / %'14"PRId64"\n",
+			print_verbose("  Back end:     %5.1f%%\t%'16"PRId64" / %'14"PRId64"\n",
 					percentage(ctotal, utotal),
 					ctotal, utotal);
-			print_verbose("Overall compression:  %4.1f%% %'14"PRId64" / %'14"PRId64"\n",
+			print_verbose("  Overall:      %5.1f%%\t%'16"PRId64" / %'14"PRId64"\n",
 					percentage(ctotal, expected_size),
 					ctotal, expected_size);
 		} else {
-			print_verbose("Due to using %s, expected decompression size not available\n",
-					ENCRYPT ? "Encryption": "Compression to STDOUT");
-			print_verbose("Rzip compression:     Unavailable\n");
-			print_verbose("Back end compression: %4.1f%% %'"PRId64" / %'"PRId64"\n", percentage(ctotal, utotal),	ctotal, utotal);
-			print_verbose("Overall compression:  Unavailable\n");
+			print_verbose("  Rzip:         Unavailable\n");
+			print_verbose("  Back end:     %5.1f%%\t%'16"PRId64" / %'14"PRId64"\n", percentage(ctotal, utotal), ctotal, utotal);
+			print_verbose("  Overall:      Unavailable\n");
 		}
 
-		print_output("%s:\nlrzip version: %'d.%'d %sfile.\n", infilecopy,
-				control->major_version, control->minor_version, ENCRYPT ? "Encrypted " : "");
-
-		print_output("Compression: ");
+		print_output("\n  Compression Method: ");
 		if (save_ctype == CTYPE_NONE)
 			print_output("rzip alone\n");
 		else if (save_ctype == CTYPE_BZIP2)
@@ -1200,7 +1204,7 @@ done:
 
 		/* show filter used */
 		if (FILTER_USED) {
-			print_output("Filter Used: %s",
+			print_output("  Filter Used: %s",
 					((control->filter_flag == FILTER_FLAG_X86) ? "x86" :
 					((control->filter_flag == FILTER_FLAG_ARM) ? "ARM" :
 					((control->filter_flag == FILTER_FLAG_ARMT) ? "ARMT" :
@@ -1212,15 +1216,16 @@ done:
 				print_output(", offset - %'d", control->delta);
 			print_output("\n");
 		}
+		print_output("\n");
 
 		if (expected_size) {
-			print_output("Decompressed file size: %'14"PRIu64"\n", expected_size);
-			print_output("Compressed file size:   %'14"PRIu64"\n", infile_size);
-			print_output("Compression ratio:      %.3Lf\n", cratio);
+			print_output("  Decompressed file size: %'14"PRIu64"\n", expected_size);
+			print_output("  Compressed file size:   %'14"PRIu64"\n", infile_size);
+			print_output("  Compression ratio:      %14.3Lfx\n", cratio);
 		} else {
-			print_output("Decompressed file size: Unavailable\n");
-			print_output("Compressed file size:   %'"PRIu64"\n", infile_size);
-			print_output("Compression ratio:      Unavailable\n");
+			print_output("  Decompressed file size:    Unavailable\n");
+			print_output("  Compressed file size:   %'14"PRIu64"\n", infile_size);
+			print_output("  Compression ratio:         Unavailable\n");
 		}
 	} /* end if (INFO) */
 
@@ -1234,16 +1239,15 @@ done:
 			if (unlikely(read(fd_in, md5_stored, MD5_DIGEST_SIZE) != MD5_DIGEST_SIZE))
 				fatal_return(("Failed to read md5 data in get_fileinfo.\n"), false);
 			if (ENCRYPT)
-				if (unlikely(!lrz_decrypt(control, md5_stored, MD5_DIGEST_SIZE, control->salt_pass, LRZ_DECRYPT)))
+				if (unlikely(!lrz_decrypt(control, md5_stored, MD5_DIGEST_SIZE, control->salt_pass, LRZ_VALIDATE)))
 					fatal_return(("Failure decrypting MD5 in get_fileinfo.\n"), false);
-			print_output("MD5 used for integrity testing\n");
-			print_output("MD5: ");
+			print_output("\n  MD5 Checksum: ");
 			for (i = 0; i < MD5_DIGEST_SIZE; i++)
 				print_output("%02x", md5_stored[i]);
 			print_output("\n");
 		}
 	} else {
-		if (INFO) print_output("CRC32 used for integrity testing\n");
+		if (INFO) print_output("\n  CRC32 used for integrity testing\n");
 	}
 
 out:
