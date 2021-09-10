@@ -1,0 +1,63 @@
+name: Feature Request
+description: Request or Suggest new feature(s) for lrzip-next
+title: ":bulb: [Insert Feature Suggestion Here]"
+labels: [enhancement]
+assignees:
+  - pete4abw
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to offer an enhancement for `lrzip-next`!
+  - type: input
+    attributes:
+      label: lrzip-next Version
+      description: What version of lrzip-next are you running?
+      placeholder: Provide output of lrzip-next -V
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Feature Suggestion
+      description: Explain what you would like to see?
+      placeholder: |
+          As complete a description as possible...
+          Is this a new feature?
+          Enhancement or Expansion of an existing feature?
+          Something unexpected?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Steps to reproduce
+      description: If applicable, what steps did you take?
+      placeholder: |
+          As complete a description as possible...
+          Steps
+          1.
+          2.
+          3.
+          4.
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: Relevant log output
+      description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
+      render: shell
+    validations: 
+      required: false
+  - type: textarea
+    attributes:
+      label: Please provide system details
+      description: Provide system details such as OS Distro, Kernel version, System Ram etc.
+      value: |
+         OS Distro: 
+         Kernel Version (uname -a): 
+         System ram (free -h): 
+    validations: 
+      required: false
+  - type: textarea
+    attributes:
+      label: Additional Context
+      description: Screenshots, POC files, config files, or any other relevant info
+      placeholder: Add any additional info, files, etc. here.
