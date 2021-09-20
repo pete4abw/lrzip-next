@@ -1,3 +1,5 @@
+ZPAQ compression fixed. Imposed compression block size limits.
+
 lrzip-next v0.8.4
 Remove lzma CRC code. Use libgcrypt for CRC hashing.
 Allow Apple to compute MD5 hash. Revert 2011 restriction.

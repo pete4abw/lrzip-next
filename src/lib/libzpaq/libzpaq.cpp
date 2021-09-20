@@ -39,16 +39,6 @@ See libzpaq.h for additional documentation.
 
 namespace libzpaq {
 
-// Standard library redirections
-void* calloc(size_t a, size_t b) {return ::calloc(a, b);}
-void free(void* p) {::free(p);}
-int memcmp(const void* d, const void* s, size_t n) {
-  return ::memcmp(d, s, n);}
-void* memset(void* d, int c, size_t n) {return ::memset(d, c, n);}
-double log(double x) {return ::log(x);}
-double exp(double x) {return ::exp(x);}
-double pow(double x, double y) {return ::pow(x, y);}
-
 // Read 16 bit little-endian number
 int toU16(const char* p) {
   return (p[0]&255)+256*(p[1]&255);
@@ -714,7 +704,7 @@ void random(char* buf, int n) {
   if (n>=1 && (buf[0]=='z' || buf[0]=='7'))
     buf[0]^=0x80;
 }
-*/
+*/ // End Prune
 
 //////////////////////////// Component ///////////////////////
 
@@ -2945,13 +2935,6 @@ bool Compressor::compress(int n) {
     if (n>=0) n-=nr;
     for (int i=0; i<nr; ++i) {
       int ch=U8(buf[i]);
-/* TODO
- * Need to show progress
-      // ver 7.15 uses read instead of get
-      // need to show progresss in this way
-      if (!(i % 128)) 
-	      show_progress(i);
-*/
       enc.compress(ch);
       if (verify) {
         if (pz.hend) pz.run(ch);

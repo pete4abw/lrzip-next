@@ -190,13 +190,19 @@ static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthr
 	}
 
 	c_len = 0;
-        /* Compression level can be 1 to 5, zpaq version 7.15 */
-	/* Levels 1 and 2 produce worse results and are omitted */
+        /* Compression level can be 1 to 5, zpaq version 7.15
+	 * 1 and 2 faile however, so only levels 3-5 are used
+	 * Data types are determined by zpaq_ease */
 	zpaq_ease = 256-(compressibility * 2.55);	/* 0, hard, 255, easy. Inverse of lz4_compresses */
 	if (zpaq_ease < 25) zpaq_ease = 25;		/* too low a value fails */
-	zpaq_type = 0;					/* default, binary data */
+	if (zpaq_ease < 64)
+		zpaq_type = 0;				/* binary data */
+	else if (zpaq_ease > 192)
+		zpaq_type = 1;				/* text data */
+	else
+		zpaq_type = 3;				/* auto data */
 
-	sprintf(method,"%'d%'d,%'d,%'d",control->zpaq_level,control->zpaq_bs,zpaq_ease,zpaq_type);
+	sprintf(method,"%d%d,%d,%d",control->zpaq_level,control->zpaq_bs,zpaq_ease,zpaq_type);
 
 	print_verbose("Starting zpaq backend compression thread %'d...\nZPAQ: Method selected: %s: level=%'d, bs=%'d, easy=%'d, type=%'d\n",
 		       current_thread, method, control->zpaq_level, control->zpaq_bs, zpaq_ease, zpaq_type);
@@ -1085,8 +1091,12 @@ retest_malloc:
 		dealloc(testmalloc);
 		print_maxverbose("Succeeded in testing %'"PRId64" sized malloc for back end compression\n", testsize);
 		/* Make the bufsize no smaller than STREAM_BUFSIZE. Round up the
-		 * bufsize to fit X threads into it */
-		stream_bufsize = round_up_page(control, MAX(limit/control->threads, STREAM_BUFSIZE));
+		 * bufsize to fit X threads into it
+		 * For ZPAQ the limit is 2^bs * 1MB */
+		if (ZPAQ_COMPRESS && (limit/control->threads > 0x100000<<control->zpaq_bs))
+			stream_bufsize = round_up_page(control, MAX((0x100000<<control->zpaq_bs)-0x1000, STREAM_BUFSIZE));
+		else
+			stream_bufsize = round_up_page(control, MAX(limit/control->threads, STREAM_BUFSIZE));
 
 		if (control->threads > 1)
 			print_maxverbose("Using up to %'d threads to compress up to %'"PRId64" bytes each.\n",
