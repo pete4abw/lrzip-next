@@ -150,13 +150,16 @@ void setup_overhead(rzip_control *control)
 			case 3: control->zpaq_bs = 4;
 				break;  //16MB ZPAQ Default
 			case 4:
-			case 5:
-			case 6:
-			case 7:	control->zpaq_bs = 5;
+			case 5:	control->zpaq_bs = 5;
 				break;	//32MB
-			case 8:
-			case 9:	control->zpaq_bs = 6;
+			case 6:	control->zpaq_bs = 6;
 				break;	//64MB
+			case 7:	control->zpaq_bs = 7;
+				break;	//128MB
+			case 8:	control->zpaq_bs = 8;
+				break;	//256MB
+			case 9:	control->zpaq_bs = 9;
+				break;	//512MB
 			default: control->zpaq_bs = 4;
 				break;	// should never reach here
 			}
