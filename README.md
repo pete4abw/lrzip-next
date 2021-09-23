@@ -1,7 +1,27 @@
 lrzip-next - Long Range ZIP
 ======================
 
-v 0.8.4
+## This version addresses ZPAQ Corruption
+For some reason, as was addressed in the original README, The ZPAQ 7.15 library corrupts data for larger files and block sizes and ZPAQ compression levels 1 and 2.\
+I have narrowed this down to when block sizes sent from `lrzip-next` to the ZPAQ backend are larger ZPAQ Block Size specified.
+
+This version will assign ZPAQ levels and block sizes based on `lrzip-next` compression levels as follows:
+
+LRZIP-NEXT Level | ZPAQ Level | ZPAQ Block Size
+:---: | :---: | :---:
+1 | 3 | 4 (16MB)
+2 | 3 | 4
+3 | 3 | 4
+4 | 4 | 5 (32MB)
+5 | 4 | 5
+6 | 4 | 6 (64MB)
+7 | 4 | 7 (128MB)
+8 | 5 | 8 (256MB)
+9 | 5 | 9 (512MB)
+
+It needs to be seen if the larger block size means anything or causes more trouble.
+
+v 0.8.5
 
 ## This is a development branch. Not for production use!
 

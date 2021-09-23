@@ -866,10 +866,6 @@ class Reader {
 public:
   virtual int get() = 0;  // should return 0..255, or -1 at EOF
   virtual int read(char* buf, int n); // read to buf[n], return no. read
-/* TODO
- * need to show progress
-  virtual void show_progress(int bytes_in); // lrzip addition to show progress
-*/
   virtual ~Reader() {}
 };
 
