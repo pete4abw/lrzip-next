@@ -1098,8 +1098,14 @@ retest_malloc:
 		}
 		dealloc(testmalloc);
 		print_maxverbose("Succeeded in testing %lld sized malloc for back end compression\n", testsize);
-		stream_bufsize = MIN(limit, MAX((limit + control->threads - 1) / control->threads,
-					STREAM_BUFSIZE));
+		/* Make the bufsize no smaller than STREAM_BUFSIZE. Round up the
+		 * bufsize to fit X threads into it
+		 * For ZPAQ the limit is 2^bs * 1MB */
+		if (ZPAQ_COMPRESS && (limit/control->threads > 0x100000<<control->zpaq_bs))
+			stream_bufsize = round_up_page(control, MAX((0x100000<<control->zpaq_bs)-0x1000, STREAM_BUFSIZE));
+		else
+			stream_bufsize = round_up_page(control, MAX(limit/control->threads, STREAM_BUFSIZE));
+
 		if (control->threads > 1)
 			print_maxverbose("Using up to %d threads to compress up to %lld bytes each.\n",
 				control->threads, stream_bufsize);

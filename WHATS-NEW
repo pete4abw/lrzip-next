@@ -1,3 +1,6 @@
+lrzip-next 0.7.64
+Fix broken ZPAQ compression.
+
 Enhance compatibility of gitdesc.sh for MacOS and small systems.
 Thanks Lucas Rademaker
 

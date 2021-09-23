@@ -13,6 +13,8 @@ Please help test and shake it out at [21.03beta Version 0.8 Development Branch](
 * **New features will not be ported to the master branch.**
 * **See the [21.03beta WHATS-NEW file](https://github.com/pete4abw/lrzip-next/blob/lzma-21.03beta/WHATS-NEW) for new `lrzip-next` features!**
 
+* ZPAQ Compression bug squashed. v0.7.64
+
 ## NEW, LZMA SDK 19.00, ZPAQ 7.15
 
 Many new changes, not in the main branch, including:
