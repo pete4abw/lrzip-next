@@ -1,6 +1,8 @@
 lrzip-next v0.8.5
 ZPAQ compression fixed. Imposed compression block size limits.
 Set Type to pass to backend based on Redundancy estimate.
+Type 0 = binary, type 1 = text when return from lz4 is 25% or less.
+No type 3 since e8e9 is not needed since there is an --x86 etc filter.
 
 lrzip-next v0.8.4
 Remove lzma CRC code. Use libgcrypt for CRC hashing.

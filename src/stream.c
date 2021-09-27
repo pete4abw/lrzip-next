@@ -170,8 +170,8 @@ static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthr
 {
 	i64 c_len, c_size;
 	uchar *c_buf;
-	int zpaq_ease, zpaq_type, compressibility;
-	char method[10]; /* level, block size, ease of compression, type */
+	int zpaq_redundancy, zpaq_type=0, compressibility;
+	char method[10]; /* level, block size, redundancy of compression, type */
 
 	/* if we're testing compressibility */
 	if (LZ4_TEST) {
@@ -191,21 +191,18 @@ static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthr
 
 	c_len = 0;
         /* Compression level can be 1 to 5, zpaq version 7.15
-	 * 1 and 2 fails however, so only levels 3-5 are used
-	 * Data types are determined by zpaq_ease */
-	zpaq_ease = 256-(compressibility * 2.55);	/* 0, hard, 255, easy. Inverse of lz4_compresses */
-	if (zpaq_ease < 25) zpaq_ease = 25;		/* too low a value fails */
-	if (zpaq_ease < 64)
-		zpaq_type = 0;				/* binary data */
-	else if (zpaq_ease > 192)
-		zpaq_type = 1;				/* text data */
-	else
-		zpaq_type = 3;				/* auto data */
+	 * 1 and 2 faile however, so only levels 3-5 are used
+	 * Data types are determined by zpaq_redundancy
+	 * Type 0 = binary/random. Type 1 = text. Type 2 and 3 not used due to e8e9 */
+	zpaq_redundancy = 256-(compressibility * 2.55);		/* 0, hard, 255, easy. Inverse of lz4_compresses */
+	if (zpaq_redundancy < 25) zpaq_redundancy = 25;		/* too low a value fails */
+	if (zpaq_redundancy > 192)
+		zpaq_type = 1;					/* text data */
 
-	sprintf(method,"%d%d,%d,%d",control->zpaq_level,control->zpaq_bs,zpaq_ease,zpaq_type);
+	sprintf(method,"%d%d,%d,%d",control->zpaq_level,control->zpaq_bs,zpaq_redundancy,zpaq_type);
 
-	print_verbose("Starting zpaq backend compression thread %'d...\nZPAQ: Method selected: %s: level=%'d, bs=%'d, easy=%'d, type=%'d\n",
-		       current_thread, method, control->zpaq_level, control->zpaq_bs, zpaq_ease, zpaq_type);
+	print_verbose("Starting zpaq backend compression thread %d...\nZPAQ: Method selected: %s: level=%d, bs=%d, redundancy=%d, type=%s\n",
+		       current_thread, method, control->zpaq_level, control->zpaq_bs, zpaq_redundancy, (zpaq_type == 0 ? "binary/random" : "text"));
 
         zpaq_compress(c_buf, &c_len, cthread->s_buf, cthread->s_len, &method[0],
 			control->msgout, SHOW_PROGRESS ? true: false, current_thread);
