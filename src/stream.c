@@ -1011,9 +1011,11 @@ retry_lzma:
 				}	// thread loop
 				if (overhead_set == true)
 					break;
-				else
+				else {
 					// reduce dictionary size
-					control->dictSize = LZMA2_DIC_SIZE_FROM_PROP(--exponent);
+					exponent -= 1;					// exponent does not decrememt properly in macro
+					control->dictSize = LZMA2_DIC_SIZE_FROM_PROP(exponent);
+				}
 				setup_overhead(control);				// recompute overhead
 			} while (control->dictSize > DICTSIZEMIN);			// dictionary size loop
 			if (!overhead_set && thread_limit > 1) {			// try again and lower thread_limit
