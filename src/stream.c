@@ -965,7 +965,7 @@ void *open_stream_out(rzip_control *control, int f, unsigned int n, i64 chunk_li
 		return NULL;
 	if (chunk_limit < control->page_size)
 		chunk_limit = control->page_size;
-	sinfo->bufsize = sinfo->size = limit = chunk_limit;
+	sinfo->bufsize = sinfo->size = chunk_limit;
 
 	sinfo->chunk_bytes = cbytes;
 	sinfo->num_streams = n;
@@ -1054,14 +1054,25 @@ retry_zpaq:
 
 		save_threads = control->threads;			// preserve thread count. Important
 
+		/* someday, get rid of 32 bit */
 		if (BITS32) {
 			limit = MIN(limit, one_g);
 			if (limit + (control->overhead * control->threads) > one_g)
 				limit = one_g - (control->overhead * control->threads);
 		}
-		/* Use a nominal minimum size should we fail all previous shrinking */
-		limit = MAX(limit, STREAM_BUFSIZE);
-		limit = MIN(control->usable_ram/testbufs, chunk_limit);
+		/* limit already set and not 32 bit */
+		/* check control->st_size. If compressing a file, check the following:
+		 * 1. if control->st_size > limit, make sure limit not > than chunk_limit
+		 * 2. if control->st_size = 0, then same test as 1
+		 * 3. if control->st_size > 0 and < limit, then limit = control->st_size or STREAM_BUFSIZE if really small file
+		 * control->sb.orig_size has buffering info, but only for rzip pre-processing
+		 * This will hopefully force all threads to be used based on computed overhead
+		 */
+		else if (control->st_size > 0 && control->st_size < limit)
+			limit = MAX(control->st_size, STREAM_BUFSIZE);
+		/* test limit against chunk_limit */
+		else if (limit > chunk_limit)
+			limit = chunk_limit;
 retest_malloc:
 		testsize = limit + (control->overhead * control->threads);
 		testmalloc = malloc(testsize);
@@ -1077,25 +1088,22 @@ retest_malloc:
 			}
 			goto retest_malloc;
 		}
-		if (!NO_COMPRESS) {
-			char *testmalloc2 = malloc(limit);
-
-			if (!testmalloc2) {
-				dealloc(testmalloc);
-				limit = limit / 10 * 9;
-				goto retest_malloc;
-			}
-			dealloc(testmalloc2);
-		}
 		dealloc(testmalloc);
 		print_maxverbose("Succeeded in testing %'"PRId64" sized malloc for back end compression\n", testsize);
 		/* Make the bufsize no smaller than STREAM_BUFSIZE. Round up the
 		 * bufsize to fit X threads into it
 		 * For ZPAQ the limit is 2^bs * 1MB */
 		if (ZPAQ_COMPRESS && (limit/control->threads > 0x100000<<control->zpaq_bs))
-			stream_bufsize = round_up_page(control, MAX((0x100000<<control->zpaq_bs)-0x1000, STREAM_BUFSIZE));
-		else
-			stream_bufsize = round_up_page(control, MAX(limit/control->threads, STREAM_BUFSIZE));
+			// ZPAQ  buffer always larger than STREAM_BUFSIZE
+			stream_bufsize = round_up_page(control, (0x100000<<control->zpaq_bs)-0x1000);
+		else if (LZMA_COMPRESS && limit/control->threads > STREAM_BUFSIZE)
+			// for smaller dictionary sizes, need MAX test to bring in larger buffer from limit
+			// limit = usable ram / 2
+			// buffer size will be larger of limit/threads OR (overhead-dictsize)/threads
+			// we want buffer to be smaller than overhead but still large in cases of small dictsize and overhead
+			stream_bufsize = round_up_page(control, MAX(limit, control->overhead-control->dictSize)/control->threads);
+		else	// all other methods
+			stream_bufsize = round_up_page(control, MIN(limit, MAX(limit/control->threads, STREAM_BUFSIZE)));
 
 		if (control->threads > 1)
 			print_maxverbose("Using up to %'d threads to compress up to %'"PRId64" bytes each.\n",
