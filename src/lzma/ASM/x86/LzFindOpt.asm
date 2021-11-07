@@ -1,6 +1,8 @@
 ; LzFindOpt.asm -- ASM version of GetMatchesSpecN_2() function
 ; 2021-07-13: Igor Pavlov : Public domain
 ; 2021-08-01: Peter Hyman (initial commit MASM-NASM)
+; 2021-07-21: Igor Pavlov : Public domain
+; 2021-11-06: Peter Hyman
 
 %ifndef x64
 ; x64=1
@@ -474,7 +476,7 @@ cmp     hash, hash_lim
 je      long_footer
 cmp     delta_x, [hash]
 jne     long_footer
-movzx   t0_x, BYTE [diff + cur] ; PTR
+movzx   t0_x, BYTE [diff + 1 * cur] ; PTR
 cmp     [cur], t0_L
 jne     long_footer
 cmp     d, d_lim

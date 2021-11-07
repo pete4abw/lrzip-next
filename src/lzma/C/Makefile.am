@@ -8,8 +8,11 @@ AM_CFLAGS = \
 
 C_S =
 if USE_ASM
-## For LZMA Assembler Decompressor
-  AM_CFLAGS += -D_LZMA_DEC_OPT -DMFMT_GM_INLINE
+## For LZMA Assembler Decompressor and LzFind Match Finder
+  AM_CFLAGS += -D_LZMA_DEC_OPT
+else
+## Add LzFindOpt.c to compile list if not using Assembler
+  C_S += LzFindOpt.c
 endif
 
 noinst_LTLIBRARIES = liblzma.la
@@ -28,4 +31,5 @@ liblzma_la_SOURCES = \
 	LzmaEnc.c 	../include/LzmaEnc.h \
 	LzmaLib.c 	../include/LzmaLib.h \
 	Threads.c 	../include/Threads.h \
-	../include/Precomp.h
+	../include/Precomp.h \
+	$(C_S)

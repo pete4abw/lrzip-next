@@ -79,7 +79,7 @@ h4 = (temp ^ (p->crc[cur[3]] << kLzHash_CrcShift_1)) & p->hash4Mask; }
 */
 
 
-	MY_NO_INLINE
+MY_NO_INLINE
 static void MtSync_Construct(CMtSync *p)
 {
 	p->affinity = 0;
@@ -116,7 +116,7 @@ static void MtSync_Construct(CMtSync *p)
 	(p)->csWasEntered = False; }
 
 
-	MY_NO_INLINE
+MY_NO_INLINE
 static UInt32 MtSync_GetNextBlock(CMtSync *p)
 {
 	UInt32 numBlocks = 0;
@@ -147,7 +147,7 @@ static UInt32 MtSync_GetNextBlock(CMtSync *p)
 
 /* if Writing (Processing) thread was started, we must call MtSync_StopWriting() */
 
-	MY_NO_INLINE
+MY_NO_INLINE
 static void MtSync_StopWriting(CMtSync *p)
 {
 	if (!Thread_WasCreated(&p->thread) || p->needStart)
@@ -185,7 +185,7 @@ static void MtSync_StopWriting(CMtSync *p)
 }
 
 
-	MY_NO_INLINE
+MY_NO_INLINE
 static void MtSync_Destruct(CMtSync *p)
 {
 	PRF(printf("\nMtSync_Destruct %p\n", p));
@@ -224,7 +224,7 @@ note: stop(btSync) will stop (htSync) also */
 
 
 // call it before each new file (when new starting is required):
-	MY_NO_INLINE
+MY_NO_INLINE
 static SRes MtSync_Init(CMtSync *p, UInt32 numBlocks)
 {
 	WRes wres;
@@ -270,7 +270,7 @@ static WRes MtSync_Create_WRes(CMtSync *p, THREAD_FUNC_TYPE startAddress, void *
 }
 
 
-	MY_NO_INLINE
+MY_NO_INLINE
 static SRes MtSync_Create(CMtSync *p, THREAD_FUNC_TYPE startAddress, void *obj)
 {
 	const WRes wres = MtSync_Create_WRes(p, startAddress, obj);
@@ -550,7 +550,7 @@ static void HashThreadFunc(CMatchFinderMt *mt)
 #define CYC_TO_POS_OFFSET 0
 // #define CYC_TO_POS_OFFSET 1 // for debug
 
-// #define MFMT_GM_INLINE
+#define MFMT_GM_INLINE
 
 #ifdef MFMT_GM_INLINE
 
@@ -749,7 +749,7 @@ static void BtFillBlock(CMatchFinderMt *p, UInt32 globalBlockIndex)
 }
 
 
-	MY_NO_INLINE
+MY_NO_INLINE
 static void BtThreadFunc(CMatchFinderMt *mt)
 {
 	CMtSync *p = &mt->btSync;
@@ -941,7 +941,7 @@ void MatchFinderMt_ReleaseStream(CMatchFinderMt *p)
 }
 
 
-	MY_NO_INLINE
+MY_NO_INLINE
 static UInt32 MatchFinderMt_GetNextBlock_Bt(CMatchFinderMt *p)
 {
 	if (p->failure_LZ_BT)
