@@ -1,74 +1,45 @@
 lrzip-next - Long Range ZIP
 ======================
 
-## This version addresses ZPAQ Corruption
-For some reason, as was addressed in the original README, The ZPAQ 7.15 library corrupts data for larger files and block sizes and ZPAQ compression levels 1 and 2.\
-I have narrowed this down to when block sizes sent from `lrzip-next` to the ZPAQ backend are larger ZPAQ Block Size specified.
+## NEW: LZMA SDK 21.04beta (Nov 2021)
 
-This version will assign ZPAQ levels and block sizes based on `lrzip-next` compression levels as follows:
-
-LRZIP-NEXT Level | ZPAQ Level | ZPAQ Block Size
-:---: | :---: | :---:
-1 | 3 | 4 (16MB)
-2 | 3 | 4
-3 | 3 | 4
-4 | 4 | 5 (32MB)
-5 | 4 | 5
-6 | 4 | 6 (64MB)
-7 | 4 | 7 (128MB)
-8 | 5 | 8 (256MB)
-9 | 5 | 9 (512MB)
-
-It needs to be seen if the larger block size means anything or causes more trouble.
-
-v 0.8.5
-
-## This is a development branch. Not for production use!
-
-Way back in 2011, MD5 computation for Apple PCs was removed. It was just accepted, but never qualified.\
-This branch accomplishes three goals:
-1. Remove lzma's CRC code and replaces it with libgcrypt's CRC routines.
-2. Remove the restriction that Apple cannot compute MD5s.
-3. Limit ASM Compilation to x86_64 only.
-
-All `lrzip-next` files will now have MD5 as the default checksum -- regardless of platform. If you use a Mac, please help test this out!
-
-## NEW: LZMA SDK 21.03beta, ZPAQ 7.15, SCRYPT Bitcoin style key derivation
-(*Still some work to do on lzma code cleanup, remove Windows cruft, etc.*)
+Tag v0.8.6
 
 Many new changes, not in the main branch, including:
 * latest LZMA and ZPAQ libraries (**ABI Compatible** with earlier versions. No need to re-compress files).
-* more helpful usage messages
-* filters for x86 and other processors, and delta
-* ASM DeCompressor (up to 40% faster. x86_64 only)
-* ability to set rzip pre-compression level independently of compression level
-* variable compressibility threshold testing
-* ability to set specific LZMA Dictionary Size
+* more helpful usage messages.
+* filters for x86 and other processors, and delta.
+* ASM LZMA DeCompressor (up to 40% faster. x86_64 only).
+* ASM LZMA Match Finder (x86_64 only).
+* ability to set rzip pre-compression level independently of compression level.
+* variable compressibility threshold testing.
+* ability to set specific LZMA Dictionary Size.
 * improved info reporting, column alignment, improved formatting, thousands separator.
-* improved memory management favoring large chunk and dictionary sizes over maxmizing number of threads
-* improved ZPAQ processing by analyzing data prior to sending to compressor
-* many bug fixes including validating a file prior to decompression (prevents corrupt file decompression before it starts!)
-* use of git describe to present current version without changing configure.ac
-* lz4 Threshold testing (replaces lzo)
-* File info `lrzip-next -i` will now fetch info from encrypted files
-* lrzip-next -i` will not print percent info when file size is not known
-* Substitute libgcrypt functions for separate sources for **md5** and **sha512** hash functions, and **aes 128 bit** encryption.  
-* SCRYPT Key Derivation.
-* lzma match finder x86_64 Assembler module.
-* ZPAQ compression settings stored in magic header. Will show in INFO output.
-
+* improved memory management favoring large chunk and dictionary sizes over maxmizing number of threads.
+* improved ZPAQ processing by analyzing data prior to sending to compressor.
+* many bug fixes including validating a file prior to decompression (prevents corrupt file decompression before it starts!).
+* use of git describe to present current version without changing configure.ac.
+* lz4 Threshold testing (replaces lzo).
+* File info `lrzip-next -i` will now fetch info from encrypted files.
+* `lrzip-next -i` will not print percent info when file size is not known.
+* `lrzip-next -i` will format data with thousands separators.
+* Substitute libgcrypt functions for separate sources for **md5** and **sha512** hash functions, and **aes 128 bit** encryption.\
 (This will allow for future bug fixes and possibly using different encryption methods through a standard library.)
+* SCRYPT (Bitcoin style) Key Derivation.
+* lzma match finder x86_64 Assembler module.
+* ZPAQ 7.15 library (Levels 3-5, random and text modes only. Binary mode (e8e9) covered by lzma-next filters).
+* ZPAQ compression settings stored in magic header. Will show in INFO output.
 
 (See original README for more historical info)
 
 ### Download and Build
-`$ git clone -b lzma-21.03beta https://github.com/pete4abw/lrzip-next`\
+`$ git clone -b lzma-21.04beta https://github.com/pete4abw/lrzip-next`\
 or if you desire to also download the **lrzip-fe** front end\
-`$ git clone -b lzma-21.03beta --recurse-submodules https://github.com/pete4abw/lrzip-next`
+`$ git clone -b lzma-21.04beta --recurse-submodules https://github.com/pete4abw/lrzip-next`
 
 If you forget use --recurse-submodules and want to download lrzip-fe separately, use these commands:
 ```
-$ git clone -b lzma-21.03beta https://github.com/pete4abw/lrzip-next
+$ git clone -b lzma-21.04beta https://github.com/pete4abw/lrzip-next
 $ cd lrzip-next
 $ git submodule update --init (to download lrzip-fe)
 ```

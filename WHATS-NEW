@@ -1,3 +1,11 @@
+lrzip-next v0.8.6
+LZMA SDK 21.04beta
+Minor updates plus addition of file LzFindOpt.c which will be
+used when no Assembler is used. Contains the function
+GetMatchesSpecN_2().
+
+Merge in stream.c changes from stream_buffsize_fix branch.
+
 lrzip-next v0.8.5
 ZPAQ compression fixed. Imposed compression block size limits.
 Set Type to pass to backend based on Redundancy estimate.
