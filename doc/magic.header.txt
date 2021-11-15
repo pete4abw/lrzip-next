@@ -18,7 +18,7 @@ move up fields for md5sum and encoding.
 Byte	Content
 0-17	Magic
 ----
-20+	RZip Chunk Data (RCD)
+18+	RZip Chunk Data (RCD)
 RCD+	Compressed Data Blocks
 end-16 or 2	MD5 hash or CRC
 
