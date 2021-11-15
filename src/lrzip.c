@@ -874,7 +874,7 @@ next_chunk:
 
 		if (INFO) {
 			print_verbose("Stream: %d\n", stream);
-			print_maxverbose("Offset: %lld\n", ofs);
+			print_maxverbose("Offset: %lld\n", stream_head[stream] + ofs);
 			print_verbose("Block\tComp\tPercent\tSize\n");
 		}
 		do {
