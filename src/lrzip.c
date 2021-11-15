@@ -1049,7 +1049,7 @@ next_chunk:
 
 		if (INFO) {
 			print_verbose("Stream: %'d\n", stream);
-			print_maxverbose("Offset: %'"PRId64"\n", ofs);
+			print_maxverbose("Offset: %'"PRId64"\n", stream_head[stream] + ofs);
 			print_verbose("%s\t%s\t%s\t%16s / %14s", "Block","Comp","Percent","Comp Size", "UComp Size");
 			print_maxverbose("%18s : %14s", "Offset", "Head");
 			print_verbose("\n");
