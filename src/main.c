@@ -447,7 +447,7 @@ int main(int argc, char *argv[])
 		case 'h':
 		case '?':
 			usage(compat);
-			return -1;
+			exit(0);
 		case 'H':
 			control->flags |= FLAG_HASH;
 			break;
@@ -657,6 +657,10 @@ int main(int argc, char *argv[])
 						break;
 				}	//switch
 			}	//if filter used
+		default:	//oops
+			usage(compat);
+			exit(1);
+
 		}	// main switch
 	}	// while input loop
 
