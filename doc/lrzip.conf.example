@@ -19,7 +19,7 @@
 # UNLIMITED = NO
 
 # Compression Method, rzip, gzip, bzip2, lzo, or lzma (default), or zpaq. (-n -g -b -l --lzma -z)
-# May be overriden by command line compression choice.
+# May be overridden by command line compression choice.
 # COMPRESSIONMETHOD = lzma
 
 # LZMA Dictionary Size. 0-40 where
