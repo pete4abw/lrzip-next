@@ -1,3 +1,8 @@
+lrzip-next v0.8.7
+LZMA SDK 21.06
+BUGFIX release, LzmaEnc.c:RangeEnc_Flush(), GetOptimum()
+Beta removed.
+
 lrzip-next v0.8.6
 LZMA SDK 21.04beta
 Minor updates plus addition of file LzFindOpt.c which will be

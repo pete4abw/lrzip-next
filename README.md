@@ -1,9 +1,9 @@
 lrzip-next - Long Range ZIP
 ======================
 
-## NEW: LZMA SDK 21.04beta (Nov 2021)
+## NEW: LZMA SDK 21.6 (Nov 2021)
 
-Tag v0.8.6
+Tag v0.8.7
 
 Many new changes, not in the main branch, including:
 * latest LZMA and ZPAQ libraries (**ABI Compatible** with earlier versions. No need to re-compress files).
@@ -33,13 +33,13 @@ Many new changes, not in the main branch, including:
 (See original README for more historical info)
 
 ### Download and Build
-`$ git clone -b lzma-21.04beta https://github.com/pete4abw/lrzip-next`\
+`$ git clone -b lzma-21.06 https://github.com/pete4abw/lrzip-next`\
 or if you desire to also download the **lrzip-fe** front end\
-`$ git clone -b lzma-21.04beta --recurse-submodules https://github.com/pete4abw/lrzip-next`
+`$ git clone -b lzma-21.06 --recurse-submodules https://github.com/pete4abw/lrzip-next`
 
 If you forget use --recurse-submodules and want to download lrzip-fe separately, use these commands:
 ```
-$ git clone -b lzma-21.04beta https://github.com/pete4abw/lrzip-next
+$ git clone -b lzma-21.06 https://github.com/pete4abw/lrzip-next
 $ cd lrzip-next
 $ git submodule update --init (to download lrzip-fe)
 ```
