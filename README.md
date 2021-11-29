@@ -4,11 +4,10 @@ lrzip-next - Long Range ZIP
 ## Announcement
 
 LZMA SDK updated to 21.06. 
-The Development Branch is now testing out the Version 0.8 Magic Header, enhanced encryption using SCRYPT for key derivation.
 
-Please help test and shake it out at [21.06 Version 0.8 Development Branch](https://github.com/pete4abw/lrzip-next/tree/lzma-21.06).
+[lzma-21.06 Version 0.8.7 is now the default branch](https://github.com/pete4abw/lrzip-next/tree/lzma-21.06).
 
-* **This branch will sunset when the lzma 21 SDK is released out of beta.**
+* **This branch has been sunset at v0.7.64.**
 * **Only major bugs will be addressed here.**
 * **New features will not be ported to the master branch.**
 * **See the [21.06 WHATS-NEW file](https://github.com/pete4abw/lrzip-next/blob/lzma-21.06/WHATS-NEW) for new `lrzip-next` features!**
