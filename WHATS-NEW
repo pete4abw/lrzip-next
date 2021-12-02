@@ -1,3 +1,9 @@
+lrzip-next v0.8.8
+Add option zpaqbs which will allow user to override default
+ZPAQ block size computation.
+Some fixups to stream.c:open_stream_out to properly compute
+zpaq overhead size.
+
 lrzip-next v0.8.7
 LZMA SDK 21.06
 BUGFIX release, LzmaEnc.c:RangeEnc_Flush(), GetOptimum()

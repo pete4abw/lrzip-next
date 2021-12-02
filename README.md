@@ -3,7 +3,7 @@ lrzip-next - Long Range ZIP
 
 ## NEW: LZMA SDK 21.06 (Nov 2021)
 
-Tag v0.8.7
+Tag v0.8.8
 This branch **lzma-21.06** is now the default branch.
 
 Many new changes, not in the main branch, including:
@@ -30,6 +30,7 @@ Many new changes, not in the main branch, including:
 * lzma match finder x86_64 Assembler module.
 * ZPAQ 7.15 library (Levels 3-5, random and text modes only. Binary mode (e8e9) covered by lzma-next filters).
 * ZPAQ compression settings stored in magic header. Will show in INFO output.
+* ZPAQ Compression Block Size can be independently set from 2MB to 2GB.
 
 (See original README for more historical info)
 
