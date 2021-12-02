@@ -1000,8 +1000,6 @@ void *open_stream_out(rzip_control *control, int f, unsigned int n, i64 chunk_li
 			u32 DICTSIZEMIN = (1 << 24);		// minimum dictionary size (16MB)
 			uchar save_exponent = exponent;		// save exponent
 retry_lzma:
-			control->dictSize = save_dictSize;	// start over
-			exponent = save_exponent;		// restore exponent
 			do {
 				for (control->threads = save_threads; control->threads >= thread_limit; control->threads--) {
 					if (limit >= (control->overhead * control->threads / testbufs)) {
@@ -1020,6 +1018,8 @@ retry_lzma:
 			} while (control->dictSize > DICTSIZEMIN);			// dictionary size loop
 			if (!overhead_set && thread_limit > 1) {			// try again and lower thread_limit
 				thread_limit--;
+				control->dictSize = save_dictSize;			// restore dictionary
+				exponent = save_exponent;				// restore exponent
 				goto retry_lzma;
 			}
 			if (control->dictSize != save_dictSize)
@@ -1027,10 +1027,10 @@ retry_lzma:
 		} else if (ZPAQ_COMPRESS) {
 			/* compute max possible block size */
 			int save_bs = control->zpaq_bs;
+			int ZPAQBSMIN = 4;
 retry_zpaq:
-			for (control->zpaq_bs = save_bs; control->zpaq_bs > 4; control->zpaq_bs--) {
-				setup_overhead(control);
-				for (control->threads = save_threads; control->threads > thread_limit; control->threads--) {
+			do {
+				for (control->threads = save_threads; control->threads >= thread_limit; control->threads--) {
 					if (limit >= control->overhead * control->threads) {
 						overhead_set = true;
 						break;
@@ -1038,9 +1038,13 @@ retry_zpaq:
 				} // thread loop
 				if (overhead_set == true)
 					break;
-			}	// block size loop
+				else
+					control->zpaq_bs--;				// decrement block size
+				setup_overhead(control);				// recompute overhead
+			} while (control->zpaq_bs > ZPAQBSMIN);				// block size loop
 			if (!overhead_set && thread_limit > 1) {			// try again and lower thread_limit
 				thread_limit--;
+				control->zpaq_bs = save_bs;				// restore block size
 				goto retry_zpaq;
 			}
 			if (control->zpaq_bs != save_bs)
@@ -1050,7 +1054,7 @@ retry_zpaq:
 		if (control->threads != save_threads)
 			print_verbose("Threads reduced to %'d\n", control->threads);
 
-		print_verbose("Per Thread Memory Overhead is %'"PRId32"\n", control->overhead);
+		print_verbose("Per Thread Memory Overhead is %'"PRId64"\n", control->overhead);
 
 		save_threads = control->threads;			// preserve thread count. Important
 
