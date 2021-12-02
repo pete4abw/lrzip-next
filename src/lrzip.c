@@ -1195,7 +1195,8 @@ done:
 		else if (save_ctype == CTYPE_ZPAQ) {
 			print_output("rzip + zpaq ");
 			if (control->zpaq_level)	// update magic with zpaq coding.
-				print_output("-- Compression Level = %'d, Block Size = %'d\n", control->zpaq_level, control->zpaq_bs);
+				print_output("-- Compression Level = %d, Block Size = %d, %'dMB\n", control->zpaq_level, control->zpaq_bs,
+						(1 << control->zpaq_bs));
 			else	// early 0.8 or <0.8 file without zpaq coding in magic header
 				print_output("\n");
 		}
