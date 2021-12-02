@@ -657,6 +657,7 @@ int main(int argc, char *argv[])
 						break;
 				}	//switch
 			}	//if filter used
+			break;	// break out of longopt switch
 		default:	//oops
 			usage(compat);
 			exit(1);
