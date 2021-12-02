@@ -44,6 +44,7 @@ Here is a summary of the options to lrzip-next.
  \-z, \-\-zpaq              zpaq compression (best, extreme compression, extremely slow)
  \-L, \-\-level level       Set lzma/bzip2/gzip compression level (1-9, default 7)
  \-\-dictsize = ds         Set lzma Dictionary Size for LZMA ds=0 to 40 expressed as 2<<11, 3<<11, 2<<12, 3<<12...2<<31-1
+ \-\-zpaqbs = bs           Set ZPAQ Block Size overriding defaults. 1-11, 2^zpaqbs * 1MB
 Filtering Options (for all compression modes):
  \-\-x86                   Use x86 filter
  \-\-arm                   Use ARM filter
@@ -139,6 +140,11 @@ If set, Dictionary sizes will be set as
 38: 2 * 2^30, 39: 3 * 2^30; 2,147,483,648, 3,221,225,472
 .br
 40: 2 * 2^31 - 1; 4,294,967,295
+.IP "\fB--zpaqbs=1\&.\&.11\fP (ZPAQ only)"
+Set ZPAQ Block Size from 1 to 11, 2^zpaqbs * 1MB (2MB to 2GB). This parameter
+will be passed to the zpaq backend. This value may cause the computed overhead
+* number of threads to be greater than available ram, so it may be reduced
+possibly along with usable threads.
 .SH "Filtering Options (for all compression modes)"
 .IP "\fB--x86\fP"
 Unconditionally use x86 filter prior to compression. Works for all

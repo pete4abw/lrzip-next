@@ -89,6 +89,7 @@ static void usage(bool compat)
 	if (!compat)
 		print_output("	-L, --level level	set lzma/bzip2/gzip compression level (1-9, default 7)\n");
 	print_output("	--dictsize		Set lzma Dictionary Size for LZMA ds=0 to 40 expressed as 2<<11, 3<<11, 2<<12, 3<<12...2<<31-1\n");
+	print_output("	--zpaqbs		Set ZPAQ Block Size overriding defaults. 1-11, 2^zpaqbs * 1MB\n");
 	print_output("    Filtering Options:\n");
 	print_output("	--x86			Use x86 filter (for all compression modes)\n");
 	print_output("	--arm			Use ARM filter (for all compression modes)\n");
@@ -287,14 +288,15 @@ static struct option long_options[] = {
 	{"fast",	no_argument,	0,	'1'},
 	{"best",	no_argument,	0,	'9'},		/* 35 */
 	{"dictsize",	required_argument,	0,	0},
+	{"zpaqbs",	required_argument,	0,	0},
 	{"x86",		no_argument,	0,	0},
 	{"arm",		no_argument,	0,	0},
-	{"armt",	no_argument,	0,	0},
-	{"ppc",		no_argument,	0,	0},		/* 40 */
+	{"armt",	no_argument,	0,	0},		/* 40 */
+	{"ppc",		no_argument,	0,	0},
 	{"sparc",	no_argument,	0,	0},
 	{"ia64",	no_argument,	0,	0},
 	{"delta",	optional_argument,	0,	0},
-	{"rzip-level",	required_argument,	0,	'R'},
+	{"rzip-level",	required_argument,	0,	'R'},	/* 45 */
 	{0,	0,	0,	0},
 };
 
@@ -599,7 +601,7 @@ int main(int argc, char *argv[])
 			control->compression_level = c - '0';
 			break;
 		case 0:	/* these are long options without a short code */
-			if (FILTER_USED && long_opt_index >= 37 )
+			if (FILTER_USED && long_opt_index >= 38 )
 				print_output("Filter already selected. %s filter ignored.\n", long_options[long_opt_index].name);
 			else {
 				switch(long_opt_index) {
@@ -616,33 +618,47 @@ int main(int argc, char *argv[])
 						 * Uses new lzma2 limited dictionary sizes */
 						if (!LZMA_COMPRESS)
 							print_err("--dictsize option only valid for LZMA compression. Ignorred.\n");
-						ds = strtol(optarg, &endptr, 10);
-						if (*endptr)
-							failure("Extra characters after dictionary size: \'%s\'\n", endptr);
-						if (ds< 0 || ds > 40)
-							failure("Dictionary Size must be between 0 and 40 for 2^12 (4KB) to 2^31 (4GB)");
-						control->dictSize = LZMA2_DIC_SIZE_FROM_PROP(ds);
+						else {
+							ds = strtol(optarg, &endptr, 10);
+							if (*endptr)
+								failure("Extra characters after dictionary size: \'%s\'\n", endptr);
+							if (ds < 0 || ds > 40)
+								failure("Dictionary Size must be between 0 and 40 for 2^12 (4KB) to 2^31 (4GB)\n");
+							control->dictSize = LZMA2_DIC_SIZE_FROM_PROP(ds);
+						}
+						break;
+					case 37:
+						if (!ZPAQ_COMPRESS)
+							print_err("--zpaqbs option only valid for ZPAQ compression. Ignored.\n");
+						else {
+							ds = strtol(optarg, &endptr, 10);
+							if (*endptr)
+								failure("Extra characters after block size: \'%s\'\n", endptr);
+							if (ds < 0 || ds > 11)
+								failure("ZPAQ Block Size must be between 1 and 11\n");
+							control->zpaq_bs = ds;
+						}
 						break;
 						/* Filtering */
-					case 37:
+					case 38:
 						control->filter_flag = FILTER_FLAG_X86;		// x86
 						break;
-					case 38:
+					case 39:
 						control->filter_flag = FILTER_FLAG_ARM;		// ARM
 						break;
-					case 39:
+					case 40:
 						control->filter_flag = FILTER_FLAG_ARMT;	// ARMT
 						break;
-					case 40:
+					case 41:
 						control->filter_flag = FILTER_FLAG_PPC;		// PPC
 						break;
-					case 41:
+					case 42:
 						control->filter_flag = FILTER_FLAG_SPARC;	// SPARC
 						break;
-					case 42:
+					case 43:
 						control->filter_flag = FILTER_FLAG_IA64;	// IA64
 						break;
-					case 43:
+					case 44:
 						control->filter_flag = FILTER_FLAG_DELTA;	// DELTA
 						/* Delta Values are 1-16, then multiples of 16 to 256 */
 						if (optarg) {
