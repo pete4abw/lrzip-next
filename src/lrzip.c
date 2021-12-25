@@ -1524,7 +1524,7 @@ bool decompress_file(rzip_control *control)
 			if (FORCE_REPLACE && !TEST_ONLY)
 				print_err("Warning, inadequate free space detected, but attempting to decompress file due to -f option being used.\n");
 			else
-				failure_return(("Inadequate free space to %s. Space needed: %'"PRId32". Space available: %'"PRId32".\nTry %s and \
+				failure_return(("Inadequate free space to %s. Space needed: %'"PRId64". Space available: %'"PRId64".\nTry %s and \
 select a larger volume.\n",
 					TEST_ONLY ? "test file" : "decompress file. Use -f to override", expected_size, free_space,
 					TEST_ONLY ? "setting `TMP=dirname`" : "using `-O dirname` or `-o [dirname/]filename` options"),

@@ -465,7 +465,7 @@ static int zpaq_decompress_buf(rzip_control *control __UNUSED__, struct uncomp_t
 	c_buf = ucthread->s_buf;
 	ucthread->s_buf = malloc(round_up_page(control, dlen));
 	if (unlikely(!ucthread->s_buf)) {
-		print_err("Failed to allocate %'"PRId32" bytes for decompression\n", dlen);
+		print_err("Failed to allocate %'"PRId64" bytes for decompression\n", dlen);
 		ret = -1;
 		goto out;
 	}
@@ -475,7 +475,7 @@ static int zpaq_decompress_buf(rzip_control *control __UNUSED__, struct uncomp_t
 			control->msgout, SHOW_PROGRESS ? true: false, current_thread);
 
 	if (unlikely(dlen != ucthread->u_len)) {
-		print_err("Inconsistent length after decompression. Got %'"PRId32" bytes, expected %'"PRId64"\n", dlen, ucthread->u_len);
+		print_err("Inconsistent length after decompression. Got %'"PRId64" bytes, expected %'"PRId64"\n", dlen, ucthread->u_len);
 		ret = -1;
 	} else
 		dealloc(c_buf);
@@ -530,7 +530,7 @@ static int gzip_decompress_buf(rzip_control *control __UNUSED__, struct uncomp_t
 	c_buf = ucthread->s_buf;
 	ucthread->s_buf = malloc(round_up_page(control, dlen));
 	if (unlikely(!ucthread->s_buf)) {
-		print_err("Failed to allocate %'"PRId32" bytes for decompression\n", dlen);
+		print_err("Failed to allocate %'"PRId64" bytes for decompression\n", dlen);
 		ret = -1;
 		goto out;
 	}
@@ -543,7 +543,7 @@ static int gzip_decompress_buf(rzip_control *control __UNUSED__, struct uncomp_t
 	}
 
 	if (unlikely((i64)dlen != ucthread->u_len)) {
-		print_err("Inconsistent length after decompression. Got %'"PRId32" bytes, expected %'"PRId64"\n", dlen, ucthread->u_len);
+		print_err("Inconsistent length after decompression. Got %'"PRId64" bytes, expected %'"PRId64"\n", dlen, ucthread->u_len);
 		ret = -1;
 	} else
 		dealloc(c_buf);
@@ -1023,7 +1023,7 @@ retry_lzma:
 				goto retry_lzma;
 			}
 			if (control->dictSize != save_dictSize)
-				print_verbose("Dictionary Size reduced to %'"PRId32"\n", control->dictSize);
+				print_verbose("Dictionary Size reduced to %'"PRIu32"\n", control->dictSize);
 		} else if (ZPAQ_COMPRESS) {
 			/* compute max possible block size */
 			int save_bs = control->zpaq_bs;
@@ -1892,7 +1892,7 @@ fill_another:
 
 	/* List this thread as busy */
 	ucthreads[s->uthread_no].busy = 1;
-	print_maxverbose("Starting thread %'"PRId32" to decompress %'"PRId64" bytes from stream %'d\n",
+	print_maxverbose("Starting thread %d to decompress %'"PRId64" bytes from stream %'d\n",
 			 s->uthread_no, padded_len, streamno);
 
 	sts = malloc(sizeof(stream_thread_struct));
@@ -1930,7 +1930,7 @@ out:
 		return -1;
 	ucthreads[s->unext_thread].busy = 0;
 
-	print_maxverbose("Taking decompressed data from thread %'"PRId32"\n", s->unext_thread);
+	print_maxverbose("Taking decompressed data from thread %d\n", s->unext_thread);
 	s->buf = ucthreads[s->unext_thread].s_buf;
 	ucthreads[s->unext_thread].s_buf = NULL;
 	s->buflen = ucthreads[s->unext_thread].u_len;
