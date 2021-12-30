@@ -568,11 +568,13 @@ int main(int argc, char *argv[])
 			control->flags |= FLAG_UNLIMITED;
 			break;
 		case 'v':
-			/* set verbosity flag */
+			/* set progress flag */
 			if (!(control->flags & FLAG_SHOW_PROGRESS))
 				control->flags |= FLAG_SHOW_PROGRESS;
-			else if (!(control->flags & FLAG_VERBOSITY) && !(control->flags & FLAG_VERBOSITY_MAX))
+			/* set verbosity flag */
+			if (!(control->flags & FLAG_VERBOSITY) && !(control->flags & FLAG_VERBOSITY_MAX))
 				control->flags |= FLAG_VERBOSITY;
+			/* or set max verbosity flag */
 			else if ((control->flags & FLAG_VERBOSITY)) {
 				control->flags &= ~FLAG_VERBOSITY;
 				control->flags |= FLAG_VERBOSITY_MAX;

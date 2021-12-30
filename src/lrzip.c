@@ -379,8 +379,6 @@ static bool get_magic(rzip_control *control, unsigned char *magic)
 	memcpy(&control->major_version, &magic[4], 1);
 	memcpy(&control->minor_version, &magic[5], 1);
 
-	print_verbose("Detected lrzip version %'d.%'d file.\n", control->major_version, control->minor_version);
-
 	if (control->major_version == 0) {
 		if (control->minor_version < 4)
 			get_magic_lt4(control, magic);
@@ -404,7 +402,7 @@ static bool get_magic(rzip_control *control, unsigned char *magic)
 	return true;
 }
 
-bool read_magic(rzip_control *control, int fd_in, i64 *expected_size)
+static bool read_magic(rzip_control *control, int fd_in, i64 *expected_size)
 {
 	unsigned char magic[OLD_MAGIC_LEN];	// Make at least big enough for old magic
 
@@ -429,6 +427,14 @@ bool read_magic(rzip_control *control, int fd_in, i64 *expected_size)
 		return false;
 	*expected_size = control->st_size;
 	return true;
+}
+
+/* show lrzip-next version
+ * helps preserve output format when validating
+ */
+static void show_version(rzip_control *control)
+{
+	print_verbose("Detected lrzip version %'d.%'d file.\n", control->major_version, control->minor_version);
 }
 
 /* preserve ownership and permissions where possible */
@@ -958,6 +964,8 @@ bool get_fileinfo(rzip_control *control)
 	/* Get decompressed size */
 	if (unlikely(!read_magic(control, fd_in, &expected_size)))
 		goto error;
+
+	if (INFO) show_version(control);		// show version if not validating
 
 	if (ENCRYPT && !control->salt_pass_len)		// Only get password if needed
 		if (unlikely(!get_hash(control, 0)))
@@ -1548,12 +1556,15 @@ select a larger volume.\n",
 
 	// vailidate file on decompression or test
 	if (STDIN)
-		print_err("Unable to validate a file from STDIN. To validate, check file directly.");
+		print_err("Unable to validate a file from STDIN. To validate, check file directly.\n");
 	else {
 		print_progress("Validating file for consistency...");
 		if (unlikely((get_fileinfo(control)) == false))
 			failure_return(("File validation failed. Corrupt lrzip archive. Cannot continue\n"),false);
+		print_progress("[OK]");
+		if (!VERBOSE) print_progress("\n");	// output LF to prevent overwriing decompression output
 	}
+	show_version(control);	// show version here to preserve output formatting
 	print_progress("Decompressing...");
 
 	if (unlikely(runzip_fd(control, fd_in, fd_out, fd_hist, expected_size) < 0))
