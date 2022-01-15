@@ -61,8 +61,8 @@
 # define MAP_ANONYMOUS MAP_ANON
 #endif
 
-#define CHUNK_MULTIPLE (100 * 1024 * 1024)
-#define CKSUM_CHUNK 1024*1024
+#define CHUNK_MULTIPLE (100 * ONE_MB)
+#define CKSUM_CHUNK ONE_MB
 #define GREAT_MATCH 1024
 #define MINIMUM_MATCH 31
 
@@ -616,7 +616,7 @@ static inline void hash_search(rzip_control *control, struct rzip_state *st,
 		memset(st->hash_table, 0, sizeof(st->hash_table[0]) * (1<<st->hash_bits));
 	else {
 		i64 hashsize = st->level->mb_used *
-				(1024 * 1024 / sizeof(st->hash_table[0]));
+				(ONE_MB / sizeof(st->hash_table[0]));
 		for (st->hash_bits = 0; (1U << st->hash_bits) < hashsize; st->hash_bits++);
 
 		print_maxverbose("hashsize = %'"PRId64".  bits = %'"PRId64". %'"PRIu32"MB\n",
@@ -1174,7 +1174,7 @@ retry:
 			eta_minutes = (diff_seconds / 60) % 60;
 			eta_seconds = diff_seconds % 60;
 
-			chunkmbs = (last_chunk / 1024 / 1024) / (double)(current.tv_sec-last.tv_sec);
+			chunkmbs = (last_chunk / ONE_MB) / (double)(current.tv_sec-last.tv_sec);
 			if (!STDIN || st->stdin_eof)
 				print_verbose("\nPass %'d / %'d -- Elapsed Time: %02d:%02d:%02d. ETA: %02d:%02d:%02d. Compress Speed: %3.3fMB/s.\n",
 					pass, passes, elapsed_hours, elapsed_minutes, elapsed_seconds,
@@ -1242,7 +1242,7 @@ retry:
 	tdiff = current.tv_sec - start.tv_sec;
 	if (!tdiff)
 		tdiff = 1;
-	chunkmbs = (s.st_size / 1024 / 1024) / tdiff;
+	chunkmbs = (s.st_size / ONE_MB) / tdiff;
 
 	fstat(fd_out, &s2);
 

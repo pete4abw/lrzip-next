@@ -23,7 +23,9 @@
 #include "config.h"
 
 #define NUM_STREAMS 2
-#define STREAM_BUFSIZE (1024 * 1024 * 10)
+#define ONE_MB 1048576
+#define one_g (1000 * ONE_MB)
+#define STREAM_BUFSIZE (ONE_MB * 10)
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -277,8 +279,6 @@ static inline unsigned char lzma2_prop_from_dic(u32 dicSize)
 #define LRZ_DECRYPT	(0)
 #define LRZ_ENCRYPT	(1)
 #define LRZ_VALIDATE	(2)	//to suppress printing decompress message when showing info or validating a file
-
-#define one_g (1000 * 1024 * 1024)
 
 #if defined(NOTHREAD) || !defined(_SC_NPROCESSORS_ONLN)
 # define PROCESSORS (1)

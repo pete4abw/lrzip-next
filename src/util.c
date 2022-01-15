@@ -139,7 +139,7 @@ void setup_overhead(rzip_control *control)
 		}
 		/* LZMA spec shows memory requirements as 6MB, not 4MB and state size
 		 * where default is 16KB */
-		control->overhead = ((i64)control->dictSize * 23 / 2) + (6 * 1024 * 1024) + 16384;
+		control->overhead = ((i64)control->dictSize * 23 / 2) + (6 * ONE_MB) + 16384;
 	} else if (ZPAQ_COMPRESS) {
 		control->zpaq_level = (control->compression_level < 4 ? 3 :
 					(control->compression_level < 8 ? 4 : 5));
@@ -164,7 +164,7 @@ void setup_overhead(rzip_control *control)
 				break;	// should never reach here
 			}
 		}
-		control->overhead = (i64) (1 << control->zpaq_bs) * 1024 * 1024;	// times 8 or 16. Out for now
+		control->overhead = (i64) (1 << control->zpaq_bs) * ONE_MB;	// times 8 or 16. Out for now
 	}
 
 	/* no need for zpaq computation here. do in open_stream_out() */

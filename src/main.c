@@ -240,7 +240,7 @@ static void show_summary(void)
 					temp_chunk = control->maxram;
 				else
 					temp_chunk = control->ramsize * 2 / 3;
-				temp_window = temp_chunk / (100 * 1024 * 1024);
+				temp_window = temp_chunk / (100 * ONE_MB);
 				print_verbose("Heuristically Computed Compression Window: %'"PRId64" = %'"PRId64"MB\n", temp_window, temp_window * 100ull);
 			}
 			if (UNLIMITED)
@@ -486,7 +486,7 @@ int main(int argc, char *argv[])
 				failure("Invalid rzip compression level (must be 1-9)\n");
 			break;
 		case 'm':
-			control->ramsize = strtol(optarg, &endptr, 10) * 1024 * 1024 * 100;
+			control->ramsize = strtol(optarg, &endptr, 10) * ONE_MB * 100;
 			if (*endptr)
 				failure("Extra characters after ramsize: \'%s\'\n", endptr);
 			break;

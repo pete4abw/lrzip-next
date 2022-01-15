@@ -67,7 +67,9 @@
 
 #include <gcrypt.h>	// for rng
 
-#define STREAM_BUFSIZE (1024 * 1024 * 10)
+/* This is not needed since it is defined in lrzip_private.h
+ * #define STREAM_BUFSIZE (1024 * 1024 * 10)
+ */
 
 static struct compress_thread {
 	uchar *s_buf;	/* Uncompressed buffer -> Compressed buffer */
