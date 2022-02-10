@@ -1,3 +1,17 @@
+whats-next: lrzip-next v0.8.9
+Remove convoluted MD5 and HASH check defines.
+!NO_HASH becomes HAS_HASH
+Add multiple hash and encryption options
+Use -H# option to set hash to one of
+enum hashcodes {CRC=0, MD5, RIPEMD, SHA256, SHA384, SHA512, SHA3_256, SHA3_512,
+        SHAKE128_16, SHAKE128_32, SHAKE128_64, SHAKE256_16, SHAKE256_32, SHAKE256_64};
+
+The SHAKE options are XOF functions using a variable output. These constants
+use 16, 32, or 64 bytes.
+
+and use -E# to set encryption to one of
+enum enccodes {NONE=0, AES128, AES256};
+
 lrzip-next v0.8.8
 Add option zpaqbs which will allow user to override default
 ZPAQ block size computation.

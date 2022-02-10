@@ -1,14 +1,4 @@
-MAYBE TODO for lrzip program
-
-Make sure STDIO works properly on large files on apple.
-
-Other posix/windows builds?? Need help there...
-
-Add log file option so that output could be
-saved for review.
-
-Add test function that would only run lzo_compresses
-for a current file without doing any writes.
+TODO for lrzip-next program
 
 ZPAQ progress does not show progress in 7.15. show_progress
 function not called properly on compression.
@@ -22,3 +12,5 @@ configure.ac
 
 Figure out why swapfile is used on larger compressions.
 If swap is off, compression still runs fine.
+
+Update documentation for new Hash and Encryption options.
