@@ -54,15 +54,13 @@
 #include "stream.h"
 #include "util.h"
 #include "lrzip_core.h"
-/* needed for CRC routines */
-#include <gcrypt.h>
 
 #ifndef MAP_ANONYMOUS
 # define MAP_ANONYMOUS MAP_ANON
 #endif
 
-#define CHUNK_MULTIPLE (100 * 1024 * 1024)
-#define CKSUM_CHUNK 1024*1024
+#define CHUNK_MULTIPLE (100 * ONE_MB)
+#define CKSUM_CHUNK ONE_MB
 #define GREAT_MATCH 1024
 #define MINIMUM_MATCH 31
 
@@ -584,9 +582,9 @@ static void *cksumthread(void *data)
 	pthread_detach(pthread_self());
 
 //	*control->checksum.cksum = CrcUpdate(*control->checksum.cksum, control->checksum.buf, control->checksum.len);
-	gcry_md_write(control->gcry_crc_handle, control->checksum.buf, control->checksum.len);
-	if (!NO_MD5)
-		gcry_md_write(control->gcry_md5_handle, control->checksum.buf, control->checksum.len);
+	gcry_md_write(control->crc_handle, control->checksum.buf, control->checksum.len);
+	if (HAS_HASH)
+		gcry_md_write(control->hash_handle, control->checksum.buf, control->checksum.len);
 	dealloc(control->checksum.buf);
 	cksem_post(control, &control->cksumsem);
 	return NULL;
@@ -616,7 +614,7 @@ static inline void hash_search(rzip_control *control, struct rzip_state *st,
 		memset(st->hash_table, 0, sizeof(st->hash_table[0]) * (1<<st->hash_bits));
 	else {
 		i64 hashsize = st->level->mb_used *
-				(1024 * 1024 / sizeof(st->hash_table[0]));
+				(ONE_MB / sizeof(st->hash_table[0]));
 		for (st->hash_bits = 0; (1U << st->hash_bits) < hashsize; st->hash_bits++);
 
 		print_maxverbose("hashsize = %'"PRId64".  bits = %'"PRId64". %'"PRIu32"MB\n",
@@ -754,27 +752,27 @@ static inline void hash_search(rzip_control *control, struct rzip_state *st,
 			control->do_mcpy(control, control->checksum.buf, cksum_limit, cksum_len);
 			cksum_limit += cksum_len;
 //			st->cksum = CrcUpdate(st->cksum, control->checksum.buf, cksum_len);
-			gcry_md_write(control->gcry_crc_handle, control->checksum.buf, cksum_len);
-			if (!NO_MD5)
-				gcry_md_write(control->gcry_md5_handle, control->checksum.buf, cksum_len);
+			gcry_md_write(control->crc_handle, control->checksum.buf, cksum_len);
+			if (HAS_HASH)
+				gcry_md_write(control->hash_handle, control->checksum.buf, cksum_len);
 		}
 		/* Process end of the checksum buffer */
 		control->do_mcpy(control, control->checksum.buf, cksum_limit, cksum_remains);
 //		st->cksum = CrcUpdate(st->cksum, control->checksum.buf, cksum_remains);
-		gcry_md_write(control->gcry_crc_handle, control->checksum.buf, cksum_remains);
-		if (!NO_MD5)
-			gcry_md_write(control->gcry_md5_handle, control->checksum.buf, cksum_remains);
+		gcry_md_write(control->crc_handle, control->checksum.buf, cksum_remains);
+		if (HAS_HASH)
+			gcry_md_write(control->hash_handle, control->checksum.buf, cksum_remains);
 		dealloc(control->checksum.buf);
 		cksem_post(control, &control->cksumsem);
 	} else {
 		cksem_wait(control, &control->cksumsem);
 		cksem_post(control, &control->cksumsem);
 	}
-	memcpy(&st->cksum, gcry_md_read(control->gcry_crc_handle, GCRY_MD_CRC32), CRC32_LEN);
+	memcpy(&st->cksum, gcry_md_read(control->crc_handle, *control->crc_gcode), *control->crc_len);
 
 	put_literal(control, st, 0, 0);
 	put_u32(control, st->ss, st->cksum);
-	gcry_md_reset(control->gcry_crc_handle);	// reset crc computation
+	gcry_md_reset(control->crc_handle);	// reset crc computation
 }
 
 
@@ -956,13 +954,13 @@ void rzip_fd(rzip_control *control, int fd_in, int fd_out)
 
 	init_mutex(control, &control->control_lock);
 	/* init CRC */
-	gcry_md_open(&control->gcry_crc_handle, GCRY_MD_CRC32, GCRY_MD_FLAG_SECURE);
-	if (unlikely(control->gcry_crc_handle == NULL))
-		failure("Cannot create MD5 Handle in rzip_fd\n");
-	if (!NO_MD5) {
-		gcry_md_open(&control->gcry_md5_handle, GCRY_MD_MD5, GCRY_MD_FLAG_SECURE);
-		if (unlikely(control->gcry_md5_handle == NULL))
-			failure("Cannot create MD5 Handle in rzip_fd\n");
+	gcry_md_open(&control->crc_handle, *control->crc_gcode, GCRY_MD_FLAG_SECURE);
+	if (unlikely(control->crc_handle == NULL))
+		failure("Cannot create CRC Handle in rzip_fd\n");
+	if (HAS_HASH) {
+		gcry_md_open(&control->hash_handle, *control->hash_gcode, GCRY_MD_FLAG_SECURE);
+		if (unlikely(control->hash_handle == NULL))
+			failure("Cannot create %s Handle in rzip_fd\n", *control->hash_label);
 	}
 	cksem_init(control, &control->cksumsem);
 	cksem_post(control, &control->cksumsem);
@@ -1174,7 +1172,7 @@ retry:
 			eta_minutes = (diff_seconds / 60) % 60;
 			eta_seconds = diff_seconds % 60;
 
-			chunkmbs = (last_chunk / 1024 / 1024) / (double)(current.tv_sec-last.tv_sec);
+			chunkmbs = (last_chunk / ONE_MB) / (double)(current.tv_sec-last.tv_sec);
 			if (!STDIN || st->stdin_eof)
 				print_verbose("\nPass %'d / %'d -- Elapsed Time: %02d:%02d:%02d. ETA: %02d:%02d:%02d. Compress Speed: %3.3fMB/s.\n",
 					pass, passes, elapsed_hours, elapsed_minutes, elapsed_seconds,
@@ -1208,22 +1206,26 @@ retry:
 		failure("Failed to close_streamout_threads in rzip_fd\n");
 	}
 
-	if (!NO_MD5) {
-		/* Temporary workaround till someone fixes apple md5 */
-		memcpy(control->gcry_md5_resblock, gcry_md_read(control->gcry_md5_handle, GCRY_MD_MD5), MD5_DIGEST_SIZE);
+	if (HAS_HASH) {
+		/* if we're using an XOF function, i.e. SLACK128, then use md_extract */
+		if ( control->hash_code < SHAKE128_16 )
+			memcpy(control->hash_resblock, gcry_md_read(control->hash_handle, *control->hash_gcode),
+			       *control->hash_len);
+		else
+			gcry_md_extract(control->hash_handle, *control->hash_gcode, control->hash_resblock, *control->hash_len);
 		if (HASH_CHECK || MAX_VERBOSE) {
-			print_output("MD5: ");
-			for (j = 0; j < MD5_DIGEST_SIZE; j++)
-				print_output("%02x", control->gcry_md5_resblock[j]);
+			print_output("%s: ", control->hash_label);
+			for (j = 0; j < *control->hash_len; j++)
+				print_output("%02x", control->hash_resblock[j]);
 			print_output("\n");
 		}
-		/* When encrypting data, we encrypt the MD5 value as well */
+		/* When encrypting data, we encrypt the hash value as well */
 		if (ENCRYPT)
-			if (unlikely(!lrz_encrypt(control, control->gcry_md5_resblock, MD5_DIGEST_SIZE, control->salt_pass))) {
+			if (unlikely(!lrz_encrypt(control, control->hash_resblock, *control->hash_len, control->salt_pass))) {
 				dealloc(st);
 				failure("Failed to lrz_encrypt in rzip_fd\n");
 			}
-		if (unlikely(write_1g(control, control->gcry_md5_resblock, MD5_DIGEST_SIZE) != MD5_DIGEST_SIZE)) {
+		if (unlikely(write_1g(control, control->hash_resblock, *control->hash_len) != *control->hash_len)) {
 			dealloc(st);
 			failure("Failed to write md5 in rzip_fd\n");
 		}
@@ -1242,7 +1244,7 @@ retry:
 	tdiff = current.tv_sec - start.tv_sec;
 	if (!tdiff)
 		tdiff = 1;
-	chunkmbs = (s.st_size / 1024 / 1024) / tdiff;
+	chunkmbs = (s.st_size / ONE_MB) / tdiff;
 
 	fstat(fd_out, &s2);
 
@@ -1262,8 +1264,8 @@ retry:
 		       1.0 * s.st_size / s2.st_size, chunkmbs);
 
 	clear_sslist(st);
-	gcry_md_close(control->gcry_md5_handle);
-	gcry_md_close(control->gcry_crc_handle);
+	gcry_md_close(control->hash_handle);
+	gcry_md_close(control->crc_handle);
 	dealloc(st);
 }
 

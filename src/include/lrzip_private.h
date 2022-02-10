@@ -23,7 +23,9 @@
 #include "config.h"
 
 #define NUM_STREAMS 2
-#define STREAM_BUFSIZE (1024 * 1024 * 10)
+#define ONE_MB 1048576
+#define one_g (1000 * ONE_MB)
+#define STREAM_BUFSIZE (ONE_MB * 10)
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -80,9 +82,30 @@ void *alloca (size_t);
 # endif
 #endif
 
-#ifndef MD5_DIGEST_SIZE
-# define MD5_DIGEST_SIZE 16
-#endif
+/* This block enumerates gcrypt constants based on magic header */
+
+enum hashcodes {CRC=0, MD5, RIPEMD, SHA256, SHA384, SHA512, SHA3_256, SHA3_512,
+	SHAKE128_16, SHAKE128_32, SHAKE128_64, SHAKE256_16, SHAKE256_32, SHAKE256_64};
+
+enum enccodes {NONE=0, AES128, AES256};
+
+#define MAXHASH 13
+#define MAXENC   2
+
+extern struct hash {
+	char	*label;	/* string label */
+	int	mcode;	/* magic header code */
+	int	gcode;	/* gcrypt hash code */
+	int	length;	/* hash length  0 for XOF function */
+} hashes[];
+
+extern struct encryption {
+	char	*label;	/* string label */
+	int	mcode;	/* magic header code */
+	int	gcode;	/* gcrypt hash code */
+	int	keylen;	/* key length */
+	int	ivlen;	/* where applicable */
+} encryptions[];
 
 #define free(X) do { free((X)); (X) = NULL; } while (0)
 
@@ -93,7 +116,6 @@ void *alloca (size_t);
 #ifndef strndupa
 # define strndupa(str, len) strncpy(alloca(len + 1), str, len)
 #endif
-
 
 #ifndef uchar
 #define uchar unsigned char
@@ -249,7 +271,7 @@ static inline unsigned char lzma2_prop_from_dic(u32 dicSize)
 #define FLAG_INFO		(1 << 14)
 #define FLAG_UNLIMITED		(1 << 15)
 #define FLAG_HASH		(1 << 16)
-#define FLAG_MD5		(1 << 17)
+#define FLAG_HASHED		(1 << 17)
 #define FLAG_CHECK		(1 << 18)
 #define FLAG_KEEP_BROKEN	(1 << 19)
 #define FLAG_THRESHOLD		(1 << 20)
@@ -257,7 +279,7 @@ static inline unsigned char lzma2_prop_from_dic(u32 dicSize)
 #define FLAG_TMP_INBUF		(1 << 22)
 #define FLAG_ENCRYPT		(1 << 23)
 
-#define NO_MD5		(!(HASH_CHECK) && !(HAS_MD5))
+#define NO_HASH		(!(HASH_CHECK) && !(HAS_HASH))
 
 #define BITS32		(sizeof(long) == 4)
 
@@ -271,14 +293,10 @@ static inline unsigned char lzma2_prop_from_dic(u32 dicSize)
 #define PASS_LEN 512
 #define HASH_LEN 64
 #define SALT_LEN 8
-#define CBC_LEN 16
-#define CRC32_LEN 4
 
 #define LRZ_DECRYPT	(0)
 #define LRZ_ENCRYPT	(1)
 #define LRZ_VALIDATE	(2)	//to suppress printing decompress message when showing info or validating a file
-
-#define one_g (1000 * 1024 * 1024)
 
 #if defined(NOTHREAD) || !defined(_SC_NPROCESSORS_ONLN)
 # define PROCESSORS (1)
@@ -331,7 +349,7 @@ static inline unsigned char lzma2_prop_from_dic(u32 dicSize)
 #define INFO		(control->flags & FLAG_INFO)
 #define UNLIMITED	(control->flags & FLAG_UNLIMITED)
 #define HASH_CHECK	(control->flags & FLAG_HASH)
-#define HAS_MD5		(control->flags & FLAG_MD5)
+#define HAS_HASH	(control->flags & FLAG_HASHED)
 #define CHECK_FILE	(control->flags & FLAG_CHECK)
 #define KEEP_BROKEN	(control->flags & FLAG_KEEP_BROKEN)
 #define LZ4_TEST	(control->flags & FLAG_THRESHOLD)
@@ -476,22 +494,41 @@ struct rzip_control {
 	int fd_hist;
 	i64 encloops;
 	i64 secs;
+
+	/* encryption */
+	uchar enc_code;			// encryption code from magic header or command line
+	/* encryption key lengths will be determined at run time */
+	char *enc_label;		// encryption label
+	int *enc_gcode;			// gcrypt cioher code
+	int *enc_keylen;		// gcrypt key length
+	int *enc_ivlen;			// initialization vector length
 	uchar salt[SALT_LEN];
 	uchar *salt_pass;
 	int salt_pass_len;
 	uchar *hash;
 	char *passphrase;
 
+	/* hashes */
+	uchar hash_code;		// hash code from magic header or command line
+	/* hash lengths will be determined at runtime */
+	char *hash_label;		// hash label
+	int *hash_gcode;		// gcrypt hash code
+	int *hash_len;			// hash length
+	uchar *crc_code;		// CRC code. Will be 0
+	char *crc_label;		// CRC label
+	int *crc_gcode;			// gcrypt CRC code
+	int *crc_len;			// CRC length
+	cksem_t cksumsem;
+	gcry_md_hd_t crc_handle;
+	gcry_md_hd_t hash_handle;
+	uchar *hash_resblock;		// block will have to be allocated at runtime
+	i64 hash_read;			// How far into the file the hash has done so far
+
 	pthread_mutex_t control_lock;
 	unsigned char eof;
 	unsigned char magic_written;
 	bool lzma_prop_set;
 
-	cksem_t cksumsem;
-	gcry_md_hd_t gcry_crc_handle;
-	gcry_md_hd_t gcry_md5_handle;
-	uchar gcry_md5_resblock[MD5_DIGEST_SIZE];
-	i64 md5_read;			// How far into the file the md5 has done so far
 	struct checksum checksum;
 
 	const char *util_infile;

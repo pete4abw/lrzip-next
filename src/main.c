@@ -1,6 +1,6 @@
 /*
    Copyright (C) 2006-2016, 2021 Con Kolivas
-   Copyright (C) 2011, 2019, 2020, 2021 Peter Hyman
+   Copyright (C) 2011, 2019, 2020, 2022 Peter Hyman
    Copyright (C) 1998-2003 Andrew Tridgell
 
    This program is free software; you can redistribute it and/or modify
@@ -53,8 +53,8 @@
 #include <getopt.h>
 #include <libgen.h>
 
-#include "rzip.h"
 #include "lrzip_core.h"
+#include "rzip.h"
 #include "util.h"
 #include "stream.h"
 #include <locale.h>
@@ -64,13 +64,43 @@
 // progress flag
 bool progress_flag=false;
 
+/* These hash and encryption constants will be referenced in the
+ * control structure. */
+
+#define MAXHASH 13
+#define MAXENC   2
+
+struct hash hashes[MAXHASH+1] = {
+	{ "CRC",	0, GCRY_MD_CRC32,     4 },
+	{ "MD5",	1, GCRY_MD_MD5,      16 },
+	{ "RIPEMD",	2, GCRY_MD_RMD160,   20 },
+	{ "SHA256",	3, GCRY_MD_SHA256,   32 },
+	{ "SHA384",	4, GCRY_MD_SHA384,   48 },
+	{ "SHA512",	5, GCRY_MD_SHA512,   64 },
+	{ "SHA3_256",	6, GCRY_MD_SHA3_256, 32 },
+	{ "SHA3_512",	7, GCRY_MD_SHA3_512, 64 },
+	{ "SHAKE128_16",8, GCRY_MD_SHAKE128, 16 }, /* XOF function */
+	{ "SHAKE128_32",9, GCRY_MD_SHAKE128, 32 }, /* XOF function */
+	{ "SHAKE128_64",10, GCRY_MD_SHAKE128, 64 }, /* XOF function */
+	{ "SHAKE256_16",11, GCRY_MD_SHAKE256, 16 }, /* XOF function */
+	{ "SHAKE256_32",12, GCRY_MD_SHAKE256, 32 }, /* XOF function */
+	{ "SHAKE256_64",13, GCRY_MD_SHAKE256, 64 }, /* XOF function */
+};
+
+struct encryption encryptions[MAXENC+1] = {
+	{ "NONE",	0, 0, 0, 0 }, /* encryption not used */
+	{ "AES128",	1, GCRY_CIPHER_AES128,	16, 16 },
+	{ "AES256",	2, GCRY_CIPHER_AES256,	32, 16 },
+};
+
+
 static rzip_control base_control, local_control, *control;
 
 static void usage(bool compat)
 {
 	print_output("lrz%s version %s\n", compat ? "" : "ip-next", PACKAGE_VERSION);
 	print_output("Copyright (C) Con Kolivas 2006-2021\n");
-	print_output("Copyright (C) Peter Hyman 2007-2021\n");
+	print_output("Copyright (C) Peter Hyman 2007-2022\n");
 	print_output("Based on rzip ");
 	print_output("Copyright (C) Andrew Tridgell 1998-2003\n\n");
 	print_output("Usage: lrz%s [options] <file...>\n", compat ? "" : "ip");
@@ -101,7 +131,8 @@ static void usage(bool compat)
 	print_output("    Additional Compression Options:\n");
 	if (compat)
 		print_output("	-c, --stdout		output to STDOUT\n");
-	print_output("	-e, --encrypt[=password] password protected sha512/aes128 encryption on compression\n");
+	print_output("	-e, --encrypt [=password] password protected sha512/aes128 encryption on compression\n");
+	print_output("	-E, --emethod [method]	Encryption Method: 1 = AES128, 2=AES256\n");
 	if (!compat)
 		print_output("	-D, --delete		delete existing files\n");
 	print_output("	-f, --force		force overwrite of any existing files\n");
@@ -131,7 +162,7 @@ default chosen by heuristic dependent on ram and chosen compression\n");
 		print_output("	-c, -C, --check		check integrity of file written on decompression\n");
 	print_output("General Options:\n----------------\n");
 	print_output("	-h, -?, --help		show help\n");
-	print_output("	-H, --hash		display md5 hash integrity information\n");
+	print_output("	-H, --hash [hash code]	Set hash to compute (default md5) 1-13 (see manpage)\n");
 	print_output("	-i, --info		show compressed file information\n");
 	if (compat) {
 		print_output("	-L, --license		display software version and license\n");
@@ -153,7 +184,7 @@ static void license(bool compat)
 {
 	print_output("lrz%s version %s\n\
 Copyright (C) Con Kolivas 2006-2016\n\
-Copyright (C) Peter Hyman 2007-2021\n\
+Copyright (C) Peter Hyman 2007-2022\n\
 Based on rzip Copyright (C) Andrew Tridgell 1998-2003\n\n\
 This is free software.  You may redistribute copies of it under the terms of\n\
 the GNU General Public License <http://www.gnu.org/licenses/gpl.html>.\n\
@@ -230,6 +261,9 @@ static void show_summary(void)
 					print_output(", offset - %'d", control->delta);
 				print_output("\n");
 			}
+			print_verbose("%s Hashing Used\n", control->hash_label);
+			if (ENCRYPT)
+				print_verbose("%s Encryption Used\n", control->enc_label);
 			if (control->window)
 				print_verbose("Compression Window: %'"PRId64" = %'"PRId64"MB\n", control->window, control->window * 100ull);
 			/* show heuristically computed window size */
@@ -240,7 +274,7 @@ static void show_summary(void)
 					temp_chunk = control->maxram;
 				else
 					temp_chunk = control->ramsize * 2 / 3;
-				temp_window = temp_chunk / (100 * 1024 * 1024);
+				temp_window = temp_chunk / (100 * ONE_MB);
 				print_verbose("Heuristically Computed Compression Window: %'"PRId64" = %'"PRId64"MB\n", temp_window, temp_window * 100ull);
 			}
 			if (UNLIMITED)
@@ -257,46 +291,47 @@ static struct option long_options[] = {
 	{"decompress",	no_argument,	0,	'd'},
 	{"delete",	no_argument,	0,	'D'},
 	{"encrypt",	optional_argument,	0,	'e'},	/* 5 */
+	{"emethod",	required_argument,	0,	'E'},
 	{"force",	no_argument,	0,	'f'},
 	{"gzip",	no_argument,	0,	'g'},
 	{"help",	no_argument,	0,	'h'},
-	{"hash",	no_argument,	0,	'H'},
-	{"info",	no_argument,	0,	'i'},		/* 10 */
+	{"hash",	optional_argument,	0,	'H'},	/* 10 */
+	{"info",	no_argument,	0,	'i'},
 	{"keep-broken",	no_argument,	0,	'k'},
 	{"keep-broken",	no_argument,	0,	'K'},
 	{"lzo",		no_argument,	0,	'l'},
-	{"lzma",       	no_argument,	0,	0},
-	{"level",	optional_argument,	0,	'L'},	/* 15 */
+	{"lzma",       	no_argument,	0,	0},		/* 15 */
+	{"level",	optional_argument,	0,	'L'},
 	{"license",	no_argument,	0,	'L'},
 	{"maxram",	required_argument,	0,	'm'},
 	{"no-compress",	no_argument,	0,	'n'},
-	{"nice-level",	required_argument,	0,	'N'},
-	{"outfile",	required_argument,	0,	'o'},	/* 20 */
+	{"nice-level",	required_argument,	0,	'N'},	/* 20 */
+	{"outfile",	required_argument,	0,	'o'},
 	{"outdir",	required_argument,	0,	'O'},
 	{"threads",	required_argument,	0,	'p'},
 	{"progress",	no_argument,	0,	'P'},
-	{"quiet",	no_argument,	0,	'q'},
-	{"recursive",	no_argument,	0,	'r'},		/* 25 */
+	{"quiet",	no_argument,	0,	'q'},		/* 25 */
+	{"recursive",	no_argument,	0,	'r'},
 	{"suffix",	required_argument,	0,	'S'},
 	{"test",	no_argument,	0,	't'},
 	{"threshold",	optional_argument,	0,	'T'},
-	{"unlimited",	no_argument,	0,	'U'},
-	{"verbose",	no_argument,	0,	'v'},		/* 30 */
+	{"unlimited",	no_argument,	0,	'U'},		/* 30 */
+	{"verbose",	no_argument,	0,	'v'},
 	{"version",	no_argument,	0,	'V'},
 	{"window",	required_argument,	0,	'w'},
 	{"zpaq",	no_argument,	0,	'z'},
-	{"fast",	no_argument,	0,	'1'},
-	{"best",	no_argument,	0,	'9'},		/* 35 */
+	{"fast",	no_argument,	0,	'1'},		/* 35 */
+	{"best",	no_argument,	0,	'9'},
 	{"dictsize",	required_argument,	0,	0},
 	{"zpaqbs",	required_argument,	0,	0},
 	{"x86",		no_argument,	0,	0},
-	{"arm",		no_argument,	0,	0},
-	{"armt",	no_argument,	0,	0},		/* 40 */
+	{"arm",		no_argument,	0,	0},		/* 40 */
+	{"armt",	no_argument,	0,	0},
 	{"ppc",		no_argument,	0,	0},
 	{"sparc",	no_argument,	0,	0},
 	{"ia64",	no_argument,	0,	0},
-	{"delta",	optional_argument,	0,	0},
-	{"rzip-level",	required_argument,	0,	'R'},	/* 45 */
+	{"delta",	optional_argument,	0,	0},	/* 45 */
+	{"rzip-level",	required_argument,	0,	'R'},
 	{0,	0,	0,	0},
 };
 
@@ -340,8 +375,8 @@ static void recurse_dirlist(char *indir, char **dirlist, int *entries)
 	closedir(dirp);
 }
 
-static const char *loptions = "bcCdDe::fghHiKlL:nN:o:O:p:PqrR:S:tT::Um:vVw:z?";
-static const char *coptions = "bcCde::fghHikKlLnN:o:O:p:PrR:S:tT::Um:vVw:z?123456789";
+static const char *loptions = "bcCdDe::E:fghH::iKlL:nN:o:O:p:PqrR:S:tT::Um:vVw:z?";
+static const char *coptions = "bcCde::E:fghH::ikKlLnN:o:O:p:PrR:S:tT::Um:vVw:z?123456789";
 
 int main(int argc, char *argv[])
 {
@@ -443,6 +478,14 @@ int main(int argc, char *argv[])
 			if (optarg)
 				control->passphrase = optarg;
 			break;
+		case 'E':	// Encryption code
+			if (!optarg)
+				failure("Enryption method must be declared.\n");
+			i=strtol(optarg, &endptr, 10);
+			if (i < 1 || i > MAXENC)
+				failure("Encryption method must be 1 or 2 for AES 128 or 256\n");
+			control->enc_code = i;
+			break;
 		case 'f':
 			control->flags |= FLAG_FORCE_REPLACE;
 			break;
@@ -451,7 +494,15 @@ int main(int argc, char *argv[])
 			usage(compat);
 			exit(0);
 		case 'H':
-			control->flags |= FLAG_HASH;
+			control->flags |= FLAG_HASHED;
+			if (optarg) {
+				i=strtol(optarg, &endptr, 10);
+				if (*endptr)
+					failure("Extra characters after Hash: \'%s\'\n", endptr);
+				if (i < 1 || i > MAXHASH)
+					failure("Hash codes out of bounds. Must be between 1 and %d.\n", MAXHASH);
+				control->hash_code = i;
+			}
 			break;
 		case 'i':
 			control->flags |= FLAG_INFO;
@@ -486,7 +537,7 @@ int main(int argc, char *argv[])
 				failure("Invalid rzip compression level (must be 1-9)\n");
 			break;
 		case 'm':
-			control->ramsize = strtol(optarg, &endptr, 10) * 1024 * 1024 * 100;
+			control->ramsize = strtol(optarg, &endptr, 10) * ONE_MB * 100;
 			if (*endptr)
 				failure("Extra characters after ramsize: \'%s\'\n", endptr);
 			break;
@@ -568,11 +619,13 @@ int main(int argc, char *argv[])
 			control->flags |= FLAG_UNLIMITED;
 			break;
 		case 'v':
-			/* set verbosity flag */
+			/* set progress flag */
 			if (!(control->flags & FLAG_SHOW_PROGRESS))
 				control->flags |= FLAG_SHOW_PROGRESS;
-			else if (!(control->flags & FLAG_VERBOSITY) && !(control->flags & FLAG_VERBOSITY_MAX))
+			/* set verbosity flag */
+			if (!(control->flags & FLAG_VERBOSITY) && !(control->flags & FLAG_VERBOSITY_MAX))
 				control->flags |= FLAG_VERBOSITY;
+			/* or set max verbosity flag */
 			else if ((control->flags & FLAG_VERBOSITY)) {
 				control->flags &= ~FLAG_VERBOSITY;
 				control->flags |= FLAG_VERBOSITY_MAX;
@@ -601,7 +654,7 @@ int main(int argc, char *argv[])
 			control->compression_level = c - '0';
 			break;
 		case 0:	/* these are long options without a short code */
-			if (FILTER_USED && long_opt_index >= 38 )
+			if (FILTER_USED && long_opt_index >= 39 )
 				print_output("Filter already selected. %s filter ignored.\n", long_options[long_opt_index].name);
 			else {
 				switch(long_opt_index) {
@@ -609,7 +662,7 @@ int main(int argc, char *argv[])
 					case 14:
 						control->flags &= ~FLAG_NOT_LZMA;		/* clear alternate compression flags */
 						break;
-					case 36:
+					case 37:
 						/* Dictionary Size,	2<<11, 3<<11
 						 * 			2<<12, 3<<12
 						 * 			...
@@ -627,7 +680,7 @@ int main(int argc, char *argv[])
 							control->dictSize = LZMA2_DIC_SIZE_FROM_PROP(ds);
 						}
 						break;
-					case 37:
+					case 38:
 						if (!ZPAQ_COMPRESS)
 							print_err("--zpaqbs option only valid for ZPAQ compression. Ignored.\n");
 						else {
@@ -640,25 +693,25 @@ int main(int argc, char *argv[])
 						}
 						break;
 						/* Filtering */
-					case 38:
+					case 39:
 						control->filter_flag = FILTER_FLAG_X86;		// x86
 						break;
-					case 39:
+					case 40:
 						control->filter_flag = FILTER_FLAG_ARM;		// ARM
 						break;
-					case 40:
+					case 41:
 						control->filter_flag = FILTER_FLAG_ARMT;	// ARMT
 						break;
-					case 41:
+					case 42:
 						control->filter_flag = FILTER_FLAG_PPC;		// PPC
 						break;
-					case 42:
+					case 43:
 						control->filter_flag = FILTER_FLAG_SPARC;	// SPARC
 						break;
-					case 43:
+					case 44:
 						control->filter_flag = FILTER_FLAG_IA64;	// IA64
 						break;
-					case 44:
+					case 45:
 						control->filter_flag = FILTER_FLAG_DELTA;	// DELTA
 						/* Delta Values are 1-16, then multiples of 16 to 256 */
 						if (optarg) {
@@ -693,6 +746,27 @@ int main(int argc, char *argv[])
 			failure("Cannot specify output filename with more than 1 file\n");
 		if (recurse)
 			failure("Cannot specify output filename with recursive\n");
+	}
+
+	if ( !control->hash_code ) control->hash_code = 1;
+	if ( ENCRYPT && !control->enc_code ) control->enc_code = 1;
+
+	/* now set hash, crc, or encryption pointers
+	 * codes are either set in initialise function or
+	 * by command line above */
+	control->crc_label  = &hashes[0].label[0];
+	control->crc_gcode  = &hashes[0].gcode;
+	control->crc_len    = &hashes[0].length;
+
+	if (!DECOMPRESS && !INFO) {	/* only applies to compression */
+		control->hash_label = &hashes[control->hash_code].label[0];
+		control->hash_gcode = &hashes[control->hash_code].gcode;
+		control->hash_len   = &hashes[control->hash_code].length;
+
+		control->enc_label  = &encryptions[control->enc_code].label[0];
+		control->enc_gcode  = &encryptions[control->enc_code].gcode;
+		control->enc_keylen = &encryptions[control->enc_code].keylen;
+		control->enc_ivlen  = &encryptions[control->enc_code].ivlen;
 	}
 
 	if (VERBOSE && !SHOW_PROGRESS) {

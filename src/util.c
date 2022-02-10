@@ -53,7 +53,6 @@
 #include <fcntl.h>
 #include "lrzip_private.h"
 #include "util.h"
-#include <gcrypt.h>
 #ifdef HAVE_CTYPE_H
 # include <ctype.h>
 #endif
@@ -139,7 +138,7 @@ void setup_overhead(rzip_control *control)
 		}
 		/* LZMA spec shows memory requirements as 6MB, not 4MB and state size
 		 * where default is 16KB */
-		control->overhead = ((i64)control->dictSize * 23 / 2) + (6 * 1024 * 1024) + 16384;
+		control->overhead = ((i64)control->dictSize * 23 / 2) + (6 * ONE_MB) + 16384;
 	} else if (ZPAQ_COMPRESS) {
 		control->zpaq_level = (control->compression_level < 4 ? 3 :
 					(control->compression_level < 8 ? 4 : 5));
@@ -164,7 +163,7 @@ void setup_overhead(rzip_control *control)
 				break;	// should never reach here
 			}
 		}
-		control->overhead = (i64) (1 << control->zpaq_bs) * 1024 * 1024;	// times 8 or 16. Out for now
+		control->overhead = (i64) (1 << control->zpaq_bs) * ONE_MB;	// times 8 or 16. Out for now
 	}
 
 	/* no need for zpaq computation here. do in open_stream_out() */
@@ -311,7 +310,7 @@ bool read_config(rzip_control *control)
 		}
 		else if (isparameter(parameter, "showhash")) {
 			if (isparameter(parametervalue, "yes"))
-				control->flags |= FLAG_HASH;
+				control->flags |= FLAG_HASHED;
 		}
 		else if (isparameter(parameter, "outputdirectory")) {
 			control->outdir = malloc(strlen(parametervalue) + 2);
@@ -393,10 +392,20 @@ bool read_config(rzip_control *control)
 	return true;
 }
 
-static void lrz_keygen(const rzip_control *control, const uchar *salt, uchar *key, uchar *iv)
+/* keygen will now use SHAKE128 with an extendable XOF output of keylen */
+static void lrz_keygen(const rzip_control *control, const uchar *salt, uchar *key, uchar *iv, int keylen, int ivlen)
 {
-	uchar buf [HASH_LEN + SALT_LEN + PASS_LEN];
-	gcry_md_hd_t gcry_sha512_handle;
+	uchar *buf;
+	buf = calloc(HASH_LEN + SALT_LEN + PASS_LEN, 1);
+	gcry_md_hd_t gcry_enchash_handle;
+	int algo;
+
+	/* hash size will depend on algo, AES 128 or 256 */
+	/* ivlen will alwatys be 16 bytes regardless */
+	if (control->enc_code == 1)
+		algo = hashes[SHAKE128_16].gcode;
+	else
+		algo = hashes[SHAKE256_32].gcode;
 
 	mlock(buf, HASH_LEN + SALT_LEN + PASS_LEN);
 
@@ -405,50 +414,56 @@ static void lrz_keygen(const rzip_control *control, const uchar *salt, uchar *ke
 	memcpy(buf + HASH_LEN + SALT_LEN, control->salt_pass, control->salt_pass_len);
 
 	/* No error checking for gcrypt key/iv hash functions */
-	gcry_md_open(&gcry_sha512_handle, GCRY_MD_SHA512, GCRY_MD_FLAG_SECURE);
-	gcry_md_write(gcry_sha512_handle, buf, HASH_LEN + SALT_LEN + control->salt_pass_len);
-	memcpy(key, gcry_md_read(gcry_sha512_handle, GCRY_MD_SHA512), HASH_LEN);
+	gcry_md_open(&gcry_enchash_handle, algo, GCRY_MD_FLAG_SECURE);
+	gcry_md_write(gcry_enchash_handle, buf, HASH_LEN + SALT_LEN + control->salt_pass_len);
+	gcry_md_extract(gcry_enchash_handle, algo, key, keylen);
 
-	gcry_md_reset(gcry_sha512_handle);
+	gcry_md_reset(gcry_enchash_handle);
 
-	memcpy(buf, key, HASH_LEN);
-	memcpy(buf + HASH_LEN, salt, SALT_LEN);
-	memcpy(buf + HASH_LEN + SALT_LEN, control->salt_pass, control->salt_pass_len);
+	memcpy(buf, key, keylen);
+	memcpy(buf + *control->enc_keylen, salt, SALT_LEN);
+	memcpy(buf + *control->enc_keylen + SALT_LEN, control->salt_pass, control->salt_pass_len);
 
-	gcry_md_write(gcry_sha512_handle, buf, HASH_LEN + SALT_LEN + control->salt_pass_len);
-	memcpy(iv, gcry_md_read(gcry_sha512_handle, GCRY_MD_SHA512), HASH_LEN);
-	gcry_md_close(gcry_sha512_handle);
+	gcry_md_write(gcry_enchash_handle, buf, keylen + SALT_LEN + control->salt_pass_len);
+	gcry_md_extract(gcry_enchash_handle, algo, iv, ivlen);
+	gcry_md_close(gcry_enchash_handle);
 
 	memset(buf, 0, sizeof(buf));
 	munlock(buf, sizeof(buf));
+	dealloc(buf);
 }
 
 bool lrz_crypt(const rzip_control *control, uchar *buf, i64 len, const uchar *salt, int encrypt)
 {
 	/* libgcrypt using cipher text stealing simplifies matters */
-	uchar key[HASH_LEN], iv[HASH_LEN];
-	uchar tmp0[CBC_LEN], tmp1[CBC_LEN];
+	uchar *key, *iv;
 	gcry_cipher_hd_t gcry_aes_cbc_handle;
 	bool ret = false;
 	size_t gcry_error;
 
-	/* Generate unique key and IV for each block of data based on salt */
-	mlock(key, HASH_LEN);
-	mlock(iv, HASH_LEN);
+	/* now allocate as to size of encryption key as
+	 * defined in lrzip_private.h */
+	key = calloc(*control->enc_keylen, 1);
+	iv  = calloc(*control->enc_ivlen, 1);
 
-	lrz_keygen(control, salt, key, iv);
+	/* Generate unique key and IV for each block of data based on salt
+	 * HASH_LEN is fixed at 64 */
+	mlock(key, *control->enc_keylen);
+	mlock(iv,  *control->enc_ivlen);
+
+	lrz_keygen(control, salt, key, iv, *control->enc_keylen, *control->enc_ivlen);
 
 	/* Using libgcrypt using CTS mode to encrypt/decrypt
 	 * entrire buffer in one pass. Breaks compatibiity with prior versions.
 	 * Error checking may be superfluous, but inserted for clarity and proper coding standard.
 	 */
-	gcry_error=gcry_cipher_open(&gcry_aes_cbc_handle, GCRY_CIPHER_AES, GCRY_CIPHER_MODE_CBC, GCRY_CIPHER_SECURE | GCRY_CIPHER_CBC_CTS);
+	gcry_error=gcry_cipher_open(&gcry_aes_cbc_handle, *control->enc_gcode, GCRY_CIPHER_MODE_CBC, GCRY_CIPHER_SECURE | GCRY_CIPHER_CBC_CTS);
 	if (unlikely(gcry_error))
 		failure_goto(("Unable to set AES CBC handle in lrz_crypt: %'d\n", gcry_error), error);
-	gcry_error=gcry_cipher_setkey(gcry_aes_cbc_handle, key, CBC_LEN);
+	gcry_error=gcry_cipher_setkey(gcry_aes_cbc_handle, key, *control->enc_keylen);
 	if (unlikely(gcry_error))
 		failure_goto(("Failed to set AES CBC key in lrz_crypt: %'d\n", gcry_error), error);
-	gcry_error=gcry_cipher_setiv(gcry_aes_cbc_handle, iv, CBC_LEN);
+	gcry_error=gcry_cipher_setiv(gcry_aes_cbc_handle, iv, *control->enc_ivlen);
 	if (unlikely(gcry_error))
 		failure_goto(("Failed to set AES CBC iv in lrz_crypt: %'d\n", gcry_error), error);
 
@@ -470,10 +485,12 @@ bool lrz_crypt(const rzip_control *control, uchar *buf, i64 len, const uchar *sa
 
 	ret = true;
 error:
-	memset(iv, 0, HASH_LEN);
-	memset(key, 0, HASH_LEN);
-	munlock(iv, HASH_LEN);
-	munlock(key, HASH_LEN);
+	memset(iv, 0, *control->enc_ivlen);
+	memset(key, 0, *control->enc_keylen);
+	munlock(iv, *control->enc_ivlen);
+	munlock(key, *control->enc_keylen);
+	dealloc(key);
+	dealloc(iv);
 	return ret;
 }
 

@@ -55,8 +55,6 @@
 
 #include "LzmaDec.h"		// decode for get_fileinfo
 
-#include <gcrypt.h>		// for rng
-
 #define MAGIC_LEN	(18)	// new v 0.8 magic header
 #define OLD_MAGIC_LEN	(24)	// Just to read older versions
 #define MAGIC_HEADER	(6)	// to validate file initially
@@ -141,21 +139,20 @@ bool write_magic(rzip_control *control)
 	 /* In encrypted files, the size is left unknown
 	 * and instead the salt is stored here to preserve space. */
 	// FIXME. I think we can do better. 8 bytes is no reason to save space
-	if (ENCRYPT)
+	if (ENCRYPT) {
 		memcpy(&magic[6], &control->salt, 8);
+		magic[15] = control->enc_code;	/* write whatever encryption code */
+	}
 	else if (control->eof) {
 		i64 esize = htole64(control->st_size);	// we know file size even when piped
-
 		memcpy(&magic[6], &esize, 8);
 	}
-	/* This is a flag that the archive contains an md5 sum at the end
+	/* This is a flag that the archive contains an hash sum at the end
 	 * which can be used as an integrity check instead of crc check.
 	 * crc is still stored for compatibility with 0.5 versions.
 	 */
-	if (!NO_MD5)
-		magic[14] = 1;
-	if (ENCRYPT)
-		magic[15] = 1;
+	if (HAS_HASH)
+		magic[14] = control->hash_code;	/* write whatever hash */
 
 	magic[16] = 0;
 	if (FILTER_USED) {
@@ -210,11 +207,17 @@ static void get_lzma_prop(rzip_control *control, unsigned char *magic)
 	return;
 }
 
-static void get_md5(rzip_control *control, unsigned char *magic)
+static void get_hash_from_magic(rzip_control *control, unsigned char *magic)
 {
-	/* Whether this archive contains md5 data at the end or not */
-	if (*magic == 1)
-		control->flags |= FLAG_MD5;
+	/* Whether this archive contains hash data at the end or not */
+	if (*magic > 0 && *magic <= MAXHASH)
+	{
+		control->flags |= FLAG_HASHED;
+		control->hash_code = *magic;	/* set hash code */
+		control->hash_label = &hashes[control->hash_code].label[0];
+		control->hash_gcode = &hashes[control->hash_code].gcode;
+		control->hash_len   = &hashes[control->hash_code].length;
+	}
 	else
 		print_verbose("Unknown hash, falling back to CRC\n");
 
@@ -225,20 +228,21 @@ static void get_md5(rzip_control *control, unsigned char *magic)
 
 static void get_encryption(rzip_control *control, unsigned char *magic, unsigned char *salt)
 {
-	if (*magic) {
-		if (*magic == 1)
-			control->flags |= FLAG_ENCRYPT;
-		else
-			failure(("Unknown encryption\n"));
+	if (*magic > 0 && *magic <= MAXENC) {
+		control->flags |= FLAG_ENCRYPT;
+		control->enc_code = *magic;
+		control->enc_label  = &encryptions[control->enc_code].label[0];
+		control->enc_gcode  = &encryptions[control->enc_code].gcode;
+		control->enc_keylen = &encryptions[control->enc_code].keylen;
+		control->enc_ivlen  = &encryptions[control->enc_code].ivlen;
 		/* In encrypted files, the size field is used to store the salt
 		 * instead and the size is unknown, just like a STDOUT chunked
 		 * file */
 		memcpy(&control->salt, salt, 8);
 		control->st_size = 0;
 		control->encloops = enc_loops(control->salt[0], control->salt[1]);
-		print_maxverbose("Encryption hash loops %'"PRId64"\n", control->encloops);
 	} else if (ENCRYPT) {
-		print_output("Asked to decrypt a non-encrypted archive. Bypassing decryption.\n");
+		print_err("Asked to decrypt a non-encrypted archive. Bypassing decryption. May fail!\n");
 		control->flags &= ~FLAG_ENCRYPT;
 	}
 
@@ -301,7 +305,7 @@ static void get_magic_lt6(rzip_control *control, unsigned char *magic)
 	if (magic[16])	// lzma
 		get_lzma_prop(control, &magic[16]);
 
-	get_md5(control, &magic[21]);
+	get_hash_from_magic(control, &magic[21]);
 
 	return;
 }
@@ -335,7 +339,7 @@ static void get_magic_lt8(rzip_control *control, unsigned char *magic)
 	if (magic[17])	// lzma
 		get_lzma_prop(control, &magic[17]);
 
-	get_md5(control, &magic[22]);
+	get_hash_from_magic(control, &magic[22]);
 
 	return;
 }
@@ -369,7 +373,7 @@ static void get_magic_v8(rzip_control *control, unsigned char *magic)
 		control->zpaq_level = magic[17] >> 4;		// divide by 16
 	}
 
-	get_md5(control, &magic[14]);
+	get_hash_from_magic(control, &magic[14]);
 
 	return;
 }
@@ -378,8 +382,6 @@ static bool get_magic(rzip_control *control, unsigned char *magic)
 {
 	memcpy(&control->major_version, &magic[4], 1);
 	memcpy(&control->minor_version, &magic[5], 1);
-
-	print_verbose("Detected lrzip version %'d.%'d file.\n", control->major_version, control->minor_version);
 
 	if (control->major_version == 0) {
 		if (control->minor_version < 4)
@@ -404,7 +406,7 @@ static bool get_magic(rzip_control *control, unsigned char *magic)
 	return true;
 }
 
-bool read_magic(rzip_control *control, int fd_in, i64 *expected_size)
+static bool read_magic(rzip_control *control, int fd_in, i64 *expected_size)
 {
 	unsigned char magic[OLD_MAGIC_LEN];	// Make at least big enough for old magic
 
@@ -429,6 +431,14 @@ bool read_magic(rzip_control *control, int fd_in, i64 *expected_size)
 		return false;
 	*expected_size = control->st_size;
 	return true;
+}
+
+/* show lrzip-next version
+ * helps preserve output format when validating
+ */
+static void show_version(rzip_control *control)
+{
+	print_verbose("Detected lrzip version %'d.%'d file.\n", control->major_version, control->minor_version);
 }
 
 /* preserve ownership and permissions where possible */
@@ -789,9 +799,11 @@ static bool get_hash(rzip_control *control, int make_hash)
 	control->salt_pass = calloc(PASS_LEN, 1);
 	control->hash = calloc(HASH_LEN, 1);
 	if (unlikely(!passphrase || !testphrase || !control->salt_pass || !control->hash)) {
-		fatal("Failed to calloc encrypt buffers in compress_file\n");
+		fatal("Failed to calloc encrypt buffers in get_hash\n");
 		dealloc(testphrase);
 		dealloc(passphrase);
+		dealloc(control->salt_pass);
+		dealloc(control->hash);
 		return false;
 	}
 	mlock(passphrase, PASS_LEN);
@@ -959,6 +971,8 @@ bool get_fileinfo(rzip_control *control)
 	if (unlikely(!read_magic(control, fd_in, &expected_size)))
 		goto error;
 
+	if (INFO) show_version(control);		// show version if not validating
+
 	if (ENCRYPT && !control->salt_pass_len)		// Only get password if needed
 		if (unlikely(!get_hash(control, 0)))
 			return false;
@@ -1032,7 +1046,7 @@ next_chunk:
 		if (!ENCRYPT)
 			print_verbose("%'"PRId64"\n", chunk_size);
 		else
-			print_verbose("N/A Encrypted File\n");
+			print_verbose("N/A %s Encrypted File\n", control->enc_label);
 	}
 	while (stream < NUM_STREAMS) {
 		int block = 1;
@@ -1110,10 +1124,10 @@ next_chunk:
 	if (unlikely((ofs = lseek(fd_in, c_len, SEEK_CUR)) == -1))
 		fatal_goto(("Failed to lseek c_len in get_fileinfo\n"), error);
 
-	if (ofs >= infile_size - (HAS_MD5 ? MD5_DIGEST_SIZE : 0))
+	if (ofs >= infile_size - *control->hash_len)
 		goto done;
 	else if (ENCRYPT)
-		if (ofs+header_length > infile_size)
+		if (ofs+header_length+ *control->hash_len > infile_size)
 			goto done;
 
 	/* Chunk byte entry */
@@ -1152,8 +1166,11 @@ done:
 
 	if (INFO) {
 		print_output("\nSummary\n=======\n");
-		print_output("File: %s\nlrzip-next version: %'d.%'d %sfile\n\n", infilecopy,
+		print_output("File: %s\nlrzip-next version: %'d.%'d ", infilecopy,
 				control->major_version, control->minor_version, ENCRYPT ? "Encrypted " : "");
+		if (ENCRYPT)
+			print_output("%s Encrypted ", control->enc_label);
+		print_output("file\n\n");
 
 		if (!expected_size)
 			print_output("Due using %s, expected decompression size not available\n",
@@ -1230,22 +1247,25 @@ done:
 		}
 	} /* end if (INFO) */
 
-	if (HAS_MD5) {
-		unsigned char md5_stored[MD5_DIGEST_SIZE];
+	if (HAS_HASH) {
+		uchar *hash_stored;
+
 		int i;
 
 		if (INFO) {
-			if (unlikely(lseek(fd_in, -MD5_DIGEST_SIZE, SEEK_END) == -1))
-				fatal_return(("Failed to seek to md5 data in get_fileinfo.\n"), false);
-			if (unlikely(read(fd_in, md5_stored, MD5_DIGEST_SIZE) != MD5_DIGEST_SIZE))
-				fatal_return(("Failed to read md5 data in get_fileinfo.\n"), false);
+			hash_stored = calloc(*control->hash_len, 1);
+			if (unlikely(lseek(fd_in, - *control->hash_len, SEEK_END) == -1))
+				fatal_return(("Failed to seek to %s data in get_fileinfo.\n", control->hash_label), false);
+			if (unlikely(read(fd_in, hash_stored, *control->hash_len) != *control->hash_len))
+				fatal_return(("Failed to read %s data in get_fileinfo.\n", control->hash_label), false);
 			if (ENCRYPT)
-				if (unlikely(!lrz_decrypt(control, md5_stored, MD5_DIGEST_SIZE, control->salt_pass, LRZ_VALIDATE)))
-					fatal_return(("Failure decrypting MD5 in get_fileinfo.\n"), false);
-			print_output("\n  MD5 Checksum: ");
-			for (i = 0; i < MD5_DIGEST_SIZE; i++)
-				print_output("%02x", md5_stored[i]);
+				if (unlikely(!lrz_decrypt(control, hash_stored, *control->hash_len, control->salt_pass, LRZ_VALIDATE)))
+					fatal_return(("Failure decrypting %s in get_fileinfo.\n", control->hash_label), false);
+			print_output("\n  %s Checksum: ", control->hash_label);
+			for (i = 0; i < *control->hash_len; i++)
+				print_output("%02x", hash_stored[i]);
 			print_output("\n");
+			dealloc(hash_stored);
 		}
 	} else {
 		if (INFO) print_output("\n  CRC32 used for integrity testing\n");
@@ -1271,10 +1291,14 @@ bool compress_file(rzip_control *control)
 	int fd_in = -1, fd_out = -1;
 	char header[MAGIC_LEN];
 
-	control->flags |= FLAG_MD5;	/* MD5 now the default */
-	if (ENCRYPT)
+	control->flags |= FLAG_HASHED;
+	/* allocate result block for selected hash */
+	control->hash_resblock = calloc (*control->hash_len, 1);
+
+	if (ENCRYPT) {			/* AES 128 now default */
 		if (unlikely(!get_hash(control, 1)))
 			return false;
+	}
 	memset(header, 0, sizeof(header));
 
 	if (!STDIN) {
@@ -1385,6 +1409,7 @@ bool compress_file(rzip_control *control)
 	}
 
 	dealloc(control->outfile);
+	dealloc(control->hash_resblock);
 	return true;
 error:
 	if (!STDIN && (fd_in > 0))
@@ -1534,17 +1559,25 @@ select a larger volume.\n",
 	control->fd_out = fd_out;
 	control->fd_hist = fd_hist;
 
-	if (NO_MD5)
-		print_verbose("Not performing MD5 hash check\n");
-	if (HAS_MD5)
-		print_verbose("MD5 ");
+	print_verbose("Detected lrzip version %'d.%'d file.\n", control->major_version, control->minor_version);
+
+	if (NO_HASH)
+		print_verbose("Not performing hash check\n");
+	if (HAS_HASH)
+		print_verbose("%s ", control->hash_label);
 	else
 		print_verbose("CRC32 ");
 	print_verbose("being used for integrity testing.\n");
 
-	if (ENCRYPT && !control->salt_pass_len)		// Only get password if needed
+	control->hash_resblock = calloc(*control->hash_len, 1);
+
+	if (ENCRYPT && !control->salt_pass_len) {	// Only get password if needed
 		if (unlikely(!get_hash(control, 0)))
 			return false;
+		print_maxverbose("Encryption hash loops %'"PRId64"\n", control->encloops);
+		if (!INFO)
+			print_verbose("%s Encryption Used\n", control->enc_label);
+	}
 
 	// vailidate file on decompression or test
 	if (STDIN)
@@ -1553,7 +1586,10 @@ select a larger volume.\n",
 		print_progress("Validating file for consistency...");
 		if (unlikely((get_fileinfo(control)) == false))
 			failure_return(("File validation failed. Corrupt lrzip archive. Cannot continue\n"),false);
+		print_progress("[OK]");
+		if (!VERBOSE) print_progress("\n");	// output LF to prevent overwriing decompression output
 	}
+	show_version(control);	// show version here to preserve output formatting
 	print_progress("Decompressing...");
 
 	if (unlikely(runzip_fd(control, fd_in, fd_out, fd_hist, expected_size) < 0))
@@ -1596,6 +1632,7 @@ select a larger volume.\n",
 		release_hashes(control);
 
 	dealloc(control->outfile);
+	dealloc(control->hash_resblock);
 	return true;
 }
 

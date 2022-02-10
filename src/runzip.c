@@ -44,11 +44,9 @@
 #include "stream.h"
 #include "util.h"
 #include "lrzip_core.h"
-/* needed for CRC routines */
-#include <gcrypt.h>
 
-/* Work Function to compute md5 of a file stream */
-int md5_stream ( FILE *, uchar * );
+/* Work Function to compute hash of a file stream */
+int hash_stream ( FILE *, uchar *, int, int );
 
 static inline uchar read_u8(rzip_control *control, void *ss, int stream, bool *err)
 {
@@ -172,11 +170,11 @@ static i64 unzip_literal(rzip_control *control, void *ss, i64 len)
 		fatal_return(("Failed to write literal buffer of size %'"PRId64"\n", stream_read), -1);
 	}
 
-	if (!HAS_MD5)
+	if (!HAS_HASH)
 //		*cksum = CrcUpdate(*cksum, buf, stream_read);
-		gcry_md_write(control->gcry_crc_handle, buf, stream_read);
-	if (!NO_MD5)
-		gcry_md_write(control->gcry_md5_handle, buf, stream_read);
+		gcry_md_write(control->crc_handle, buf, stream_read);
+	if (HAS_HASH)
+		gcry_md_write(control->hash_handle, buf, stream_read);
 
 	dealloc(buf);
 	return stream_read;
@@ -238,11 +236,11 @@ static i64 unzip_match(rzip_control *control, void *ss, i64 len, int chunk_bytes
 			fatal_return(("Failed to read %'d bytes in unzip_match\n", n), -1);
 		}
 
-		if (!HAS_MD5)
+		if (!HAS_HASH)
 //			*cksum = CrcUpdate(*cksum, buf, n);
-			gcry_md_write(control->gcry_crc_handle, buf, n);
-		if (!NO_MD5)
-			gcry_md_write(control->gcry_md5_handle, buf, n);
+			gcry_md_write(control->crc_handle, buf, n);
+		if (HAS_HASH)
+			gcry_md_write(control->hash_handle, buf, n);
 
 		len -= n;
 		total += n;
@@ -372,8 +370,8 @@ static i64 runzip_chunk(rzip_control *control, int fd_in, i64 expected_size, i64
 		}
 	}
 
-	memcpy(&cksum, gcry_md_read(control->gcry_crc_handle, GCRY_MD_CRC32), CRC32_LEN);
-	if (!HAS_MD5) {
+	memcpy(&cksum, gcry_md_read(control->crc_handle, *control->crc_gcode), *control->crc_len);
+	if (!HAS_HASH) {
 		good_cksum = read_u32(control, ss, 0, &err);
 		if (unlikely(err)) {
 			close_stream_in(control, ss);
@@ -401,16 +399,18 @@ static i64 runzip_chunk(rzip_control *control, int fd_in, i64 expected_size, i64
  */
 i64 runzip_fd(rzip_control *control, int fd_in, int fd_out, int fd_hist, i64 expected_size)
 {
-	uchar md5_stored[MD5_DIGEST_SIZE];
+	uchar *hash_stored;
 	struct timeval start,end;
 	i64 total = 0, u;
 	double tdiff;
 
-	gcry_md_open(&control->gcry_crc_handle, GCRY_MD_CRC32, GCRY_MD_FLAG_SECURE);
-	if (!NO_MD5) {
-		gcry_md_open(&control->gcry_md5_handle, GCRY_MD_MD5, GCRY_MD_FLAG_SECURE);
-		if ((unlikely(control->gcry_md5_handle == NULL)))
-			failure("Unable to set md5 handle in runzip_fd\n");
+	hash_stored = calloc(*control->hash_len, 1);
+
+	gcry_md_open(&control->crc_handle, *control->crc_gcode, GCRY_MD_FLAG_SECURE);
+	if (HAS_HASH) {
+		gcry_md_open(&control->hash_handle, *control->hash_gcode, GCRY_MD_FLAG_SECURE);
+		if ((unlikely(control->hash_handle == NULL)))
+			failure("Unable to set %s handle in runzip_fd\n", control->hash_label);
 	}
 	gettimeofday(&start,NULL);
 
@@ -450,99 +450,106 @@ i64 runzip_fd(rzip_control *control, int fd_in, int fd_out, int fd_hist, i64 exp
 		if (!tdiff)
 			tdiff = 1;
 		print_progress("\nAverage DeCompression Speed: %6.3fMB/s\n",
-			       (total / 1024 / 1024) / tdiff);
+			       (total / ONE_MB) / tdiff);
 	}
 
-	if (!NO_MD5) {
+	if (HAS_HASH) {
 		int i,j;
 
-		memcpy(control->gcry_md5_resblock, gcry_md_read(control->gcry_md5_handle, GCRY_MD_MD5), MD5_DIGEST_SIZE);
-		if (HAS_MD5) {
+		/* if we're using an XOF function, i.e. SLACK128, then use md_extract */
+		if ( control->hash_code < SHAKE128_16 )
+			memcpy(control->hash_resblock, gcry_md_read(control->hash_handle, *control->hash_gcode),
+			       *control->hash_len);
+		else
+			gcry_md_extract(control->hash_handle, *control->hash_gcode, control->hash_resblock, *control->hash_len);
+		if (HAS_HASH) {
 			i64 fdinend = seekto_fdinend(control);
 
 			if (unlikely(fdinend == -1))
 				failure_return(("Failed to seekto_fdinend in rzip_fd\n"), -1);
-			if (unlikely(seekto_fdin(control, fdinend - MD5_DIGEST_SIZE) == -1))
+			if (unlikely(seekto_fdin(control, fdinend - *control->hash_len) == -1))
 				failure_return(("Failed to seekto_fdin in rzip_fd\n"), -1);
 
-			if (unlikely(read_1g(control, fd_in, md5_stored, MD5_DIGEST_SIZE) != MD5_DIGEST_SIZE))
-				fatal_return(("Failed to read md5 data in runzip_fd\n"), -1);
+			if (unlikely(read_1g(control, fd_in, hash_stored, *control->hash_len) != *control->hash_len))
+				fatal_return(("Failed to read %s data in runzip_fd\n", control->hash_label), -1);
 			if (ENCRYPT)
 				// pass decrypt flag
-				if (unlikely(!lrz_decrypt(control, md5_stored, MD5_DIGEST_SIZE, control->salt_pass, LRZ_DECRYPT)))
+				if (unlikely(!lrz_decrypt(control, hash_stored, *control->hash_len, control->salt_pass, LRZ_DECRYPT)))
 					return -1;
-			for (i = 0; i < MD5_DIGEST_SIZE; i++)
-				if (md5_stored[i] != control->gcry_md5_resblock[i]) {
-					print_output("MD5 CHECK FAILED.\nStored:");
-					for (j = 0; j < MD5_DIGEST_SIZE; j++)
-						print_output("%02x", md5_stored[j]);
+			for (i = 0; i < *control->hash_len; i++)
+				if (hash_stored[i] != control->hash_resblock[i]) {
+					print_output("%s CHECK FAILED.\nStored:", control->hash_label);
+					for (j = 0; j < *control->hash_len; j++)
+						print_output("%02x", hash_stored[j]);
 					print_output("\nOutput file:");
-					for (j = 0; j < MD5_DIGEST_SIZE; j++)
-						print_output("%02x", control->gcry_md5_resblock[j]);
+					for (j = 0; j < *control->hash_len; j++)
+						print_output("%02x", control->hash_resblock[j]);
 					failure_return(("\n"), -1);
 				}
 		}
 
 		if (HASH_CHECK || MAX_VERBOSE) {
-			print_output("MD5: ");
-			for (i = 0; i < MD5_DIGEST_SIZE; i++)
-				print_output("%02x", control->gcry_md5_resblock[i]);
+			print_output("%s:", control->hash_label);
+			for (i = 0; i < *control->hash_len; i++)
+				print_output("%02x", control->hash_resblock[i]);
 			print_output("\n");
 		}
 
 		if (CHECK_FILE) {
-			FILE *md5_fstream;
+			FILE *hash_fstream;
 			int i, j;
 
 			if (TMP_OUTBUF)
 				close_tmpoutbuf(control);
-			memcpy(md5_stored, control->gcry_md5_resblock, MD5_DIGEST_SIZE);
+			memcpy(hash_stored, control->hash_resblock, *control->hash_len);
 			if (unlikely(seekto_fdhist(control, 0) == -1))
 				fatal_return(("Failed to seekto_fdhist in runzip_fd\n"), -1);
-			if (unlikely((md5_fstream = fdopen(fd_hist, "r")) == NULL))
+			if (unlikely((hash_fstream = fdopen(fd_hist, "r")) == NULL))
 				fatal_return(("Failed to fdopen fd_hist in runzip_fd\n"), -1);
-			if (unlikely(md5_stream(md5_fstream, control->gcry_md5_resblock)))
-				fatal_return(("Failed to md5_stream in runzip_fd\n"), -1);
+			if (unlikely(hash_stream(hash_fstream, control->hash_resblock, *control->hash_gcode, *control->hash_len)))
+				fatal_return(("Failed to %s_stream in runzip_fd\n", control->hash_label), -1);
 			/* We don't close the file here as it's closed in main */
-			for (i = 0; i < MD5_DIGEST_SIZE; i++)
-				if (md5_stored[i] != control->gcry_md5_resblock[i]) {
-					print_output("MD5 CHECK FAILED.\nStored:");
-					for (j = 0; j < MD5_DIGEST_SIZE; j++)
-						print_output("%02x", md5_stored[j]);
+			for (i = 0; i < *control->hash_len; i++)
+				if (hash_stored[i] != control->hash_resblock[i]) {
+					print_output("%s CHECK FAILED.\nStored: ", control->hash_label);
+					for (j = 0; j < *control->hash_len; j++)
+						print_output("%02x", hash_stored[j]);
 					print_output("\nOutput file:");
-					for (j = 0; j < MD5_DIGEST_SIZE; j++)
-						print_output("%02x", control->gcry_md5_resblock[j]);
+					for (j = 0; j < *control->hash_len; j++)
+						print_output("%02x", control->hash_resblock[j]);
 					failure_return(("\n"), -1);
 				}
-			print_output("MD5 integrity of written file matches archive\n");
-			if (!HAS_MD5)
-				print_output("Note this lrzip archive did not have a stored md5 value.\n"
-				"The archive decompression was validated with crc32 and the md5 hash was "
+			print_output("%s integrity of written file matches archive\n", control->hash_label);
+			if (!HAS_HASH)
+				print_output("Note this lrzip archive did not have a stored hash value.\n"
+				"The archive decompression was validated with crc32 and the was "
 				"calculated on decompression\n");
 		}
 	}
 
+	free(hash_stored);
+
 	return total;
 }
 
-/* Work Function to compute an md5 from a file stream
+/* Work Function to compute a hash from a file stream
  * Taken from the old md5.c file and updated to use gcrypt
  */
 
-/* Compute MD5 message digest for bytes read from STREAM.  The
+/* Compute hash message digest for bytes read from STREAM.  The
    resulting message digest number will be written into the 16 bytes
    beginning at RESBLOCK.  */
 #define BLOCKSIZE 32768
-int md5_stream (FILE *stream, uchar *resblock)
+int hash_stream (FILE *stream, uchar *resblock, int hash_gcode, int hash_len)
 {
-	gcry_md_hd_t gcry_md5_handle;
+	gcry_md_hd_t hash_handle;
 	size_t sum;
 
 	char *buffer = malloc (BLOCKSIZE + 72);
 	if (!buffer)
 		return 1;
 
-	gcry_md_open(&gcry_md5_handle, GCRY_MD_MD5, GCRY_MD_FLAG_SECURE);
+	gcry_md_open(&hash_handle, hash_gcode, GCRY_MD_FLAG_SECURE);
 
 	/* Iterate over full file contents.  */
 	while (1)
@@ -570,17 +577,22 @@ int md5_stream (FILE *stream, uchar *resblock)
 			if (feof (stream))
 				goto process_partial_block;
 		}
-		gcry_md_write(gcry_md5_handle, buffer, BLOCKSIZE);
+		gcry_md_write(hash_handle, buffer, BLOCKSIZE);
 	}
 
 process_partial_block:
 	/* Process any remaining bytes.  */
 	if (sum > 0)
-		gcry_md_write(gcry_md5_handle, buffer, sum);
+		gcry_md_write(hash_handle, buffer, sum);
 
 	/* Construct result in desired memory.  */
-	memcpy(resblock, gcry_md_read(gcry_md5_handle, GCRY_MD_MD5), MD5_DIGEST_SIZE);
-	gcry_md_close(gcry_md5_handle);
+	/* test for XOF */
+	if ( hash_gcode < SHAKE128_16)
+		memcpy(resblock, gcry_md_read(hash_handle, hash_gcode), hash_len);
+	else
+		gcry_md_extract(hash_handle, hash_gcode, resblock, hash_len);
+
+	gcry_md_close(hash_handle);
 	free (buffer);
 	return 0;
 }
