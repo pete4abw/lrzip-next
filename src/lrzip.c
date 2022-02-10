@@ -231,10 +231,6 @@ static void get_encryption(rzip_control *control, unsigned char *magic, unsigned
 	if (*magic > 0 && *magic <= MAXENC) {
 		control->flags |= FLAG_ENCRYPT;
 		control->enc_code = *magic;
-		control->enc_label  = &encryptions[control->enc_code].label[0];
-		control->enc_gcode  = &encryptions[control->enc_code].gcode;
-		control->enc_keylen = &encryptions[control->enc_code].keylen;
-		control->enc_ivlen  = &encryptions[control->enc_code].ivlen;
 		/* In encrypted files, the size field is used to store the salt
 		 * instead and the size is unknown, just like a STDOUT chunked
 		 * file */
@@ -244,7 +240,12 @@ static void get_encryption(rzip_control *control, unsigned char *magic, unsigned
 	} else if (ENCRYPT) {
 		print_err("Asked to decrypt a non-encrypted archive. Bypassing decryption. May fail!\n");
 		control->flags &= ~FLAG_ENCRYPT;
+		control->enc_code = 0;
 	}
+	control->enc_label  = &encryptions[control->enc_code].label[0];
+	control->enc_gcode  = &encryptions[control->enc_code].gcode;
+	control->enc_keylen = &encryptions[control->enc_code].keylen;
+	control->enc_ivlen  = &encryptions[control->enc_code].ivlen;
 
 	return;
 }
@@ -1697,5 +1698,8 @@ bool initialise_control(rzip_control *control)
 		control->tmpdir[len] = '/'; 	/* need a trailing slash */
 		control->tmpdir[len + 1] = '\0';
 	}
+
+	/* just in case, set pointers for hash and encryptions */
+
 	return true;
 }
