@@ -308,9 +308,16 @@ bool read_config(rzip_control *control)
 				control->flags |= FLAG_HASH;
 			}
 		}
-		else if (isparameter(parameter, "showhash")) {
-			if (isparameter(parametervalue, "yes"))
+		else if (isparameter(parameter, "hash")) {
+			control->hash_code = atoi(parametervalue);
+			if (isparameter(parametervalue, "yes") ||
+				(control->hash_code > 0 && control->hash_code <= MAXHASH))
 				control->flags |= FLAG_HASHED;
+			else if (control->hash_code > MAXHASH) {	// out of bounds
+				print_err("lrzip.conf hash value (%d) out of bounds. Please check\n", control->hash_code);
+				control->hash_code = 0;
+				control->flags &= ~FLAG_HASHED;
+			}
 		}
 		else if (isparameter(parameter, "outputdirectory")) {
 			control->outdir = malloc(strlen(parametervalue) + 2);
@@ -363,8 +370,15 @@ bool read_config(rzip_control *control)
 				strcat(control->tmpdir, "/");
 		}
 		else if (isparameter(parameter, "encrypt")) {
-			if (isparameter(parameter, "YES"))
+			control->enc_code = atoi(parametervalue);
+			if (isparameter(parametervalue, "YES") ||
+				(control->enc_code > 0 && control->enc_code <= MAXENC))
 				control->flags |= FLAG_ENCRYPT;
+			else if (control->enc_code > MAXENC) {		// out of bounds
+				print_err("lrzip.conf encryption value (%d) out of bounds. Please check.\n", control->enc_code);
+				control->enc_code = 0;
+				control->flags &= ~FLAG_ENCRYPT;
+			}
 		}
 		else if (isparameter(parameter, "dictionarysize")) {
 			int p;
