@@ -56,7 +56,11 @@ Parameter values are not case sensitive except where specified\&.
 # \fBHASHCHECK = YES\fP
 
 # Show HASH value on Compression even if Verbose is off, YES (-H)
-# \fBSHOWHASH = YES\fP
+# Set Hash Method 1-MAXHASH
+# Default hash is 1 - MD5
+# See CURRENT_HASHES file for list
+# \fBHASH = YES\fP OR
+# \fBHASH = 1..MAXHASH\fP
 
 # Default output directory (-O)
 # \fBOUTPUTDIRECTORY = location\fP
@@ -87,7 +91,8 @@ Parameter values are not case sensitive except where specified\&.
 # \fBTMPDIR = /tmp\fP
 
 # Whether to use encryption on compression YES, NO (-e)
-# \fBENCRYPT = NO\fP
+# \fBENCRYPT = NO\fP OR
+# \fBENCRYPT = 1..MAXENC\fP
 .fi
 .PP
 .SH "NOTES"

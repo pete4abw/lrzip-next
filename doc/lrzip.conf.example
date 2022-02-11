@@ -40,7 +40,11 @@
 # HASHCHECK = YES
 
 # Show HASH value on Compression even if Verbose is off, YES (-H)
-# SHOWHASH = YES
+# Set Hash Method 1-MAXHASH
+# Default hash is 1: MD5
+# See CURRENT_HASHES file for list
+# HASH = YES
+# HASH = 1..MAXHASH
 
 # Default output directory (-O)
 # OUTPUTDIRECTORY = location
@@ -71,5 +75,8 @@
 # TMPDIR = /tmp
 
 # Whether to use encryption on compression YES, NO (-e)
+# OR Encryption Method
+# Method - 1,,NAXENC
+# See CURRENT_ENCMETHODS for list.
 # ENCRYPT = NO
-
+# ENCRYPT = 1..MAXENC

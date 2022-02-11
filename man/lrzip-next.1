@@ -54,7 +54,8 @@ Filtering Options (for all compression modes):
  \-\-ia64                  Use IA64 filter
  \-\-delta [=offset]       Use DELTA filter (offset 1..32. 1 default)
 Additional Compression Options:
- \-e, \-\-encrypt[=password] password protected sha512/aes128 encryption on compression
+ \-e, \-\-encrypt[=password] Password protected SHAKE128/AES128 SHAKE256/AES256 encryption on compression
+ \-E, \-\-emethod method    Select Encryption method, 1=AES 128, 2=AES 256 bit
  \-D, \-\-delete            delete existing files
  \-f, \-\-force             force overwrite of any existing files
  \-k, \-\-keep-broken       keep broken or damaged output files
@@ -77,7 +78,7 @@ Low level Compression Options:
  \-c, \-\-check             check integrity of file written on decompression
 .B General options:
  \-h, \-?, \-\-help          show help
- \-H, \-\-hash              display md5 hash integrity information
+ \-H, \-\-hash[=hash code]  Set hash to compute (default md5) and display hash integrity information
  \-i, \-\-info              show compressed file information
  \-p, \-\-threads value     Set processor count to override number of threads
  \-q, \-\-quiet             don't show compression progress
@@ -198,6 +199,10 @@ If input is from STDIN, then the password must be on the command line.
 .br
 If lrzip-next is embedded in a \fBtar -I lrzip-next [options]\fP command, then
 this option cannot be used.
+.IP "\fB-E | --emethod\fR[\fIencryption method\fP]"
+Select encryption method to use: 1=AES 128 bit, 2=AES 256 bit encryption.
+AES 128 uses SHAKE128 hashing for key generation, and AES 256 uses
+SHAKE256 hashing.
 .IP "\fB-D | --delete\fP"
 If this option is specified then lrzip-next will delete the
 source file after successful compression or decompression. When this
@@ -275,7 +280,7 @@ Decompress. If this option is not used then lrzip-next looks at
 the name used to launch the program. If it contains the string
 "lrunzip" then the \-d option is automatically set. If it contains the string
 "lrzcat" then the \-d \-o \- options are automatically set.
-.IP "\fB-e, -f, -o, -O\fP"
+.IP "\fB-e, -E, -f, -o, -O\fP"
 Same as above. See \fBCompression Options\fP.
 .IP "\fB-t | --test\fP"
 This tests the compressed file integrity. It does this by decompressing it
@@ -295,14 +300,44 @@ written is the same as the original archived.
 .SH "General Options:"
 .IP "\fB-h | -? | --help\fP"
 Print an options summary page
-.IP "\fB-H | --hash\fP"
-This shows the md5 hash value calculated on compressing or decompressing an
+.IP "\fB-H | --hash\fR \fI[hash code]\fP"
+This shows the hash value calculated on compressing or decompressing an
 lrzip-next archive. By default all compression has the md5 value calculated and
-stored in all archives since version 0.560. On decompression, when an md5
+stored in all archives since version 0.560. On decompression, when a hash
 value has been found, it will be calculated and used for integrity checking.
-If the md5 value is not stored in the archive, it will not be calculated unless
+If the hash value is not stored in the archive, it will not be calculated unless
 explicitly specified with this option, or check integrity (see below) has been
 requested.
+.br
+Hash values can be 1-13 and are defined as follows:
+.br
+ 0 CRC         - 32 bit CRC
+.br
+ 1 MD5         - MD5 Checksum
+.br
+ 2 RIPEMD      - RACE Integrity Primitives Evaluation Message Digest
+.br
+ 3 SHA256      - Secure Hash Algorithm 2, 256 bit
+.br
+ 4 SHA384      - Secure Hash Algorithm 2, 384 bit
+.br
+ 5 SHA512      - Secure Hash Algorithm 2, 512 bit
+.br
+ 6 SHA3_256    - Secure Hash Algorithm 3, 256 bit
+.br
+ 7 SHA3_512    - Secure Hash Algorithm 3, 512 bit
+.br
+ 8 SHAKE128_16 - Extendable Output Function (XOF) 128 bit, 16 byte output
+.br
+ 9 SHAKE128_32 - Extendable Output Function (XOF) 128 bit, 32 byte output
+.br
+10 SHAKE128_64 - Extendable Output Function (XOF) 128 bit, 64 byte output
+.br
+11 SHAKE256_16 - Extendable Output Function (XOF) 256 bit, 16 byte output
+.br
+12 SHAKE256_32 - Extendable Output Function (XOF) 256 bit, 32 byte output
+.br
+13 SHAKE256_64 - Extendable Output Function (XOF) 256 bit, 64 byte output
 .IP "\fB-i | --info\fP"
 This shows information about a compressed file. It shows the compressed size,
 the decompressed size, the compression ratio, what compression was used and
