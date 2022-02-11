@@ -1,0 +1,8 @@
+These Encryption Methods are used to secure lrzip-next files.
+
+ 0 NONE    - No Encryption
+ 1 AES 128 - 128 bit AES with 16 Byte key and 16 Byte Initialization Vector
+ 2 AES 256 - 256 bit AES with 32 Byte key and 16 Byte Initialization Vector
+
+Peter Hyman
+February 2022

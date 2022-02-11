@@ -1,6 +1,8 @@
 MAINTAINERCLEANFILES = Makefile.in
 
 dist_doc_DATA = \
+	CURRENT_ENCMETHODS \
+	CURRENT_HASHES \
 	README.NEW.BENCHMARK.ALGO.md \
 	README.Assembler \
 	README.benchmarks \

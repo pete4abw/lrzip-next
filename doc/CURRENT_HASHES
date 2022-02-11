@@ -1,0 +1,19 @@
+These Message Digests are used to compute and evaluate hash values.
+
+ 0 CRC         - 32 bit CRC
+ 1 MD5         - MD5 Checksum
+ 2 RIPEMD      - RACE Integrity Primitives Evaluation Message Digest
+ 3 SHA256      - Secure Hash Algorithm 2, 256 bit
+ 4 SHA384      - Secure Hash Algorithm 2, 384 bit
+ 5 SHA512      - Secure Hash Algorithm 2, 512 bit
+ 6 SHA3_256    - Secure Hash Algorithm 3, 256 bit
+ 7 SHA3_512    - Secure Hash Algorithm 3, 512 bit
+ 8 SHAKE128_16 - Extendable Output Function (XOF) 128 bit, 16 byte output
+ 9 SHAKE128_32 - Extendable Output Function (XOF) 128 bit, 32 byte output
+10 SHAKE128_64 - Extendable Output Function (XOF) 128 bit, 64 byte output
+11 SHAKE256_16 - Extendable Output Function (XOF) 256 bit, 16 byte output
+12 SHAKE256_32 - Extendable Output Function (XOF) 256 bit, 32 byte output
+13 SHAKE256_64 - Extendable Output Function (XOF) 256 bit, 64 byte output
+
+Peter Hyman
+February 2022
