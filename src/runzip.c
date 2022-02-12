@@ -459,41 +459,38 @@ i64 runzip_fd(rzip_control *control, int fd_in, int fd_out, int fd_hist, i64 exp
 		/* if we're using an XOF function, i.e. SLACK128, then use md_extract */
 		if ( control->hash_code < SHAKE128_16 )
 			memcpy(control->hash_resblock, gcry_md_read(control->hash_handle, *control->hash_gcode),
-			       *control->hash_len);
+					*control->hash_len);
 		else
 			gcry_md_extract(control->hash_handle, *control->hash_gcode, control->hash_resblock, *control->hash_len);
-		if (HAS_HASH) {
-			i64 fdinend = seekto_fdinend(control);
 
-			if (unlikely(fdinend == -1))
-				failure_return(("Failed to seekto_fdinend in rzip_fd\n"), -1);
-			if (unlikely(seekto_fdin(control, fdinend - *control->hash_len) == -1))
-				failure_return(("Failed to seekto_fdin in rzip_fd\n"), -1);
+		i64 fdinend = seekto_fdinend(control);
+		if (unlikely(fdinend == -1))
+			failure_return(("Failed to seekto_fdinend in rzip_fd\n"), -1);
+		if (unlikely(seekto_fdin(control, fdinend - *control->hash_len) == -1))
+			failure_return(("Failed to seekto_fdin in rzip_fd\n"), -1);
 
-			if (unlikely(read_1g(control, fd_in, hash_stored, *control->hash_len) != *control->hash_len))
-				fatal_return(("Failed to read %s data in runzip_fd\n", control->hash_label), -1);
-			if (ENCRYPT)
-				// pass decrypt flag
-				if (unlikely(!lrz_decrypt(control, hash_stored, *control->hash_len, control->salt_pass, LRZ_DECRYPT)))
-					return -1;
-			for (i = 0; i < *control->hash_len; i++)
-				if (hash_stored[i] != control->hash_resblock[i]) {
-					print_output("%s CHECK FAILED.\nStored:", control->hash_label);
-					for (j = 0; j < *control->hash_len; j++)
-						print_output("%02x", hash_stored[j]);
-					print_output("\nOutput file:");
-					for (j = 0; j < *control->hash_len; j++)
-						print_output("%02x", control->hash_resblock[j]);
-					failure_return(("\n"), -1);
-				}
+		if (unlikely(read_1g(control, fd_in, hash_stored, *control->hash_len) != *control->hash_len))
+			fatal_return(("Failed to read %s data in runzip_fd\n", control->hash_label), -1);
+		if (ENCRYPT)
+			// pass decrypt flag
+			if (unlikely(!lrz_decrypt(control, hash_stored, *control->hash_len, control->salt_pass, LRZ_DECRYPT)))
+				return -1;
+		for (i = 0; i < *control->hash_len; i++) {
+			if (hash_stored[i] != control->hash_resblock[i]) {
+				print_output("%s CHECK FAILED.\nStored:", control->hash_label);
+				for (j = 0; j < *control->hash_len; j++)
+					print_output("%02x", hash_stored[j]);
+				print_output("\nOutput file:");
+				for (j = 0; j < *control->hash_len; j++)
+					print_output("%02x", control->hash_resblock[j]);
+				failure_return(("\n"), -1);
+			}
 		}
 
-		if (HASH_CHECK || MAX_VERBOSE) {
-			print_output("%s:", control->hash_label);
-			for (i = 0; i < *control->hash_len; i++)
-				print_output("%02x", control->hash_resblock[i]);
-			print_output("\n");
-		}
+		print_output("%s:", control->hash_label);
+		for (i = 0; i < *control->hash_len; i++)
+			print_output("%02x", control->hash_resblock[i]);
+		print_output("\n");
 
 		if (CHECK_FILE) {
 			FILE *hash_fstream;
@@ -509,7 +506,7 @@ i64 runzip_fd(rzip_control *control, int fd_in, int fd_out, int fd_hist, i64 exp
 			if (unlikely(hash_stream(hash_fstream, control->hash_resblock, *control->hash_gcode, *control->hash_len)))
 				fatal_return(("Failed to %s_stream in runzip_fd\n", control->hash_label), -1);
 			/* We don't close the file here as it's closed in main */
-			for (i = 0; i < *control->hash_len; i++)
+			for (i = 0; i < *control->hash_len; i++) {
 				if (hash_stored[i] != control->hash_resblock[i]) {
 					print_output("%s CHECK FAILED.\nStored: ", control->hash_label);
 					for (j = 0; j < *control->hash_len; j++)
@@ -519,13 +516,13 @@ i64 runzip_fd(rzip_control *control, int fd_in, int fd_out, int fd_hist, i64 exp
 						print_output("%02x", control->hash_resblock[j]);
 					failure_return(("\n"), -1);
 				}
+			}
 			print_output("%s integrity of written file matches archive\n", control->hash_label);
-			if (!HAS_HASH)
-				print_output("Note this lrzip archive did not have a stored hash value.\n"
+		}
+	} else	/* hash not stored */
+		print_output("Note this lrzip archive did not have a stored hash value.\n"
 				"The archive decompression was validated with crc32 and the was "
 				"calculated on decompression\n");
-		}
-	}
 
 	free(hash_stored);
 
