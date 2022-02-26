@@ -500,7 +500,10 @@ static bool fwrite_stdout(rzip_control *control, void *buf, i64 len)
 
 	total = 0;
 	while (len > 0) {
-		nmemb = MIN(len, one_g);
+		if (BITS32)
+			nmemb = MIN(len, one_g);
+		else
+			nmemb = len;
 		ret = fwrite(offset_buf, 1, nmemb, control->outFILE);
 		if (unlikely(ret != nmemb))
 			fatal_return(("Failed to fwrite %'"PRId32" bytes in fwrite_stdout\n", nmemb), false);
@@ -518,7 +521,10 @@ bool write_fdout(rzip_control *control, void *buf, i64 len)
 	ssize_t ret, nmemb;
 
 	while (len > 0) {
-		nmemb = MIN(len, one_g);
+		if (BITS32)
+			nmemb = MIN(len, one_g);
+		else
+			nmemb = len;
 		ret = write(control->fd_out, offset_buf, (size_t)nmemb);
 		if (unlikely(ret != nmemb))
 			fatal_return(("Failed to write %'"PRId32" bytes to fd_out in write_fdout\n", nmemb), false);
@@ -582,7 +588,10 @@ bool write_fdin(rzip_control *control)
 	ssize_t ret;
 
 	while (len > 0) {
-		ret = MIN(len, one_g);
+		if (BITS32)
+			ret = MIN(len, one_g);
+		else
+			ret = len;
 		ret = write(control->fd_in, offset_buf, (size_t)ret);
 		if (unlikely(ret <= 0))
 			fatal_return(("Failed to write to fd_in in write_fdin\n"), false);
