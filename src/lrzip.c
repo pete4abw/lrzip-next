@@ -1567,8 +1567,14 @@ select a larger volume.\n",
 	show_version(control);	// show version here to preserve output formatting
 	print_progress("Decompressing...");
 
-	if (unlikely(runzip_fd(control, fd_in, fd_out, fd_hist, expected_size) < 0))
+	if (unlikely(runzip_fd(control, fd_in, fd_out, fd_hist, expected_size) < 0)) {
+		clear_rulist(control);
 		return false;
+	}
+
+	/* We can now safely delete sinfo and pthread data of all threads
+	* created. */
+	clear_rulist(control);
 
 	if (STDOUT && !TMP_OUTBUF) {
 		if (unlikely(!dump_tmpoutfile(control, fd_out)))
