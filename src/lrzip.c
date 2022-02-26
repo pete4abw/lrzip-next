@@ -362,7 +362,7 @@ static void get_magic_v8(rzip_control *control, unsigned char *magic)
 		for (i = 0; i < 4; i++)						// lzma2 to lzma dictionary expansion
 			control->lzma_properties[1 + i] = (Byte)(control->dictSize >> (8 * i));
 	}
-	else if (magic[17] && 0b10000000)	// zpaq block and compression level stored
+	else if (magic[17] & 0b10000000)	// zpaq block and compression level stored
 	{
 		control->zpaq_bs = magic[17] & 0b00001111;	// low order bits are block size
 		magic[17] &= 0b01110000;			// strip high bit
