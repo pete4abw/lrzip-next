@@ -1,3 +1,6 @@
+lrzip-next v0.8.10
+Upstream fixes, merge in whats-next.
+
 whats-next: lrzip-next v0.8.9
 Remove convoluted MD5 and HASH check defines.
 !NO_HASH becomes HAS_HASH
