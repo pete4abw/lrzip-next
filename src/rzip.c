@@ -1268,17 +1268,3 @@ retry:
 	gcry_md_close(control->crc_handle);
 	dealloc(st);
 }
-
-void rzip_control_free(rzip_control *control)
-{
-	if (!control)
-		return;
-
-	dealloc(control->tmpdir);
-	dealloc(control->outname);
-	dealloc(control->outdir);
-	if (control->suffix && control->suffix[0])
-		dealloc(control->suffix);
-
-	dealloc(control);
-}

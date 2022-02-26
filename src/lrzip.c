@@ -367,7 +367,7 @@ static void get_magic_v8(rzip_control *control, unsigned char *magic)
 		for (i = 0; i < 4; i++)						// lzma2 to lzma dictionary expansion
 			control->lzma_properties[1 + i] = (Byte)(control->dictSize >> (8 * i));
 	}
-	else if (magic[17] && 0b10000000)	// zpaq block and compression level stored
+	else if (magic[17] & 0b10000000)	// zpaq block and compression level stored
 	{
 		control->zpaq_bs = magic[17] & 0b00001111;	// low order bits are block size
 		magic[17] &= 0b01110000;			// strip high bit
@@ -505,7 +505,10 @@ static bool fwrite_stdout(rzip_control *control, void *buf, i64 len)
 
 	total = 0;
 	while (len > 0) {
-		nmemb = MIN(len, one_g);
+		if (BITS32)
+			nmemb = MIN(len, one_g);
+		else
+			nmemb = len;
 		ret = fwrite(offset_buf, 1, nmemb, control->outFILE);
 		if (unlikely(ret != nmemb))
 			fatal_return(("Failed to fwrite %'"PRId32" bytes in fwrite_stdout\n", nmemb), false);
@@ -523,7 +526,10 @@ bool write_fdout(rzip_control *control, void *buf, i64 len)
 	ssize_t ret, nmemb;
 
 	while (len > 0) {
-		nmemb = MIN(len, one_g);
+		if (BITS32)
+			nmemb = MIN(len, one_g);
+		else
+			nmemb = len;
 		ret = write(control->fd_out, offset_buf, (size_t)nmemb);
 		if (unlikely(ret != nmemb))
 			fatal_return(("Failed to write %'"PRId32" bytes to fd_out in write_fdout\n", nmemb), false);
@@ -587,7 +593,10 @@ bool write_fdin(rzip_control *control)
 	ssize_t ret;
 
 	while (len > 0) {
-		ret = MIN(len, one_g);
+		if (BITS32)
+			ret = MIN(len, one_g);
+		else
+			ret = len;
 		ret = write(control->fd_in, offset_buf, (size_t)ret);
 		if (unlikely(ret <= 0))
 			fatal_return(("Failed to write to fd_in in write_fdin\n"), false);
@@ -1550,7 +1559,7 @@ bool decompress_file(rzip_control *control)
 			if (FORCE_REPLACE && !TEST_ONLY)
 				print_err("Warning, inadequate free space detected, but attempting to decompress file due to -f option being used.\n");
 			else
-				failure_return(("Inadequate free space to %s. Space needed: %'"PRId32". Space available: %'"PRId32".\nTry %s and \
+				failure_return(("Inadequate free space to %s. Space needed: %'"PRId64". Space available: %'"PRId64".\nTry %s and \
 select a larger volume.\n",
 					TEST_ONLY ? "test file" : "decompress file. Use -f to override", expected_size, free_space,
 					TEST_ONLY ? "setting `TMP=dirname`" : "using `-O dirname` or `-o [dirname/]filename` options"),
@@ -1582,7 +1591,7 @@ select a larger volume.\n",
 
 	// vailidate file on decompression or test
 	if (STDIN)
-		print_err("Unable to validate a file from STDIN. To validate, check file directly.");
+		print_err("Unable to validate a file from STDIN. To validate, check file directly.\n");
 	else {
 		print_progress("Validating file for consistency...");
 		if (unlikely((get_fileinfo(control)) == false))
@@ -1593,8 +1602,14 @@ select a larger volume.\n",
 	show_version(control);	// show version here to preserve output formatting
 	print_progress("Decompressing...");
 
-	if (unlikely(runzip_fd(control, fd_in, fd_out, fd_hist, expected_size) < 0))
+	if (unlikely(runzip_fd(control, fd_in, fd_out, fd_hist, expected_size) < 0)) {
+		clear_rulist(control);
 		return false;
+	}
+
+	/* We can now safely delete sinfo and pthread data of all threads
+	* created. */
+	clear_rulist(control);
 
 	if (STDOUT && !TMP_OUTBUF) {
 		if (unlikely(!dump_tmpoutfile(control, fd_out)))
