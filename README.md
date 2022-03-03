@@ -1,6 +1,8 @@
 lrzip-next - Long Range ZIP
 ======================
 
+**This is the whats-next branch of `lrzip-next`. Here new features will be tested.**
+
 ## NEW: LZMA SDK 21.06 (Feb 2022)
 
 Tag v0.8.10
