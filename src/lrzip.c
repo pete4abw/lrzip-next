@@ -1312,12 +1312,6 @@ bool compress_file(rzip_control *control)
 	memset(header, 0, sizeof(header));
 
 	if (!STDIN) {
-		 /* is extension at end of infile? */
-		if ((tmp = strrchr(control->infile, '.')) && !strcmp(tmp, control->suffix)) {
-			print_err("%s: already has %s suffix. Skipping...\n", control->infile, control->suffix);
-			return false;
-		}
-
 		fd_in = open(control->infile, O_RDONLY);
 		if (unlikely(fd_in == -1))
 			fatal_return(("Failed to open %s\n", control->infile), false);
@@ -1326,18 +1320,7 @@ bool compress_file(rzip_control *control)
 
 	if (!STDOUT) {
 		if (control->outname) {
-				/* check if outname has control->suffix */
-				if (*(control->suffix) == '\0') /* suffix is empty string */
-					control->outfile = strdup(control->outname);
-				else if ((tmp=strrchr(control->outname, '.')) && strcmp(tmp, control->suffix)) {
-					control->outfile = malloc(strlen(control->outname) + strlen(control->suffix) + 1);
-					if (unlikely(!control->outfile))
-						fatal_goto(("Failed to allocate outfile name\n"), error);
-					strcpy(control->outfile, control->outname);
-					strcat(control->outfile, control->suffix);
-					print_output("Suffix added to %s.\nFull pathname is: %s\n", control->outname, control->outfile);
-				} else	/* no, already has suffix */
-					control->outfile = strdup(control->outname);
+			control->outfile = strdup(control->outname);
 		} else {
 			/* default output name from control->infile
 			 * test if outdir specified. If so, strip path from filename of
@@ -1360,6 +1343,9 @@ bool compress_file(rzip_control *control)
 			strcat(control->outfile, control->suffix);
 			print_output("Output filename is: %s\n", control->outfile);
 		}
+
+		if (!strcmp(control->infile, control->outfile))
+			fatal_return(("Input and Output files are the same. %s. Exiting\n",control->infile),false);
 
 		fd_out = open(control->outfile, O_RDWR | O_CREAT | O_EXCL, 0666);
 		if (FORCE_REPLACE && (-1 == fd_out) && (EEXIST == errno)) {
@@ -1664,7 +1650,6 @@ bool initialise_control(rzip_control *control)
 	control->msgerr = stderr;
 	register_outputfile(control, control->msgout);
 	control->flags = FLAG_SHOW_PROGRESS | FLAG_KEEP_FILES | FLAG_THRESHOLD;
-	control->suffix = ".lrz";
 	control->filter_flag = 0;		/* filter flag. Default to none */
 	control->compression_level = 7;		/* compression level default */
 	control->rzip_compression_level = 0;	/* rzip compression level default will equal compression level unless explicitly set */

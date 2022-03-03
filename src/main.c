@@ -391,6 +391,7 @@ int main(int argc, char *argv[])
 	extern int optind;
 	char *eptr, *av; /* for environment */
 	char *endptr = NULL;
+	char *pwd = NULL;
 
 	setlocale(LC_ALL, "");	/* for printf features */
 
@@ -428,6 +429,8 @@ int main(int argc, char *argv[])
 		options_file = read_config(control);
 	if (options_file && (control->flags & FLAG_NOT_LZMA))		/* if some compression set in lrzip.conf    */
 		conf_file_compression_set = true;			/* need this to allow command line override */
+
+	pwd = getenv("PWD");						/* get PWD for output directory test */
 
 	while ((c = getopt_long(argc, argv, compat ? coptions : loptions, long_options, &long_opt_index)) != -1) {
 		switch (c) {
@@ -476,7 +479,7 @@ int main(int argc, char *argv[])
 		case 'e':
 			control->flags |= FLAG_ENCRYPT;
 			if (optarg)
-				control->passphrase = optarg;
+				control->passphrase = strdup(optarg);
 			break;
 		case 'E':	// Encryption code
 			if (!optarg)
@@ -554,20 +557,21 @@ int main(int argc, char *argv[])
 				failure("Cannot have -o and -O together\n");
 			if (unlikely(STDOUT))
 				failure("Cannot specify an output filename when outputting to stdout\n");
-			control->outname = optarg;
-			control->suffix = "";
+			control->outname = strdup(optarg);
 			break;
 		case 'O':
 			if (control->outname)	/* can't mix -o and -O */
 				failure("Cannot have options -o and -O together\n");
 			if (unlikely(STDOUT))
 				failure("Cannot specify an output directory when outputting to stdout\n");
-			control->outdir = malloc(strlen(optarg) + 2);
-			if (control->outdir == NULL)
-				fatal("Failed to allocate for outdir\n");
-			strcpy(control->outdir,optarg);
-			if (strcmp(optarg+strlen(optarg) - 1, "/")) 	/* need a trailing slash */
-				strcat(control->outdir, "/");
+			if (strcmp(optarg, pwd)) {	/* if pwd is different than optarg, assign */
+				control->outdir = malloc(strlen(optarg) + 2);
+				if (control->outdir == NULL)
+					fatal("Failed to allocate for outdir\n");
+				strcpy(control->outdir,optarg);
+				if (strcmp(optarg+strlen(optarg) - 1, "/")) 	/* need a trailing slash */
+					strcat(control->outdir, "/");
+			}
 			break;
 		case 'p':
 			control->threads = strtol(optarg, &endptr, 10);
@@ -590,7 +594,7 @@ int main(int argc, char *argv[])
 				failure("Specified output filename already, can't specify an extension.\n");
 			if (unlikely(STDOUT))
 				failure("Cannot specify a filename suffix when outputting to stdout\n");
-			control->suffix = optarg;
+			control->suffix = strdup(optarg);
 			break;
 		case 't':
 			if (control->outname)
@@ -747,8 +751,11 @@ int main(int argc, char *argv[])
 		if (recurse)
 			failure("Cannot specify output filename with recursive\n");
 	}
-
+	/* set suffix to default .lrz IF outname not defined */
+	if ( !control->suffix && !control->outname) control->suffix = strdup(".lrz");
+	/* IF hash method not defined, make it MD5 */
 	if ( !control->hash_code ) control->hash_code = 1;
+	/* IF using encryption and encryption method not defined, make it AES128 */
 	if ( ENCRYPT && !control->enc_code ) control->enc_code = 1;
 
 	/* now set hash, crc, or encryption pointers
