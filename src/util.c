@@ -387,6 +387,14 @@ bool read_config(rzip_control *control)
 				failure_return(("CONF FILE error. Dictionary Size must be between 0 and 40."), false);
 			control->dictSize = ((p == 40) ? 0xFFFFFFFF : ((2 | ((p) & 1)) << ((p) / 2 + 11)));	// Slight modification to lzma2 spec 2^31 OK
 		}
+		else if (isparameter(parameter, "locale")) {
+			if (!isparameter(parametervalue, "DEFAULT")) {
+				if (isparameter(parametervalue, "NONE"))
+					control->locale = NULL;
+				else
+					control->locale = strdup(parametervalue);
+			}
+		}
 		else {
 			/* oops, we have an invalid parameter, display */
 			print_err("lrzip.conf: Unrecognized parameter value, %s = %s. Continuing.\n",\

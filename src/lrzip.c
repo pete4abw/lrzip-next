@@ -1646,6 +1646,7 @@ bool initialise_control(rzip_control *control)
 	size_t len;
 
 	memset(control, 0, sizeof(rzip_control));
+	control->locale = "";			/* empty string for default locale */
 	control->msgout = stderr;
 	control->msgerr = stderr;
 	register_outputfile(control, control->msgout);

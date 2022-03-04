@@ -1,3 +1,12 @@
+whats-next: March 2022
+LOCALE can be overridden in lrzip.conf
+A user complained that using localized redix and separators
+made confusing output. Now, a specific country locale can
+be used or not.
+LOCALE = DEFAULT (not necessary but will default to current locale)
+LOCALE = NONE (ignore any localized settings)
+LOCALE = locale (e.g. en_US, it_IT, en_AU)
+
 lrzip-next v0.8.10
 Upstream fixes, merge in whats-next.
 

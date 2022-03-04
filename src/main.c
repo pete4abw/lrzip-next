@@ -393,8 +393,6 @@ int main(int argc, char *argv[])
 	char *endptr = NULL;
 	char *pwd = NULL;
 
-	setlocale(LC_ALL, "");	/* for printf features */
-
         control = &base_control;
 
 	initialise_control(control);
@@ -431,6 +429,8 @@ int main(int argc, char *argv[])
 		conf_file_compression_set = true;			/* need this to allow command line override */
 
 	pwd = getenv("PWD");						/* get PWD for output directory test */
+
+	setlocale(LC_NUMERIC, control->locale);				/* for printf features. Defailt is current locale */
 
 	while ((c = getopt_long(argc, argv, compat ? coptions : loptions, long_options, &long_opt_index)) != -1) {
 		switch (c) {

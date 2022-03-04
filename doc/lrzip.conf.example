@@ -80,3 +80,8 @@
 # See CURRENT_ENCMETHODS for list.
 # ENCRYPT = NO
 # ENCRYPT = 1..MAXENC
+
+# Override default LOCALE
+# Will control how radix and separators are presented.
+# DEFAULT (Current locale), NONE (ignore locale setting), or LOCALE value
+# LOCALE = DEFAULT

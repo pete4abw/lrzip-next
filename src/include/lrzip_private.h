@@ -447,6 +447,7 @@ struct rzip_state {
 
 /* lrzip library callback code removed */
 struct rzip_control {
+	char *locale;			// locale code
 	char *infile;
 	FILE *inFILE; 			// if a FILE is being read from
 	char *outname;
