@@ -17,7 +17,6 @@ AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE([1.6 dist-bzip2 foreign subdir-objects])
 AC_USE_SYSTEM_EXTENSIONS
 
-AC_PROG_LIBTOOL
 LT_INIT
 
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
@@ -44,24 +43,45 @@ AC_SUBST(SHELL)
 AC_SYS_LARGEFILE
 AC_FUNC_FSEEKO
 AC_FUNC_ALLOCA
-AC_PROG_CC_C99
-AS_IF([test x"$ac_cv_prog_cc_c99" = x"no"],
-	AC_MSG_ERROR([C compiler does not support C99], 1))
+
+AS_IF([test x"$ac_cv_prog_cc_c99" = xno],
+	AC_MSG_ERROR([C compiler does not support C99]))
+
 AC_CHECK_PROG([HAVE_POD2MAN], [pod2man], [yes])
 AS_IF([test "$HAVE_POD2MAN" != "yes"],
 	AC_MSG_FAILURE([pod2man is needed to generate manual from POD]))
 
+AC_CHECK_SIZEOF(short)
+AC_CHECK_SIZEOF(int)
+AC_CHECK_SIZEOF(long)
+
+## no more 32 bit CPUs
+AS_IF([test $ac_cv_sizeof_long = 4],
+      AC_MSG_ERROR([Size of long type is 4 bytes. 32 bit processors are NO LONGER supported in lrzip-next]))
+
+AC_TYPE_OFF_T
+AC_TYPE_SIZE_T
+AC_C___ATTRIBUTE__
+AC_C_INLINE
+AC_C_BIGENDIAN
+
+static=no
+AC_ARG_ENABLE([static-bin],
+	[AS_HELP_STRING([--enable-static-bin],[Build statically linked binary @<:@default=no@:>@])],
+	[static=$enableval]
+	)
+AM_CONDITIONAL([STATIC], [test x"$static" = xyes])
 
 AC_ARG_ENABLE(
 		asm,
-		[AC_HELP_STRING([--enable-asm],[Enable native Assembly code])],
+		[AS_HELP_STRING([--enable-asm],[Enable native Assembly code])],
 		ASM=$enableval,
 		ASM=yes
 	)
 
-if test x"$ASM" = x"yes"; then
+if test x"$ASM" = xyes; then
 	AC_CHECK_PROGS( ASM_PROG, nasm yasm, no,  ) # Allow test for multiple Assemblers.
-	if test x"$ASM_PROG" = x"no"; then
+	if test x"$ASM_PROG" = xno; then
 		ASM=no
 	fi
 ## only x86_64
@@ -75,21 +95,14 @@ if test x"$ASM" = x"yes"; then
 	esac
 fi
 
-if test x"$ASM" = x"no"; then
+if test x"$ASM" = xno; then
 	ASM_PROG=
 	ASM_OPT=
 	ASM=
 fi
-AM_CONDITIONAL([USE_ASM], [test x"$ASM" = x"yes"])
+AM_CONDITIONAL([USE_ASM], [test x"$ASM" = xyes])
 AC_SUBST(ASM_OPT)
 AC_SUBST(ASM_PROG)
-
-static=no
-AC_ARG_ENABLE([static-bin],
-	[AC_HELP_STRING([--enable-static-bin],[Build statically linked binary @<:@default=no@:>@])],
-	[static=$enableval]
-	)
-AM_CONDITIONAL([STATIC], [test x"$static" = x"yes"])
 
 AC_CHECK_HEADERS(fcntl.h sys/time.h unistd.h sys/mman.h)
 AC_CHECK_HEADERS(ctype.h errno.h sys/resource.h)
@@ -97,18 +110,7 @@ AC_CHECK_HEADERS(endian.h sys/endian.h arpa/inet.h)
 AC_CHECK_HEADERS(alloca.h pthread.h)
 AC_CHECK_HEADERS(gcrypt.h gpg-error.h)
 
-AC_TYPE_OFF_T
-AC_TYPE_SIZE_T
-AC_C___ATTRIBUTE__
-AC_CHECK_SIZEOF(int)
-AC_CHECK_SIZEOF(long)
-AC_CHECK_SIZEOF(short)
-
 # remove rzip large file check. From version 0.24!
-
-AC_C_INLINE
-
-AC_C_BIGENDIAN
 
 AC_CHECK_LIB(pthread, pthread_create, ,
 	AC_MSG_ERROR([Could not find pthread library - please install libpthread]))
@@ -156,7 +158,7 @@ doc/Makefile
 man/Makefile
 ])
 
-AS_IF([test x"$ASM" = x"yes"],
+AS_IF([test x"$ASM" = xyes],
       AC_CONFIG_FILES([src/lzma/ASM/Makefile]),[echo "Not making ASM Makefile"])
 
 AC_OUTPUT
@@ -182,7 +184,7 @@ echo "  CPPFLAGS.............: $CPPFLAGS"
 echo "  CFLAGS...............: $CFLAGS"
 echo "  CXXFLAGS.............: $CXXFLAGS"
 echo -n "  ASM..................: "
-if test x"$ASM" != x"yes"; then
+if test x"$ASM" != xyes; then
 	echo "no"
 else
 	echo "$ASM, using $ASM_PROG Assembler"
@@ -192,7 +194,7 @@ echo "  LDFLAGS..............: $LDFLAGS"
 echo
 echo "Installation...........: make install (as root if needed, with 'su' or 'sudo')"
 echo "  prefix...............: $prefix"
-if test x"$static" = x"yes"; then
+if test x"$static" = xyes; then
 gver=$(ldd --version | head -n1 | rev | cut -f1 -d\ | rev)
 	echo "WARNING: Static Binary will require runtime glibc libraries of the same version used to link it here: $gver. Therefore static binary may not be portable to other systems."
 fi
