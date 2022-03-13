@@ -37,6 +37,9 @@ Many new changes, not in the main branch, including:
 * 13 Hash options (see CURRENT_HASHES)
 * 2 Encryption options (see CURRENT_ENCMETHODS)
 * Configurable with `lrzip.conf` file
+* Configurable LOCALE settings via lrzip.conf
+* Update autofoo to remove obsolete macros
+* REMOVE 32-BIT Architecture support
 
 (See original README for more historical info)
 

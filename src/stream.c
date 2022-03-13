@@ -670,10 +670,7 @@ ssize_t write_1g(rzip_control *control, void *buf, i64 len)
 
 	total = 0;
 	while (len > 0) {
-		if (BITS32)
-			ret = MIN(len, one_g);
-		else
-			ret = len;
+		ret = len;
 		ret = put_fdout(control, offset_buf, (size_t)ret);
 		if (unlikely(ret <= 0))
 			return ret;
@@ -748,10 +745,7 @@ ssize_t read_1g(rzip_control *control, int fd, void *buf, i64 len)
 read_fd:
 	total = 0;
 	while (len > 0) {
-		if (BITS32)
-			ret = MIN(len, one_g);
-		else
-			ret = len;
+		ret = len;
 		ret = read(fd, offset_buf, (size_t)ret);
 		if (unlikely(ret <= 0))
 			return ret;
@@ -1064,13 +1058,7 @@ retry_zpaq:
 
 		save_threads = control->threads;			// preserve thread count. Important
 
-		/* someday, get rid of 32 bit */
-		if (BITS32) {
-			limit = MIN(limit, one_g);
-			if (limit + (control->overhead * control->threads) > one_g)
-				limit = one_g - (control->overhead * control->threads);
-		}
-		/* limit already set and not 32 bit */
+		/* Bye bye 32 bit */
 		/* check control->st_size. If compressing a file, check the following:
 		 * 1. if control->st_size > limit, make sure limit not > than chunk_limit
 		 * 2. if control->st_size = 0, then same test as 1
@@ -1078,7 +1066,7 @@ retry_zpaq:
 		 * control->sb.orig_size has buffering info, but only for rzip pre-processing
 		 * This will hopefully force all threads to be used based on computed overhead
 		 */
-		else if (control->st_size > 0 && control->st_size < limit)
+		if (control->st_size > 0 && control->st_size < limit)
 			limit = MAX(control->st_size, STREAM_BUFSIZE);
 		/* test limit against chunk_limit */
 		else if (limit > chunk_limit)

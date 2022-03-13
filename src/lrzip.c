@@ -505,10 +505,7 @@ static bool fwrite_stdout(rzip_control *control, void *buf, i64 len)
 
 	total = 0;
 	while (len > 0) {
-		if (BITS32)
-			nmemb = MIN(len, one_g);
-		else
-			nmemb = len;
+		nmemb = len;
 		ret = fwrite(offset_buf, 1, nmemb, control->outFILE);
 		if (unlikely(ret != nmemb))
 			fatal_return(("Failed to fwrite %'"PRId32" bytes in fwrite_stdout\n", nmemb), false);
@@ -526,10 +523,7 @@ bool write_fdout(rzip_control *control, void *buf, i64 len)
 	ssize_t ret, nmemb;
 
 	while (len > 0) {
-		if (BITS32)
-			nmemb = MIN(len, one_g);
-		else
-			nmemb = len;
+		nmemb = len;
 		ret = write(control->fd_out, offset_buf, (size_t)nmemb);
 		if (unlikely(ret != nmemb))
 			fatal_return(("Failed to write %'"PRId32" bytes to fd_out in write_fdout\n", nmemb), false);
@@ -593,10 +587,7 @@ bool write_fdin(rzip_control *control)
 	ssize_t ret;
 
 	while (len > 0) {
-		if (BITS32)
-			ret = MIN(len, one_g);
-		else
-			ret = len;
+		ret = len;
 		ret = write(control->fd_in, offset_buf, (size_t)ret);
 		if (unlikely(ret <= 0))
 			fatal_return(("Failed to write to fd_in in write_fdin\n"), false);
@@ -741,8 +732,7 @@ void close_tmpoutbuf(rzip_control *control)
 {
 	control->flags &= ~FLAG_TMP_OUTBUF;
 	dealloc(control->tmp_outbuf);
-	if (!BITS32)
-		control->usable_ram = control->maxram += control->ramsize / 18;
+	control->usable_ram = control->maxram += control->ramsize / 18;
 }
 
 static bool open_tmpinbuf(rzip_control *control)
@@ -774,8 +764,7 @@ void close_tmpinbuf(rzip_control *control)
 {
 	control->flags &= ~FLAG_TMP_INBUF;
 	dealloc(control->tmp_inbuf);
-	if (!BITS32)
-		control->usable_ram = control->maxram += control->ramsize / 18;
+	control->usable_ram = control->maxram += control->ramsize / 18;
 }
 
 static int get_pass(rzip_control *control, char *s)

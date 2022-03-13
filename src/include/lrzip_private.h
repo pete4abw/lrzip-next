@@ -281,8 +281,6 @@ static inline unsigned char lzma2_prop_from_dic(u32 dicSize)
 
 #define NO_HASH		(!(HASH_CHECK) && !(HAS_HASH))
 
-#define BITS32		(sizeof(long) == 4)
-
 #define CTYPE_NONE 3
 #define CTYPE_BZIP2 4
 #define CTYPE_LZO 5

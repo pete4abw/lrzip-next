@@ -6,6 +6,9 @@ be used or not.
 LOCALE = DEFAULT (not necessary but will default to current locale)
 LOCALE = NONE (ignore any localized settings)
 LOCALE = locale (e.g. en_US, it_IT, en_AU)
+Remove support for 32 bit architecture.
+Update autofoo to replace obsolete macros.
+Cleanup configure.ac. Remove rzip large file test from v 0.24
 
 lrzip-next v0.8.10
 Upstream fixes, merge in whats-next.
