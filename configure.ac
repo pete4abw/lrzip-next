@@ -104,14 +104,7 @@ AC_CHECK_SIZEOF(int)
 AC_CHECK_SIZEOF(long)
 AC_CHECK_SIZEOF(short)
 
-AC_CACHE_CHECK([for large file support],rzip_cv_HAVE_LARGE_FILES,[
-AC_RUN_IFELSE([AC_LANG_SOURCE([[
-#include <stdio.h>
-#include <sys/types.h>
-main() { return (sizeof(off_t) == 4); }]])],[rzip_cv_HAVE_LARGE_FILES=yes],[rzip_cv_HAVE_LARGE_FILES=no],[rzip_cv_HAVE_LARGE_FILES=cross])])
-if test x"$rzip_cv_HAVE_LARGE_FILES" = x"yes"; then
-	AC_DEFINE(HAVE_LARGE_FILES, 1, [ ])
-fi
+# remove rzip large file check. From version 0.24!
 
 AC_C_INLINE
 
