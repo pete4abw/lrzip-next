@@ -564,14 +564,12 @@ int main(int argc, char *argv[])
 				failure("Cannot have options -o and -O together\n");
 			if (unlikely(STDOUT))
 				failure("Cannot specify an output directory when outputting to stdout\n");
-			if (strcmp(optarg, pwd)) {	/* if pwd is different than optarg, assign */
-				control->outdir = malloc(strlen(optarg) + 2);
-				if (control->outdir == NULL)
-					fatal("Failed to allocate for outdir\n");
-				strcpy(control->outdir,optarg);
-				if (strcmp(optarg+strlen(optarg) - 1, "/")) 	/* need a trailing slash */
-					strcat(control->outdir, "/");
-			}
+			control->outdir = malloc(strlen(optarg) + 2);
+			if (control->outdir == NULL)
+				fatal("Failed to allocate for outdir\n");
+			strcpy(control->outdir,optarg);
+			if (strcmp(optarg+strlen(optarg) - 1, "/")) 	/* need a trailing slash */
+				strcat(control->outdir, "/");
 			break;
 		case 'p':
 			control->threads = strtol(optarg, &endptr, 10);
