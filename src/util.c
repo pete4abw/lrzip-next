@@ -255,17 +255,17 @@ bool read_config(rzip_control *control)
 		else if (isparameter(parameter, "compressionlevel")) {
 			control->compression_level = atoi(parametervalue);
 			if ( control->compression_level < 1 || control->compression_level > 9 )
-				failure_return(("CONF.FILE error. Compression Level must between 1 and 9"), false);
+				fatal("CONF.FILE error. Compression Level must between 1 and 9\n");
 		}
 		else if (isparameter(parameter, "rziplevel")) {
 			control->rzip_compression_level = atoi(parametervalue);
 			if ( control->rzip_compression_level < 1 || control->rzip_compression_level > 9 )
-				failure_return(("CONF.FILE error. RZIP Compression Level must between 1 and 9"), false);
+				fatal("CONF.FILE error. RZIP Compression Level must between 1 and 9\n");
 		}
 		else if (isparameter(parameter, "compressionmethod")) {
 			/* valid are rzip, gzip, bzip2, lzo, lzma (default), and zpaq */
 			if (control->flags & FLAG_NOT_LZMA)
-				failure_return(("CONF.FILE error. Can only specify one compression method"), false);
+				fatal("CONF.FILE error. Can only specify one compression method\n");
 			if (isparameter(parametervalue, "bzip2"))
 				control->flags |= FLAG_BZIP2_COMPRESS;
 			else if (isparameter(parametervalue, "gzip"))
@@ -277,7 +277,7 @@ bool read_config(rzip_control *control)
 			else if (isparameter(parametervalue, "zpaq"))
 				control->flags |= FLAG_ZPAQ_COMPRESS;
 			else if (!isparameter(parametervalue, "lzma")) /* oops, not lzma! */
-				failure_return(("CONF.FILE error. Invalid compression method %s specified\n",parametervalue), false);
+				fatal("CONF.FILE error. Invalid compression method %s specified\n", parametervalue);
 		}
 		else if (isparameter(parameter, "lzotest")) {
 			/* default is yes */
@@ -288,7 +288,7 @@ bool read_config(rzip_control *control)
 			/* default is 100 */
 			control->threshold = atoi(parametervalue);
 			if (control->threshold < 1 || control->threshold > 99)
-				failure_return(("CONF.FILE error. LZO Threshold must be between 1 and 99"), false);
+				fatal("CONF.FILE error. LZO Threshold must be between 1 and 99\n");
 		}
 		else if (isparameter(parameter, "hashcheck")) {
 			if (isparameter(parametervalue, "yes")) {
@@ -310,14 +310,14 @@ bool read_config(rzip_control *control)
 		else if (isparameter(parameter, "outputdirectory")) {
 			control->outdir = malloc(strlen(parametervalue) + 2);
 			if (!control->outdir)
-				fatal_return(("Fatal Memory Error in read_config"), false);
+				fatal("Fatal Memory Error in read_config\n");
 			strcpy(control->outdir, parametervalue);
 			if (strcmp(parametervalue + strlen(parametervalue) - 1, "/"))
 				strcat(control->outdir, "/");
 		}
 		else if (isparameter(parameter,"verbosity")) {
 			if (control->flags & FLAG_VERBOSE)
-				failure_return(("CONF.FILE error. Verbosity already defined."), false);
+				fatal("CONF.FILE error. Verbosity already defined.\n");
 			if (isparameter(parametervalue, "yes"))
 				control->flags |= FLAG_VERBOSITY;
 			else if (isparameter(parametervalue,"max"))
@@ -333,7 +333,7 @@ bool read_config(rzip_control *control)
 		else if (isparameter(parameter,"nice")) {
 			control->nice_val = atoi(parametervalue);
 			if (control->nice_val < -20 || control->nice_val > 19)
-				failure_return(("CONF.FILE error. Nice must be between -20 and 19"), false);
+				fatal("CONF.FILE error. Nice must be between -20 and 19\n");
 		}
 		else if (isparameter(parameter, "keepbroken")) {
 			if (isparameter(parametervalue, "yes" ))
@@ -352,7 +352,7 @@ bool read_config(rzip_control *control)
 		else if (isparameter(parameter, "tmpdir")) {
 			control->tmpdir = realloc(NULL, strlen(parametervalue) + 2);
 			if (!control->tmpdir)
-				fatal_return(("Fatal Memory Error in read_config"), false);
+				fatal("Fatal Memory Error in read_config\n");
 			strcpy(control->tmpdir, parametervalue);
 			if (strcmp(parametervalue + strlen(parametervalue) - 1, "/"))
 				strcat(control->tmpdir, "/");
@@ -372,7 +372,7 @@ bool read_config(rzip_control *control)
 			int p;
 			p = atoi(parametervalue);
 			if (p < 0 || p > 40)
-				failure_return(("CONF FILE error. Dictionary Size must be between 0 and 40."), false);
+				fatal("CONF FILE error. Dictionary Size must be between 0 and 40.\n");
 			control->dictSize = ((p == 40) ? 0xFFFFFFFF : ((2 | ((p) & 1)) << ((p) / 2 + 11)));	// Slight modification to lzma2 spec 2^31 OK
 		}
 		else if (isparameter(parameter, "locale")) {
@@ -391,7 +391,7 @@ bool read_config(rzip_control *control)
 	}
 
 	if (unlikely(fclose(fp)))
-		fatal_return(("Failed to fclose fp in read_config\n"), false);
+		fatal("Failed to fclose fp in read_config\n");
 
 /*	fprintf(stderr, "\nWindow = %'d \
 		\nCompression Level = %'d \
@@ -469,27 +469,27 @@ bool lrz_crypt(const rzip_control *control, uchar *buf, i64 len, const uchar *sa
 	 */
 	gcry_error=gcry_cipher_open(&gcry_aes_cbc_handle, *control->enc_gcode, GCRY_CIPHER_MODE_CBC, GCRY_CIPHER_SECURE | GCRY_CIPHER_CBC_CTS);
 	if (unlikely(gcry_error))
-		failure_goto(("Unable to set AES CBC handle in lrz_crypt: %'d\n", gcry_error), error);
+		fatal("Unable to set AES CBC handle in lrz_crypt: %'d\n", gcry_error);
 	gcry_error=gcry_cipher_setkey(gcry_aes_cbc_handle, key, *control->enc_keylen);
 	if (unlikely(gcry_error))
-		failure_goto(("Failed to set AES CBC key in lrz_crypt: %'d\n", gcry_error), error);
+		fatal("Failed to set AES CBC key in lrz_crypt: %'d\n", gcry_error);
 	gcry_error=gcry_cipher_setiv(gcry_aes_cbc_handle, iv, *control->enc_ivlen);
 	if (unlikely(gcry_error))
-		failure_goto(("Failed to set AES CBC iv in lrz_crypt: %'d\n", gcry_error), error);
+		fatal("Failed to set AES CBC iv in lrz_crypt: %'d\n", gcry_error);
 
 	if (encrypt == LRZ_ENCRYPT) {
 		print_maxverbose("Encrypting data        \n");
 		/* Encrypt whole buffer */
 		gcry_error=gcry_cipher_encrypt(gcry_aes_cbc_handle, buf, len, NULL, 0);
 		if (unlikely(gcry_error))
-			failure_goto(("Failed to encrypt AES CBC data in lrz_crypt: %'d\n", gcry_error), error);
+			fatal("Failed to encrypt AES CBC data in lrz_crypt: %'d\n", gcry_error);
 	} else { //LRZ_DECRYPT or LRZ_VALIDATE
 		if (encrypt == LRZ_DECRYPT)	// don't print if validating or in info
 			print_maxverbose("Decrypting data        \n");
 		/* Decrypt whole buffer */
 		gcry_error=gcry_cipher_decrypt(gcry_aes_cbc_handle, buf, len, NULL, 0);
 		if (unlikely(gcry_error))
-				failure_goto(("Failed to decrypt AES CBC data in lrz_crypt: %'d\n", gcry_error), error);
+				fatal("Failed to decrypt AES CBC data in lrz_crypt: %'d\n", gcry_error);
 	}
 	gcry_cipher_close(gcry_aes_cbc_handle);
 

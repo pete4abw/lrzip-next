@@ -353,13 +353,13 @@ static void recurse_dirlist(char *indir, char **dirlist, int *entries)
 
 	dirp = opendir(indir);
 	if (unlikely(!dirp))
-		failure("Unable to open directory %s\n", indir);
+		fatal("Unable to open directory %s\n", indir);
 	while ((dp = readdir(dirp)) != NULL) {
 		if (!strcmp(dp->d_name, ".") || !strcmp(dp->d_name, ".."))
 			continue;
 		sprintf(fname, "%s/%s", indir, dp->d_name);
 		if (unlikely(stat(fname, &istat)))
-			failure("Unable to stat file %s\n", fname);
+			fatal("Unable to stat file %s\n", fname);
 		if (S_ISDIR(istat.st_mode)) {
 			recurse_dirlist(fname, dirlist, entries);
 			continue;
@@ -443,7 +443,7 @@ int main(int argc, char *argv[])
 			 * because conf_file_compression_set will be true
 			 */
 			if ((control->flags & FLAG_NOT_LZMA) && conf_file_compression_set == false)
-				failure("Can only use one of -l, -b, -g, -z or -n\n");
+				fatal("Can only use one of -l, -b, -g, -z or -n\n");
 			/* Select Compression Mode */
 			control->flags &= ~FLAG_NOT_LZMA; 		/* must clear all compressions first */
 			if (c == 'b')
@@ -483,10 +483,10 @@ int main(int argc, char *argv[])
 			break;
 		case 'E':	// Encryption code
 			if (!optarg)
-				failure("Enryption method must be declared.\n");
+				fatal("Enryption method must be declared.\n");
 			i=strtol(optarg, &endptr, 10);
 			if (i < 1 || i > MAXENC)
-				failure("Encryption method must be 1 or 2 for AES 128 or 256\n");
+				fatal("Encryption method must be 1 or 2 for AES 128 or 256\n");
 			control->enc_code = i;
 			break;
 		case 'f':
@@ -501,9 +501,9 @@ int main(int argc, char *argv[])
 			if (optarg) {
 				i=strtol(optarg, &endptr, 10);
 				if (*endptr)
-					failure("Extra characters after Hash: \'%s\'\n", endptr);
+					fatal("Extra characters after Hash: \'%s\'\n", endptr);
 				if (i < 1 || i > MAXHASH)
-					failure("Hash codes out of bounds. Must be between 1 and %d.\n", MAXHASH);
+					fatal("Hash codes out of bounds. Must be between 1 and %d.\n", MAXHASH);
 				control->hash_code = i;
 			}
 			break;
@@ -527,43 +527,43 @@ int main(int argc, char *argv[])
 			}
 			control->compression_level = strtol(optarg, &endptr, 10);
 			if (*endptr)
-				failure("Extra characters after compression level: \'%s\'\n", endptr);
+				fatal("Extra characters after compression level: \'%s\'\n", endptr);
 			if (control->compression_level < 1 || control->compression_level > 9)
-				failure("Invalid compression level (must be 1-9)\n");
+				fatal("Invalid compression level (must be 1-9)\n");
 			break;
 		case 'R':
 			/* explicitly set rzip compression level */
 			control->rzip_compression_level = strtol(optarg, &endptr, 10);
 			if (*endptr)
-				failure("Extra characters after rzip compression level: \'%s\'\n", endptr);
+				fatal("Extra characters after rzip compression level: \'%s\'\n", endptr);
 			if (control->rzip_compression_level < 1 || control->rzip_compression_level > 9)
-				failure("Invalid rzip compression level (must be 1-9)\n");
+				fatal("Invalid rzip compression level (must be 1-9)\n");
 			break;
 		case 'm':
 			control->ramsize = strtol(optarg, &endptr, 10) * ONE_MB * 100;
 			if (*endptr)
-				failure("Extra characters after ramsize: \'%s\'\n", endptr);
+				fatal("Extra characters after ramsize: \'%s\'\n", endptr);
 			break;
 		case 'N':
 			nice_set = true;
 			control->nice_val = strtol(optarg, &endptr, 10);
 			if (*endptr)
-				failure("Extra characters after nice level: \'%s\'\n", endptr);
+				fatal("Extra characters after nice level: \'%s\'\n", endptr);
 			if (control->nice_val < PRIO_MIN || control->nice_val > PRIO_MAX)
-				failure("Invalid nice value (must be %'d...%'d)\n", PRIO_MIN, PRIO_MAX);
+				fatal("Invalid nice value (must be %'d...%'d)\n", PRIO_MIN, PRIO_MAX);
 			break;
 		case 'o':
 			if (control->outdir)
-				failure("Cannot have -o and -O together\n");
+				fatal("Cannot have -o and -O together\n");
 			if (unlikely(STDOUT))
-				failure("Cannot specify an output filename when outputting to stdout\n");
+				fatal("Cannot specify an output filename when outputting to stdout\n");
 			control->outname = strdup(optarg);
 			break;
 		case 'O':
 			if (control->outname)	/* can't mix -o and -O */
-				failure("Cannot have options -o and -O together\n");
+				fatal("Cannot have options -o and -O together\n");
 			if (unlikely(STDOUT))
-				failure("Cannot specify an output directory when outputting to stdout\n");
+				fatal("Cannot specify an output directory when outputting to stdout\n");
 			control->outdir = malloc(strlen(optarg) + 2);
 			if (control->outdir == NULL)
 				fatal("Failed to allocate for outdir\n");
@@ -574,9 +574,9 @@ int main(int argc, char *argv[])
 		case 'p':
 			control->threads = strtol(optarg, &endptr, 10);
 			if (*endptr)
-				failure("Extra characters after number of threads: \'%s\'\n", endptr);
+				fatal("Extra characters after number of threads: \'%s\'\n", endptr);
 			if (control->threads < 1)
-				failure("Must have at least one thread\n");
+				fatal("Must have at least one thread\n");
 			break;
 		case 'P':
 			control->flags |= FLAG_SHOW_PROGRESS;
@@ -589,18 +589,18 @@ int main(int argc, char *argv[])
 			break;
 		case 'S':
 			if (control->outname)
-				failure("Specified output filename already, can't specify an extension.\n");
+				fatal("Specified output filename already, can't specify an extension.\n");
 			if (unlikely(STDOUT))
-				failure("Cannot specify a filename suffix when outputting to stdout\n");
+				fatal("Cannot specify a filename suffix when outputting to stdout\n");
 			control->suffix = strdup(optarg);
 			break;
 		case 't':
 			if (control->outname)
-				failure("Cannot specify an output file name when just testing.\n");
+				fatal("Cannot specify an output file name when just testing.\n");
 			if (compat)
 				control->flags |= FLAG_KEEP_FILES;
 			if (!KEEP_FILES)
-				failure("Doubt that you want to delete a file when just testing.\n");
+				fatal("Doubt that you want to delete a file when just testing.\n");
 			control->flags |= FLAG_TEST_ONLY;
 			break;
 		case 'T':
@@ -610,9 +610,9 @@ int main(int argc, char *argv[])
 			if (optarg) {
 				i=strtol(optarg, &endptr, 10);
 				if (*endptr)
-					failure("Extra characters after threshold limit: \'%s\'\n", endptr);
+					fatal("Extra characters after threshold limit: \'%s\'\n", endptr);
 				if (i < 1 || i > 99)
-					failure("Threshhold limits are 1-99\n");
+					fatal("Threshhold limits are 1-99\n");
 				control->threshold = i;
 			} else
 				control->flags &= ~FLAG_THRESHOLD;
@@ -640,9 +640,9 @@ int main(int argc, char *argv[])
 		case 'w':
 			control->window = strtol(optarg, &endptr, 10);
 			if (*endptr)
-				failure("Extra characters after window size: \'%s\'\n", endptr);
+				fatal("Extra characters after window size: \'%s\'\n", endptr);
 			if (control->window < 1)
-				failure("Window must be positive\n");
+				fatal("Window must be positive\n");
 			break;
 		case '1':
 		case '2':
@@ -676,9 +676,9 @@ int main(int argc, char *argv[])
 						else {
 							ds = strtol(optarg, &endptr, 10);
 							if (*endptr)
-								failure("Extra characters after dictionary size: \'%s\'\n", endptr);
+								fatal("Extra characters after dictionary size: \'%s\'\n", endptr);
 							if (ds < 0 || ds > 40)
-								failure("Dictionary Size must be between 0 and 40 for 2^12 (4KB) to 2^31 (4GB)\n");
+								fatal("Dictionary Size must be between 0 and 40 for 2^12 (4KB) to 2^31 (4GB)\n");
 							control->dictSize = LZMA2_DIC_SIZE_FROM_PROP(ds);
 						}
 						break;
@@ -688,9 +688,9 @@ int main(int argc, char *argv[])
 						else {
 							ds = strtol(optarg, &endptr, 10);
 							if (*endptr)
-								failure("Extra characters after block size: \'%s\'\n", endptr);
+								fatal("Extra characters after block size: \'%s\'\n", endptr);
 							if (ds < 0 || ds > 11)
-								failure("ZPAQ Block Size must be between 1 and 11\n");
+								fatal("ZPAQ Block Size must be between 1 and 11\n");
 							control->zpaq_bs = ds;
 						}
 						break;
@@ -719,9 +719,9 @@ int main(int argc, char *argv[])
 						if (optarg) {
 							i=strtol(optarg, &endptr, 10);
 							if (*endptr)
-								failure("Extra characters after delta offset: \'%s\'\n", endptr);
+								fatal("Extra characters after delta offset: \'%s\'\n", endptr);
 							if (i < 1 || i > 32)
-								failure("Delta offset value must be between 1 and 32\n");
+								fatal("Delta offset value must be between 1 and 32\n");
 							control->delta = ( i <= 17 ? i : (i-16) * 16 );
 						} else
 							control->delta = DEFAULT_DELTA;		// 1 is default
@@ -745,9 +745,9 @@ int main(int argc, char *argv[])
 
 	if (control->outname) {
 		if (argc > 1)
-			failure("Cannot specify output filename with more than 1 file\n");
+			fatal("Cannot specify output filename with more than 1 file\n");
 		if (recurse)
-			failure("Cannot specify output filename with recursive\n");
+			fatal("Cannot specify output filename with recursive\n");
 	}
 	/* set suffix to default .lrz IF outname not defined */
 	if ( !control->suffix && !control->outname) control->suffix = strdup(".lrz");
@@ -838,25 +838,25 @@ int main(int argc, char *argv[])
 				struct stat istat;
 
 				if (unlikely(stat(infile, &istat)))
-					failure("Failed to stat %s\n", infile);
+					fatal("Failed to stat %s\n", infile);
 				isdir = S_ISDIR(istat.st_mode);
 				if (!recurse && (isdir || !S_ISREG(istat.st_mode))) {
-					failure("lrzip only works directly on regular FILES.\n"
+					fatal("lrzip only works directly on regular FILES.\n"
 					"Use -r recursive, lrztar or pipe through tar for compressing directories.\n");
 				}
 				if (recurse && !isdir)
-					failure("%s not a directory, -r recursive needs a directory\n", infile);
+					fatal("%s not a directory, -r recursive needs a directory\n", infile);
 			}
 		}
 
 		if (recurse) {
 			if (unlikely(STDIN || STDOUT))
-				failure("Cannot use -r recursive with STDIO\n");
+				fatal("Cannot use -r recursive with STDIO\n");
 			recurse_dirlist(infile, &dirlist, &direntries);
 		}
 
 		if (INFO && STDIN)
-			failure("Will not get file info from STDIN\n");
+			fatal("Will not get file info from STDIN\n");
 recursion:
 		if (recurse) {
 			if (curentry >= direntries) {
@@ -923,9 +923,9 @@ recursion:
 		gettimeofday(&start_time, NULL);
 
 		if (unlikely(STDIN && ENCRYPT && control->passphrase == NULL))
-			failure("Unable to work from STDIN while reading password. Use -e passphrase.\n");
+			fatal("Unable to work from STDIN while reading password. Use -e passphrase.\n");
 		if (unlikely(STDOUT && !(DECOMPRESS || INFO || TEST_ONLY) && ENCRYPT))
-			failure("Unable to encrypt while writing to STDOUT.\n");
+			fatal("Unable to encrypt while writing to STDOUT.\n");
 
 		memcpy(&local_control, &base_control, sizeof(rzip_control));
 		if (DECOMPRESS || TEST_ONLY) {

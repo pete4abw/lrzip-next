@@ -42,14 +42,13 @@ bool lrz_crypt(const rzip_control *control, uchar *buf, i64 len, const uchar *sa
  * Valdidate will suppress printing message during validation or info
  */
 bool decrypt_header(rzip_control *control, uchar *head, uchar *c_type, i64 *c_len, i64 *u_len, i64 *last_head, int decompress_type);
-/* Failure when there is likely to be a meaningful error in perror */
+
 static inline void fatal(const rzip_control *control, unsigned int line, const char *file, const char *func, const char *format, ...)
 {
 	va_list ap;
 	/* lrzip library callback code removed */
 	va_start(ap, format);
 	vfprintf(stderr, format, ap);
-	perror(NULL);
 	va_end(ap);
 	fatal_exit((rzip_control*)control);
 }
@@ -57,36 +56,6 @@ static inline void fatal(const rzip_control *control, unsigned int line, const c
 # undef fatal
 #endif
 #define fatal(...) fatal(control, __LINE__, __FILE__, __func__, __VA_ARGS__)
-#define fatal_return(stuff, ...) do { \
-	fatal stuff; \
-	return __VA_ARGS__; \
-} while (0)
-#define fatal_goto(stuff, label) do { \
-	fatal stuff; \
-	goto label; \
-} while (0)
-static inline void failure(const rzip_control *control, unsigned int line, const char *file, const char *func, const char *format, ...)
-{
-	va_list ap;
-
-	va_start(ap, format);
-	/* lrzip library callback code removed */
-	vfprintf(stderr, format, ap);
-	va_end(ap);
-	fatal_exit((rzip_control*)control);
-}
-#ifdef failure
-# undef failure
-#endif
-#define failure(...) failure(control, __LINE__, __FILE__, __func__, __VA_ARGS__)
-#define failure_return(stuff, ...) do { \
-	failure stuff; \
-	return __VA_ARGS__; \
-} while (0)
-#define failure_goto(stuff, label) do { \
-	failure stuff; \
-	goto label; \
-} while (0)
 
 static inline bool lrz_encrypt(const rzip_control *control, uchar *buf, i64 len, const uchar *salt)
 {

@@ -96,21 +96,21 @@ i64 get_ram(rzip_control *control)
 	if (ramsize <= 0) {
 		/* Workaround for uclibc which doesn't properly support sysconf */
 		if(!(meminfo = fopen("/proc/meminfo", "r")))
-			fatal_return(("Failed to open /proc/meminfo\n"), -1);
+			fatal("Failed to open /proc/meminfo\n");
 
 		while(!feof(meminfo) && !fscanf(meminfo, "MemTotal: %'"PRId64" kB", &ramsize)) {
 			if (unlikely(fgets(aux, sizeof(aux), meminfo) == NULL)) {
 				fclose(meminfo);
-				fatal_return(("Failed to fgets in get_ram\n"), -1);
+				fatal("Failed to fgets in get_ram\n");
 			}
 		}
 		if (fclose(meminfo) == -1)
-			fatal_return(("Failed to close /proc/meminfo"), -1);
+			fatal("Failed to close /proc/meminfo\n");
 		ramsize *= 1024;
 	}
 #endif
 	if (ramsize <= 0)
-		fatal_return(("No memory or can't determine ram? Can't continue.\n"), -1);
+		fatal("No memory or can't determine ram? Can't continue.\n");
 	return ramsize;
 }
 
@@ -182,10 +182,10 @@ bool write_magic(rzip_control *control)
 	}
 
 	if (unlikely(fdout_seekto(control, 0)))
-		fatal_return(("Failed to seek to BOF to write Magic Header\n"), false);
+		fatal("Failed to seek to BOF to write Magic Header\n");
 
 	if (unlikely(put_fdout(control, magic, MAGIC_LEN) != MAGIC_LEN))
-		fatal_return(("Failed to write magic header\n"), false);
+		fatal("Failed to write magic header\n");
 	control->magic_written = 1;
 	return true;
 }
@@ -414,18 +414,18 @@ static bool read_magic(rzip_control *control, int fd_in, i64 *expected_size)
 	memset(magic, 0, sizeof(magic));
 	/* Initially read only file type and version */
 	if (unlikely(read(fd_in, magic, MAGIC_HEADER) != MAGIC_HEADER))
-		fatal_return(("Failed to read initial magic header\n"), false);
+		fatal("Failed to read initial magic header\n");
 
 	if (unlikely(strncmp(magic, "LRZI", 4)))
-		failure_return(("Not an lrzip file\n"), false);
+		fatal("Not an lrzip file\n");
 
 	if (magic[4] == 0 && magic[5] < 8)	// read rest of header
 	{
 		if (unlikely(read(fd_in, &magic[6], OLD_MAGIC_LEN - MAGIC_HEADER) != OLD_MAGIC_LEN - MAGIC_HEADER))
-			fatal_return(("Failed to read magic header\n"), false);
+			fatal("Failed to read magic header\n");
 	} else if (magic[4] == 0 && magic[5] == 8) { // 0.8 file
 		if (unlikely(read(fd_in, &magic[6], MAGIC_LEN - MAGIC_HEADER) != MAGIC_LEN - MAGIC_HEADER))
-			fatal_return(("Failed to read magic header\n"), false);
+			fatal("Failed to read magic header\n");
 	}
 
 	if (unlikely(!get_magic(control, magic)))
@@ -448,7 +448,7 @@ static bool preserve_perms(rzip_control *control, int fd_in, int fd_out)
 	struct stat st;
 
 	if (unlikely(fstat(fd_in, &st)))
-		fatal_return(("Failed to fstat input file\n"), false);
+		fatal("Failed to fstat input file\n");
 	if (unlikely(fchmod(fd_out, (st.st_mode & 0666))))
 		print_verbose("Warning, unable to set permissions on %s\n", control->outfile);
 
@@ -464,7 +464,7 @@ static bool preserve_times(rzip_control *control, int fd_in)
 	struct stat st;
 
 	if (unlikely(fstat(fd_in, &st)))
-		fatal_return(("Failed to fstat input file\n"), false);
+		fatal("Failed to fstat input file\n");
 	times.actime = 0;
 	times.modtime = st.st_mtime;
 	if (unlikely(utime(control->outfile, &times)))
@@ -483,7 +483,7 @@ int open_tmpoutfile(rzip_control *control)
 	if (control->tmpdir) {
 		control->outfile = realloc(NULL, strlen(control->tmpdir) + 16);
 		if (unlikely(!control->outfile))
-			fatal_return(("Failed to allocate outfile name\n"), -1);
+			fatal("Failed to allocate outfile name\n");
 		strcpy(control->outfile, control->tmpdir);
 		strcat(control->outfile, "lrzipout.XXXXXX");
 	}
@@ -508,7 +508,7 @@ static bool fwrite_stdout(rzip_control *control, void *buf, i64 len)
 		nmemb = len;
 		ret = fwrite(offset_buf, 1, nmemb, control->outFILE);
 		if (unlikely(ret != nmemb))
-			fatal_return(("Failed to fwrite %'"PRId32" bytes in fwrite_stdout\n", nmemb), false);
+			fatal("Failed to fwrite %'"PRId32" bytes in fwrite_stdout\n", nmemb);
 		len -= ret;
 		offset_buf += ret;
 		total += ret;
@@ -526,7 +526,7 @@ bool write_fdout(rzip_control *control, void *buf, i64 len)
 		nmemb = len;
 		ret = write(control->fd_out, offset_buf, (size_t)nmemb);
 		if (unlikely(ret != nmemb))
-			fatal_return(("Failed to write %'"PRId32" bytes to fd_out in write_fdout\n", nmemb), false);
+			fatal("Failed to write %'"PRId32" bytes to fd_out in write_fdout\n", nmemb);
 		len -= ret;
 		offset_buf += ret;
 	}
@@ -557,12 +557,12 @@ bool dump_tmpoutfile(rzip_control *control, int fd_out)
 	int tmpchar;
 
 	if (unlikely(fd_out == -1))
-		fatal_return(("Failed: No temporary outfile created, unable to do in ram\n"), false);
+		fatal("Failed: No temporary outfile created, unable to do in ram\n");
 	/* flush anything not yet in the temporary file */
 	fsync(fd_out);
 	tmpoutfp = fdopen(fd_out, "r");
 	if (unlikely(tmpoutfp == NULL))
-		fatal_return(("Failed to fdopen out tmpfile\n"), false);
+		fatal("Failed to fdopen out tmpfile\n");
 	rewind(tmpoutfp);
 
 	if (!TEST_ONLY) {
@@ -574,7 +574,7 @@ bool dump_tmpoutfile(rzip_control *control, int fd_out)
 	}
 
 	if (unlikely(ftruncate(fd_out, 0)))
-		fatal_return(("Failed to ftruncate fd_out in dump_tmpoutfile\n"), false);
+		fatal("Failed to ftruncate fd_out in dump_tmpoutfile\n");
 	return true;
 }
 
@@ -590,7 +590,7 @@ bool write_fdin(rzip_control *control)
 		ret = len;
 		ret = write(control->fd_in, offset_buf, (size_t)ret);
 		if (unlikely(ret <= 0))
-			fatal_return(("Failed to write to fd_in in write_fdin\n"), false);
+			fatal("Failed to write to fd_in in write_fdin\n");
 		len -= ret;
 		offset_buf += ret;
 	}
@@ -606,7 +606,7 @@ int open_tmpinfile(rzip_control *control)
 	if (control->tmpdir) {
 		control->infile = malloc(strlen(control->tmpdir) + 15);
 		if (unlikely(!control->infile))
-			fatal_return(("Failed to allocate infile name\n"), -1);
+			fatal("Failed to allocate infile name\n");
 		strcpy(control->infile, control->tmpdir);
 		strcat(control->infile, "lrzipin.XXXXXX");
 		fd_in = mkstemp(control->infile);
@@ -617,7 +617,7 @@ int open_tmpinfile(rzip_control *control)
 		dealloc(control->infile);
 		control->infile = malloc(16);
 		if (unlikely(!control->infile))
-			fatal_return(("Failed to allocate infile name\n"), -1);
+			fatal("Failed to allocate infile name\n");
 		strcpy(control->infile, "lrzipin.XXXXXX");
 		fd_in = mkstemp(control->infile);
 	}
@@ -627,7 +627,7 @@ int open_tmpinfile(rzip_control *control)
 		dealloc(control->infile);
 		control->infile = malloc(20);
 		if (unlikely(!control->infile))
-			fatal_return(("Failed to allocate infile name\n"), -1);
+			fatal("Failed to allocate infile name\n");
 		strcpy(control->infile, "/tmp/lrzipin.XXXXXX");
 		fd_in = mkstemp(control->infile);
 	}
@@ -638,11 +638,10 @@ int open_tmpinfile(rzip_control *control)
 	} else {
 		register_infile(control, control->infile, (DECOMPRESS || TEST_ONLY) && STDIN);
 		/* Unlink temporary file immediately to minimise chance of files left
-		* lying around in cases of failure_return((. */
+		* lying around */
 		if (unlikely(unlink(control->infile))) {
-			fatal("Failed to unlink tmpfile: %s\n", control->infile);
 			close(fd_in);
-			return -1;
+			fatal("Failed to unlink tmpfile: %s\n", control->infile);
 		}
 	}
 	return fd_in;
@@ -659,7 +658,7 @@ static bool read_tmpinmagic(rzip_control *control)
 	for (i = 0; i < MAGIC_LEN; i++) {
 		tmpchar = getchar();
 		if (unlikely(tmpchar == EOF))
-			failure_return(("Reached end of file on STDIN prematurely on v05 magic read\n"), false);
+			fatal("Reached end of file on STDIN prematurely on v05 magic read\n");
 		magic[i] = (char)tmpchar;
 	}
 	/* if < 0.8 read in last bytes */
@@ -667,7 +666,7 @@ static bool read_tmpinmagic(rzip_control *control)
 		for ( ; i < OLD_MAGIC_LEN; i++) {
 			tmpchar = getchar();
 			if (unlikely(tmpchar == EOF))
-				failure_return(("Reached end of file on STDIN prematurely on v05 magic read\n"), false);
+				fatal("Reached end of file on STDIN prematurely on v05 magic read\n");
 			magic[i] = (char)tmpchar;
 		}
 	}
@@ -687,7 +686,7 @@ bool read_tmpinfile(rzip_control *control, int fd_in)
 		fprintf(control->msgout, "Copying from stdin.\n");
 	tmpinfp = fdopen(fd_in, "w+");
 	if (unlikely(tmpinfp == NULL))
-		fatal_return(("Failed to fdopen in tmpfile\n"), false);
+		fatal("Failed to fdopen in tmpfile\n");
 
 	while ((tmpchar = getchar()) != EOF)
 		fputc(tmpchar, tmpinfp);
@@ -713,7 +712,7 @@ static bool open_tmpoutbuf(rzip_control *control)
 		}
 		maxlen = maxlen / 3 * 2;
 		if (maxlen < 100000000)
-			fatal_return(("Unable to even malloc 100MB for tmp_outbuf\n"), false);
+			fatal("Unable to even malloc 100MB for tmp_outbuf\n");
 	}
 	control->flags |= FLAG_TMP_OUTBUF;
 	/* Allocate slightly more so we can cope when the buffer overflows and
@@ -741,7 +740,7 @@ static bool open_tmpinbuf(rzip_control *control)
 	control->in_maxlen = control->maxram;
 	control->tmp_inbuf = malloc(control->maxram + control->page_size);
 	if (unlikely(!control->tmp_inbuf))
-		fatal_return(("Failed to malloc tmp_inbuf in open_tmpinbuf\n"), false);
+		fatal("Failed to malloc tmp_inbuf in open_tmpinbuf\n");
 	return true;
 }
 
@@ -753,9 +752,9 @@ void clear_tmpinbuf(rzip_control *control)
 bool clear_tmpinfile(rzip_control *control)
 {
 	if (unlikely(lseek(control->fd_in, 0, SEEK_SET)))
-		fatal_return(("Failed to lseek on fd_in in clear_tmpinfile\n"), false);
+		fatal("Failed to lseek on fd_in in clear_tmpinfile\n");
 	if (unlikely(ftruncate(control->fd_in, 0)))
-		fatal_return(("Failed to truncate fd_in in clear_tmpinfile\n"), false);
+		fatal("Failed to truncate fd_in in clear_tmpinfile\n");
 	return true;
 }
 
@@ -775,7 +774,7 @@ static int get_pass(rzip_control *control, char *s)
 	if (control->passphrase)
 		strncpy(s, control->passphrase, PASS_LEN - SALT_LEN - 1);
 	else if (unlikely(fgets(s, PASS_LEN - SALT_LEN, stdin) == NULL))
-		failure_return(("Failed to retrieve passphrase\n"), -1);
+		fatal("Failed to retrieve passphrase\n");
 	len = strlen(s);
 	if (len > 0 && ('\r' ==  s[len - 1] || '\n' == s[len - 1]))
 		s[len - 1] = '\0';
@@ -783,7 +782,7 @@ static int get_pass(rzip_control *control, char *s)
 		s[len - 2] = '\0';
 	len = strlen(s);
 	if (unlikely(0 == len))
-		failure_return(("Empty passphrase\n"), -1);
+		fatal("Empty passphrase\n");
 	return len;
 }
 
@@ -798,12 +797,11 @@ static bool get_hash(rzip_control *control, int make_hash)
 	control->salt_pass = calloc(PASS_LEN, 1);
 	control->hash = calloc(HASH_LEN, 1);
 	if (unlikely(!passphrase || !testphrase || !control->salt_pass || !control->hash)) {
-		fatal("Failed to calloc encrypt buffers in get_hash\n");
 		dealloc(testphrase);
 		dealloc(passphrase);
 		dealloc(control->salt_pass);
 		dealloc(control->hash);
-		return false;
+		fatal("Failed to calloc encrypt buffers in get_hash\n");
 	}
 	mlock(passphrase, PASS_LEN);
 	mlock(testphrase, PASS_LEN);
@@ -864,10 +862,10 @@ bool get_header_info(rzip_control *control, int fd_in, uchar *ctype, i64 *c_len,
 		// read in salt
 		// first 8 bytes, instead of chunk bytes and size
 		if (unlikely(read(fd_in, enc_head, SALT_LEN) != SALT_LEN))
-			fatal_return(("Failed to read encrypted header in get_header_info\n"), false);
+			fatal("Failed to read encrypted header in get_header_info\n");
 	}
 	if (unlikely(read(fd_in, ctype, 1) != 1))
-		fatal_return(("Failed to read in get_header_info\n"), false);
+		fatal("Failed to read in get_header_info\n");
 
 	*c_len = *u_len = *last_head = 0;
 	if (control->major_version == 0) {
@@ -875,11 +873,11 @@ bool get_header_info(rzip_control *control, int fd_in, uchar *ctype, i64 *c_len,
 			u32 c_len32, u_len32, last_head32;
 
 			if (unlikely(read(fd_in, &c_len32, 4) != 4))
-				fatal_return(("Failed to read in get_header_info"), false);
+				fatal("Failed to read in get_header_info\n");
 			if (unlikely(read(fd_in, &u_len32, 4) != 4))
-				fatal_return(("Failed to read in get_header_info"), false);
+				fatal("Failed to read in get_header_info\n");
 			if (unlikely(read(fd_in, &last_head32, 4) != 4))
-				fatal_return(("Failed to read in get_header_info"), false);
+				fatal("Failed to read in get_header_info\n");
 			c_len32 = le32toh(c_len32);
 			u_len32 = le32toh(u_len32);
 			last_head32 = le32toh(last_head32);
@@ -895,18 +893,18 @@ bool get_header_info(rzip_control *control, int fd_in, uchar *ctype, i64 *c_len,
 			else
 				read_len = chunk_bytes;
 			if (unlikely(read(fd_in, c_len, read_len) != read_len))
-				fatal_return(("Failed to read in get_header_info"), false);
+				fatal("Failed to read in get_header_info\n");
 			if (unlikely(read(fd_in, u_len, read_len) != read_len))
-				fatal_return(("Failed to read in get_header_info"), false);
+				fatal("Failed to read in get_header_info\n");
 			if (unlikely(read(fd_in, last_head, read_len) != read_len))
-				fatal_return(("Failed to read_i64 in get_header_info"), false);
+				fatal("Failed to read_i64 in get_header_info\n");
 			*c_len = le64toh(*c_len);
 			*u_len = le64toh(*u_len);
 			*last_head = le64toh(*last_head);
 			if (ENCRYPT) {
 				// decrypt header suppressing printing max verbose message
 				if (unlikely(!decrypt_header(control, enc_head, ctype, c_len, u_len, last_head, LRZ_VALIDATE)))
-					fatal_return(("Failed to decrypt header in get_header_info\n"), false);
+					fatal("Failed to decrypt header in get_header_info\n");
 			}
 		}
 	}	// control->major_version
@@ -951,19 +949,19 @@ bool get_fileinfo(rzip_control *control)
 	struct stat fdin_stat;
 
 	if (unlikely(stat(control->infile, &fdin_stat)))
-		fatal_return(("File %s not found...\n", control->infile), false);
+		fatal("File %s not found...\n", control->infile);
 	else if (unlikely(!S_ISREG(fdin_stat.st_mode)))
-		fatal_return(("File %s us not a regular file. lrzip-next cannot continue...\n", control->infile), false);
+		fatal("File %s us not a regular file. lrzip-next cannot continue...\n", control->infile);
 	else
 		infilecopy = strdupa(control->infile);
 
 	fd_in = open(infilecopy, O_RDONLY);
 	if (unlikely(fd_in == -1))
-		fatal_return(("Failed to open %s\n", infilecopy), false);
+		fatal("Failed to open %s\n", infilecopy);
 
 	/* Get file size */
 	if (unlikely(fstat(fd_in, &st)))
-		fatal_goto(("bad magic file descriptor!?\n"), error);
+		fatal("bad magic file descriptor!?\n");
 	infile_size = st.st_size;
 
 	/* Get decompressed size */
@@ -979,18 +977,18 @@ bool get_fileinfo(rzip_control *control)
 	if (control->major_version == 0) {
 		if (control->minor_version > 4) {
 			if (unlikely(read(fd_in, &chunk_byte, 1) != 1))
-				fatal_goto(("Failed to read chunk_byte in get_fileinfo\n"), error);
+				fatal("Failed to read chunk_byte in get_fileinfo\n");
 			if (unlikely(chunk_byte < 1 || chunk_byte > 8))
-				failure_goto(("Invalid chunk bytes %'d\n", chunk_byte), error);
+				fatal("Invalid chunk bytes %'d\n", chunk_byte);
 			if (control->minor_version > 5) {
 				if (unlikely(read(fd_in, &control->eof, 1) != 1))
-					fatal_goto(("Failed to read eof in get_fileinfo\n"), error);
+					fatal("Failed to read eof in get_fileinfo\n");
 				if (!ENCRYPT) {
 					if (unlikely(read(fd_in, &chunk_size, chunk_byte) != chunk_byte))
-						fatal_goto(("Failed to read chunk_size in get_fileinfo\n"), error);
+						fatal("Failed to read chunk_size in get_fileinfo\n");
 					chunk_size = le64toh(chunk_size);
 					if (unlikely(chunk_size < 0))
-						failure_goto(("Invalid chunk size %'"PRId64"\n", chunk_size), error);
+						fatal("Invalid chunk size %'"PRId64"\n", chunk_size);
 				} else {
 					chunk_byte=8;
 					chunk_size=0;
@@ -1035,7 +1033,7 @@ next_chunk:
 	if (!ENCRYPT) {
 		chunk_total += chunk_size;
 		if (unlikely(chunk_byte && (chunk_byte > 8 || chunk_size <= 0)))
-			failure_goto(("Invalid chunk data\n"), error);
+			fatal("Invalid chunk data\n");
 	}
 
 	if (INFO) {
@@ -1052,13 +1050,13 @@ next_chunk:
 
 		second_last = 0;
 		if (unlikely(lseek(fd_in, stream_head[stream] + ofs, SEEK_SET) == -1))
-			fatal_goto(("Failed to seek to header data in get_fileinfo\n"), error);
+			fatal("Failed to seek to header data in get_fileinfo\n");
 
 		if (unlikely(!get_header_info(control, fd_in, &ctype, &c_len, &u_len, &last_head, chunk_byte)))
 			return false;
 
 		if (ENCRYPT && ctype != CTYPE_NONE)
-			failure_goto(("Invalid stream ctype (%02x) for encrypted file. Bad Password?\n", ctype), error);
+			fatal("Invalid stream ctype (%02x) for encrypted file. Bad Password?\n", ctype);
 
 		if (INFO) {
 			print_verbose("Stream: %'d\n", stream);
@@ -1071,23 +1069,23 @@ next_chunk:
 			i64 head_off;
 
 			if (unlikely(last_head && last_head < second_last))
-				failure_goto(("Invalid earlier last_head position, corrupt archive.\n"), error);
+				fatal("Invalid earlier last_head position, corrupt archive.\n");
 			second_last = last_head;
 			if (!ENCRYPT) {
 				if (unlikely(last_head + ofs > infile_size))
-					failure_goto(("Offset greater than archive size, likely corrupted/truncated archive.\n"), error);
+					fatal("Offset greater than archive size, likely corrupted/truncated archive.\n");
 			} else {
 				if (unlikely(last_head + ofs + header_length > infile_size))
-					failure_goto(("Offset greater than archive size, likely corrupted/truncated archive.\n"), error);
+					fatal("Offset greater than archive size, likely corrupted/truncated archive.\n");
 			}
 
 			if (unlikely((head_off = lseek(fd_in, last_head + ofs, SEEK_SET)) == -1))
-				fatal_goto(("Failed to seek to header data in get_fileinfo\n"), error);
+				fatal("Failed to seek to header data in get_fileinfo\n");
 			if (unlikely(!get_header_info(control, fd_in, &ctype, &c_len, &u_len,
 					&last_head, chunk_byte)))
 				return false;
 			if (unlikely(last_head < 0 || c_len < 0 || u_len < 0))
-				failure_goto(("Entry negative, likely corrupted archive.\n"), error);
+				fatal("Entry negative, likely corrupted archive.\n");
 			if (INFO) print_verbose("%'d\t", block);
 			if (ctype == CTYPE_NONE) {
 				if (INFO) print_verbose("none");
@@ -1102,7 +1100,7 @@ next_chunk:
 			} else if (ctype == CTYPE_ZPAQ) {
 				if (INFO) print_verbose("zpaq");
 			} else
-				failure_goto(("Unknown Compression Type: %'d\n", ctype), error);
+				fatal("Unknown Compression Type: %'d\n", ctype);
 			if (save_ctype == 255)
 				save_ctype = ctype; /* need this for lzma when some chunks could have no compression
 						     * and info will show rzip + none on info display if last chunk
@@ -1121,7 +1119,7 @@ next_chunk:
 	}
 
 	if (unlikely((ofs = lseek(fd_in, c_len, SEEK_CUR)) == -1))
-		fatal_goto(("Failed to lseek c_len in get_fileinfo\n"), error);
+		fatal("Failed to lseek c_len in get_fileinfo\n");
 
 	if (ofs >= infile_size - *control->hash_len)
 		goto done;
@@ -1133,18 +1131,18 @@ next_chunk:
 	if (control->major_version == 0) {
 		if(control->minor_version > 4 && !ENCRYPT) {
 			if (unlikely(read(fd_in, &chunk_byte, 1) != 1))
-				fatal_goto(("Failed to read chunk_byte in get_fileinfo\n"), error);
+				fatal("Failed to read chunk_byte in get_fileinfo\n");
 			if (unlikely(chunk_byte < 1 || chunk_byte > 8))
-				failure_goto(("Invalid chunk bytes %'d\n", chunk_byte), error);
+				fatal("Invalid chunk bytes %'d\n", chunk_byte);
 			ofs++;
 			if (control->minor_version > 5) {
 				if (unlikely(read(fd_in, &control->eof, 1) != 1))
-					fatal_goto(("Failed to read eof in get_fileinfo\n"), error);
+					fatal("Failed to read eof in get_fileinfo\n");
 				if (unlikely(read(fd_in, &chunk_size, chunk_byte) != chunk_byte))
-					fatal_goto(("Failed to read chunk_size in get_fileinfo\n"), error);
+					fatal("Failed to read chunk_size in get_fileinfo\n");
 				chunk_size = le64toh(chunk_size);
 				if (unlikely(chunk_size < 0))
-					failure_goto(("Invalid chunk size %'"PRId64"\n", chunk_size), error);
+					fatal("Invalid chunk size %'"PRId64"\n", chunk_size);
 				ofs += 1 + chunk_byte;
 				header_length = 1 + (chunk_byte * 3);
 			}
@@ -1161,7 +1159,7 @@ next_chunk:
 done:
 	cratio = (long double)expected_size / (long double)infile_size;
 	if (unlikely(ofs > infile_size))
-		failure_goto(("Offset greater than archive size, likely corrupted/truncated archive.\n"), error);
+		fatal("Offset greater than archive size, likely corrupted/truncated archive.\n");
 
 	if (INFO) {
 		print_output("\nSummary\n=======\n");
@@ -1254,12 +1252,12 @@ done:
 		if (INFO) {
 			hash_stored = calloc(*control->hash_len, 1);
 			if (unlikely(lseek(fd_in, - *control->hash_len, SEEK_END) == -1))
-				fatal_return(("Failed to seek to %s data in get_fileinfo.\n", control->hash_label), false);
+				fatal("Failed to seek to %s data in get_fileinfo.\n", control->hash_label);
 			if (unlikely(read(fd_in, hash_stored, *control->hash_len) != *control->hash_len))
-				fatal_return(("Failed to read %s data in get_fileinfo.\n", control->hash_label), false);
+				fatal("Failed to read %s data in get_fileinfo.\n", control->hash_label);
 			if (ENCRYPT)
 				if (unlikely(!lrz_decrypt(control, hash_stored, *control->hash_len, control->salt_pass, LRZ_VALIDATE)))
-					fatal_return(("Failure decrypting %s in get_fileinfo.\n", control->hash_label), false);
+					fatal("Failure decrypting %s in get_fileinfo.\n", control->hash_label);
 			print_output("\n  %s Checksum: ", control->hash_label);
 			for (i = 0; i < *control->hash_len; i++)
 				print_output("%02x", hash_stored[i]);
@@ -1272,7 +1270,7 @@ done:
 
 out:
 	if (unlikely(close(fd_in)))
-		fatal_return(("Failed to close fd_in in get_fileinfo\n"), false);
+		fatal("Failed to close fd_in in get_fileinfo\n");
 	return true;
 error:
 	dealloc(control->outfile);
@@ -1303,7 +1301,7 @@ bool compress_file(rzip_control *control)
 	if (!STDIN) {
 		fd_in = open(control->infile, O_RDONLY);
 		if (unlikely(fd_in == -1))
-			fatal_return(("Failed to open %s\n", control->infile), false);
+			fatal("Failed to open %s\n", control->infile);
 	} else
 		fd_in = fileno(control->inFILE);
 
@@ -1322,7 +1320,7 @@ bool compress_file(rzip_control *control)
 
 			control->outfile = malloc((control->outdir == NULL? 0: strlen(control->outdir)) + strlen(tmpinfile) + strlen(control->suffix) + 1);
 			if (unlikely(!control->outfile))
-				fatal_goto(("Failed to allocate outfile name\n"), error);
+				fatal("Failed to allocate outfile name\n");
 
 			if (control->outdir) {	/* prepend control->outdir */
 				strcpy(control->outfile, control->outdir);
@@ -1334,19 +1332,19 @@ bool compress_file(rzip_control *control)
 		}
 
 		if (!strcmp(control->infile, control->outfile))
-			fatal_return(("Input and Output files are the same. %s. Exiting\n",control->infile),false);
+			fatal("Input and Output files are the same. %s. Exiting\n",control->infile);
 
 		fd_out = open(control->outfile, O_RDWR | O_CREAT | O_EXCL, 0666);
 		if (FORCE_REPLACE && (-1 == fd_out) && (EEXIST == errno)) {
 			if (unlikely(unlink(control->outfile)))
-				fatal_goto(("Failed to unlink an existing file: %s\n", control->outfile), error);
+				fatal("Failed to unlink an existing file: %s\n", control->outfile);
 			fd_out = open(control->outfile, O_RDWR | O_CREAT | O_EXCL, 0666);
 		}
 		if (unlikely(fd_out == -1)) {
 			/* We must ensure we don't delete a file that already
 			 * exists just because we tried to create a new one */
 			control->flags |= FLAG_KEEP_BROKEN;
-			fatal_goto(("Failed to create %s\n", control->outfile), error);
+			fatal("Failed to create %s\n", control->outfile);
 		}
 		control->fd_out = fd_out;
 		if (!STDIN) {
@@ -1360,7 +1358,7 @@ bool compress_file(rzip_control *control)
 
 	/* Write zeroes to header at beginning of file */
 	if (unlikely(!STDOUT && write(fd_out, header, sizeof(header)) != sizeof(header)))
-		fatal_goto(("Cannot write file header\n"), error);
+		fatal("Cannot write file header\n");
 
 	rzip_fd(control, fd_in, fd_out);
 
@@ -1384,13 +1382,13 @@ bool compress_file(rzip_control *control)
 		goto error;
 	}
 	if (unlikely(!STDOUT && close(fd_out)))
-		fatal_return(("Failed to close fd_out\n"), false);
+		fatal("Failed to close fd_out\n");
 	if (TMP_OUTBUF)
 		close_tmpoutbuf(control);
 
 	if (!KEEP_FILES && !STDIN) {
 		if (unlikely(unlink(control->infile)))
-			fatal_return(("Failed to unlink %s\n", control->infile), false);
+			fatal("Failed to unlink %s\n", control->infile);
 	}
 
 	dealloc(control->outfile);
@@ -1418,9 +1416,9 @@ bool decompress_file(rzip_control *control)
 		struct stat fdin_stat;
 		infilecopy = strdupa(control->infile);
 		if (unlikely(stat(infilecopy, &fdin_stat)))
-			failure("File %s not found...\n", control->infile);
+			fatal("File %s not found...\n", control->infile);
 		else if (unlikely(!S_ISREG(fdin_stat.st_mode)))
-			failure("lrzip-next only works on regular FILES\n");
+			fatal("lrzip-next only works on regular FILES\n");
 		/* regardless, infilecopy has the input filename */
 	}
 
@@ -1444,7 +1442,7 @@ bool decompress_file(rzip_control *control)
 
 			control->outfile = malloc((control->outdir == NULL? 0: strlen(control->outdir)) + strlen(tmpoutfile) + 1);
 			if (unlikely(!control->outfile))
-				fatal_return(("Failed to allocate outfile name\n"), false);
+				fatal("Failed to allocate outfile name\n");
 
 			if (control->outdir) {	/* prepend control->outdir */
 				strcpy(control->outfile, control->outdir);
@@ -1458,7 +1456,7 @@ bool decompress_file(rzip_control *control)
 
 		if (unlikely(!strcmp(control->outfile, infilecopy))) {
 			control->flags |= FLAG_TEST_ONLY;	// stop and no more decompres or deleting files.
-			fatal_return(("Output and Input files are the same...Cannot continue\n"), false);
+			fatal("Output and Input files are the same...Cannot continue\n");
 		}
 	}
 
@@ -1466,14 +1464,14 @@ bool decompress_file(rzip_control *control)
 		fd_in = open_tmpinfile(control);
 		read_tmpinmagic(control);
 		if (ENCRYPT)
-			failure_return(("Cannot decompress encrypted file from STDIN\n"), false);
+			fatal("Cannot decompress encrypted file from STDIN\n");
 		expected_size = control->st_size;
 		if (unlikely(!open_tmpinbuf(control)))
 			return false;
 	} else {
 		fd_in = open(infilecopy, O_RDONLY);
 		if (unlikely(fd_in == -1)) {
-			fatal_return(("Failed to open %s\n", infilecopy), false);
+			fatal("Failed to open %s\n", infilecopy);
 		}
 	}
 	control->fd_in = fd_in;
@@ -1482,18 +1480,18 @@ bool decompress_file(rzip_control *control)
 		fd_out = open(control->outfile, O_WRONLY | O_CREAT | O_EXCL, 0666);
 		if (FORCE_REPLACE && (-1 == fd_out) && (EEXIST == errno)) {
 			if (unlikely(unlink(control->outfile)))
-				fatal_return(("Failed to unlink an existing file: %s\n", control->outfile), false);
+				fatal("Failed to unlink an existing file: %s\n", control->outfile);
 			fd_out = open(control->outfile, O_WRONLY | O_CREAT | O_EXCL, 0666);
 		}
 		if (unlikely(fd_out == -1)) {
 			/* We must ensure we don't delete a file that already
 			 * exists just because we tried to create a new one */
 			control->flags |= FLAG_KEEP_BROKEN;
-			fatal_return(("Failed to create %s\n", control->outfile), false);
+			fatal("Failed to create %s\n", control->outfile);
 		}
 		fd_hist = open(control->outfile, O_RDONLY);
 		if (unlikely(fd_hist == -1))
-			fatal_return(("Failed to open history file %s\n", control->outfile), false);
+			fatal("Failed to open history file %s\n", control->outfile);
 
 		/* Can't copy permissions from STDIN */
 		if (!STDIN)
@@ -1506,10 +1504,10 @@ bool decompress_file(rzip_control *control)
 		} else {
 			fd_hist = open(control->outfile, O_RDONLY);
 			if (unlikely(fd_hist == -1))
-				fatal_return(("Failed to open history file %s\n", control->outfile), false);
+				fatal("Failed to open history file %s\n", control->outfile);
 			/* Unlink temporary file as soon as possible */
 			if (unlikely(unlink(control->outfile)))
-				fatal_return(("Failed to unlink tmpfile: %s\n", control->outfile), false);
+				fatal("Failed to unlink tmpfile: %s\n", control->outfile);
 		}
 	}
 
@@ -1521,24 +1519,22 @@ bool decompress_file(rzip_control *control)
 		if (unlikely(!read_magic(control, fd_in, &expected_size)))
 			return false;
 		if (unlikely(expected_size < 0))
-			fatal_return(("Invalid expected size %'"PRId64"\n", expected_size), false);
+			fatal("Invalid expected size %'"PRId64"\n", expected_size);
 	}
 
 	if (!STDOUT) {
 		/* Check if there's enough free space on the device chosen to fit the
 		* decompressed or test file. */
 		if (unlikely(fstatvfs(fd_out, &fbuf)))
-			fatal_return(("Failed to fstatvfs in decompress_file\n"), false);
+			fatal("Failed to fstatvfs in decompress_file\n");
 		free_space = (i64)fbuf.f_bsize * (i64)fbuf.f_bavail;
 		if (free_space < expected_size) {
 			if (FORCE_REPLACE && !TEST_ONLY)
 				print_err("Warning, inadequate free space detected, but attempting to decompress file due to -f option being used.\n");
 			else
-				failure_return(("Inadequate free space to %s. Space needed: %'"PRId64". Space available: %'"PRId64".\nTry %s and \
-select a larger volume.\n",
+				fatal("Inadequate free space to %s. Space needed: %'"PRId64". Space available: %'"PRId64".\nTry %s and select a larger volume.\n",
 					TEST_ONLY ? "test file" : "decompress file. Use -f to override", expected_size, free_space,
-					TEST_ONLY ? "setting `TMP=dirname`" : "using `-O dirname` or `-o [dirname/]filename` options"),
-						false);
+					TEST_ONLY ? "setting `TMP=dirname`" : "using `-O dirname` or `-o [dirname/]filename` options");
 		}
 	}
 	control->fd_out = fd_out;
@@ -1570,7 +1566,7 @@ select a larger volume.\n",
 	else {
 		print_progress("Validating file for consistency...");
 		if (unlikely((get_fileinfo(control)) == false))
-			failure_return(("File validation failed. Corrupt lrzip archive. Cannot continue\n"),false);
+			fatal("File validation failed. Corrupt lrzip archive. Cannot continue\n");
 		print_progress("[OK]");
 		if (!VERBOSE) print_progress("\n");	// output LF to prevent overwriing decompression output
 	}
@@ -1607,7 +1603,7 @@ select a larger volume.\n",
 
 	if (fd_out > 0)
 		if (unlikely(close(fd_hist) || close(fd_out)))
-			fatal_return(("Failed to close files\n"), false);
+			fatal("Failed to close files\n");
 
 	if (unlikely(!STDIN && !STDOUT && !TEST_ONLY && !preserve_times(control, fd_in)))
 		return false;
@@ -1617,7 +1613,7 @@ select a larger volume.\n",
 
 	if (!KEEP_FILES && !STDIN)
 		if (unlikely(unlink(control->infile)))
-			fatal_return(("Failed to unlink %s\n", infilecopy), false);
+			fatal("Failed to unlink %s\n", infilecopy);
 
 	if (ENCRYPT)
 		release_hashes(control);
@@ -1655,7 +1651,7 @@ bool initialise_control(rzip_control *control)
 	 * The next 2 bytes encode how many times to hash the password.
 	 * The last 9 bytes are random data, making 16 bytes of salt */
 	if (unlikely((now_t = time(NULL)) == ((time_t)-1)))
-		fatal_return(("Failed to call time in main\n"), false);
+		fatal("Failed to call time in main\n");
 	if (unlikely(now_t < T_ZERO)) {
 		print_output("Warning your time reads before the year 2011, check your system clock\n");
 		now_t = T_ZERO;
@@ -1682,7 +1678,7 @@ bool initialise_control(rzip_control *control)
 
 	control->tmpdir = malloc(len + 2);
 	if (control->tmpdir == NULL)
-		fatal_return(("Failed to allocate for tmpdir\n"), false);
+		fatal("Failed to allocate for tmpdir\n");
 	strcpy(control->tmpdir, eptr);
 	if (control->tmpdir[len - 1] != '/') {
 		control->tmpdir[len] = '/'; 	/* need a trailing slash */
