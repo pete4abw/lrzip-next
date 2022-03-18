@@ -279,27 +279,12 @@ static void get_filter(rzip_control *control, unsigned char *magic)
 	return;
 }
 
-// retrieve magic for lrzip-next <v 0.4
-static void get_magic_lt4(rzip_control *control, unsigned char *magic)
+// retrieve magic for lrzip v6
+
+static void get_magic_v6(rzip_control *control, unsigned char *magic)
 {
-	uint32_t v;
-	i64 expected_size;
+	// only difference is encryption
 
-	/* Support the convoluted way we described size in versions < 0.40 */
-	memcpy(&v, &magic[6], 4);
-	expected_size = ntohl(v);
-	memcpy(&v, &magic[10], 4);
-	control->st_size |= ((i64)ntohl(v)) << 32;
-
-	if (magic[16])
-		get_lzma_prop(control, &magic[16]);
-
-	return;
-}
-
-// retrieve magic for lrzip <v 0.6
-static void get_magic_lt6(rzip_control *control, unsigned char *magic)
-{
 	if (!magic[22])	// not encrypted
 		get_expected_size(control, magic);
 
@@ -307,17 +292,6 @@ static void get_magic_lt6(rzip_control *control, unsigned char *magic)
 		get_lzma_prop(control, &magic[16]);
 
 	get_hash_from_magic(control, &magic[21]);
-
-	return;
-}
-
-// retrieve magic for lrzip v6
-
-static void get_magic_lt7(rzip_control *control, unsigned char *magic)
-{
-	// only difference is encryption
-
-	get_magic_lt6(control, magic);
 	get_encryption(control, &magic[22], &magic[6]);
 
 	return;
@@ -325,7 +299,7 @@ static void get_magic_lt7(rzip_control *control, unsigned char *magic)
 
 // retrieve magic for lrzip-next v7
 
-static void get_magic_lt8(rzip_control *control, unsigned char *magic)
+static void get_magic_v7(rzip_control *control, unsigned char *magic)
 {
 	int i;
 
@@ -384,25 +358,24 @@ static bool get_magic(rzip_control *control, unsigned char *magic)
 	memcpy(&control->major_version, &magic[4], 1);
 	memcpy(&control->minor_version, &magic[5], 1);
 
+	/* remove checks for lrzip < 0.6 */
 	if (control->major_version == 0) {
-		if (control->minor_version < 4)
-			get_magic_lt4(control, magic);
-		else if (control->minor_version < 6)
-			get_magic_lt6(control, magic);
-		else if (control->minor_version < 7)
-			get_magic_lt7(control, magic);
-		else if (control->minor_version < 8)
-			get_magic_lt8(control, magic);
-		else
+		switch (control->minor_version) {
+		case 6:
+			get_magic_v6(control, magic);
+			break;
+		case 7:
+			get_magic_v7(control, magic);
+			break;
+		case 8:
 			get_magic_v8(control, magic);
+			break;
+		default:
+			print_err("lrzip version %d.%d archive is not supported. Aborting\n",
+					control->major_version, control->minor_version);
+			return false;
+		}
 	}
-
-	if (control->major_version > LRZIP_MAJOR_VERSION ||
-	    (control->major_version == LRZIP_MAJOR_VERSION && control->minor_version > LRZIP_MINOR_VERSION))
-		print_output("Attempting to work with file produced by newer lrzip version %'d.%'d file.\n", control->major_version, control->minor_version);
-
-	if (control->major_version == 0 && control->minor_version < 6)
-		control->eof = 1;
 
 	return true;
 }
@@ -868,44 +841,25 @@ bool get_header_info(rzip_control *control, int fd_in, uchar *ctype, i64 *c_len,
 		fatal("Failed to read in get_header_info\n");
 
 	*c_len = *u_len = *last_head = 0;
+	/* remove checks for lrzip < 0.6 */
 	if (control->major_version == 0) {
-		if (control->minor_version < 4) {
-			u32 c_len32, u_len32, last_head32;
+		// header the same after v 0.4 except for chunk bytes
+		int read_len;
 
-			if (unlikely(read(fd_in, &c_len32, 4) != 4))
-				fatal("Failed to read in get_header_info\n");
-			if (unlikely(read(fd_in, &u_len32, 4) != 4))
-				fatal("Failed to read in get_header_info\n");
-			if (unlikely(read(fd_in, &last_head32, 4) != 4))
-				fatal("Failed to read in get_header_info\n");
-			c_len32 = le32toh(c_len32);
-			u_len32 = le32toh(u_len32);
-			last_head32 = le32toh(last_head32);
-			*c_len = c_len32;
-			*u_len = u_len32;
-			*last_head = last_head32;
-		} else {
-			// header the same after v 0.4 except for chunk bytes
-			int read_len;
-
-			if (control->minor_version == 5)
-				read_len = 8;
-			else
-				read_len = chunk_bytes;
-			if (unlikely(read(fd_in, c_len, read_len) != read_len))
-				fatal("Failed to read in get_header_info\n");
-			if (unlikely(read(fd_in, u_len, read_len) != read_len))
-				fatal("Failed to read in get_header_info\n");
-			if (unlikely(read(fd_in, last_head, read_len) != read_len))
-				fatal("Failed to read_i64 in get_header_info\n");
-			*c_len = le64toh(*c_len);
-			*u_len = le64toh(*u_len);
-			*last_head = le64toh(*last_head);
-			if (ENCRYPT) {
-				// decrypt header suppressing printing max verbose message
-				if (unlikely(!decrypt_header(control, enc_head, ctype, c_len, u_len, last_head, LRZ_VALIDATE)))
-					fatal("Failed to decrypt header in get_header_info\n");
-			}
+		read_len = chunk_bytes;
+		if (unlikely(read(fd_in, c_len, read_len) != read_len))
+			fatal("Failed to read in get_header_info\n");
+		if (unlikely(read(fd_in, u_len, read_len) != read_len))
+			fatal("Failed to read in get_header_info\n");
+		if (unlikely(read(fd_in, last_head, read_len) != read_len))
+			fatal("Failed to read_i64 in get_header_info\n");
+		*c_len = le64toh(*c_len);
+		*u_len = le64toh(*u_len);
+		*last_head = le64toh(*last_head);
+		if (ENCRYPT) {
+			// decrypt header suppressing printing max verbose message
+			if (unlikely(!decrypt_header(control, enc_head, ctype, c_len, u_len, last_head, LRZ_VALIDATE)))
+				fatal("Failed to decrypt header in get_header_info\n");
 		}
 	}	// control->major_version
 	return true;
@@ -974,46 +928,35 @@ bool get_fileinfo(rzip_control *control)
 		if (unlikely(!get_hash(control, 0)))
 			return false;
 
+	/* remove checks for lrzip < 0.6 */
 	if (control->major_version == 0) {
-		if (control->minor_version > 4) {
-			if (unlikely(read(fd_in, &chunk_byte, 1) != 1))
-				fatal("Failed to read chunk_byte in get_fileinfo\n");
-			if (unlikely(chunk_byte < 1 || chunk_byte > 8))
-				fatal("Invalid chunk bytes %'d\n", chunk_byte);
-			if (control->minor_version > 5) {
-				if (unlikely(read(fd_in, &control->eof, 1) != 1))
-					fatal("Failed to read eof in get_fileinfo\n");
-				if (!ENCRYPT) {
-					if (unlikely(read(fd_in, &chunk_size, chunk_byte) != chunk_byte))
-						fatal("Failed to read chunk_size in get_fileinfo\n");
-					chunk_size = le64toh(chunk_size);
-					if (unlikely(chunk_size < 0))
-						fatal("Invalid chunk size %'"PRId64"\n", chunk_size);
-				} else {
-					chunk_byte=8;
-					chunk_size=0;
-				}
-			}
+		if (unlikely(read(fd_in, &chunk_byte, 1) != 1))
+			fatal("Failed to read chunk_byte in get_fileinfo\n");
+		if (unlikely(chunk_byte < 1 || chunk_byte > 8))
+			fatal("Invalid chunk bytes %'d\n", chunk_byte);
+		if (unlikely(read(fd_in, &control->eof, 1) != 1))
+			fatal("Failed to read eof in get_fileinfo\n");
+		if (!ENCRYPT) {
+			if (unlikely(read(fd_in, &chunk_size, chunk_byte) != chunk_byte))
+				fatal("Failed to read chunk_size in get_fileinfo\n");
+			chunk_size = le64toh(chunk_size);
+			if (unlikely(chunk_size < 0))
+				fatal("Invalid chunk size %'"PRId64"\n", chunk_size);
+		} else {
+			chunk_byte=8;
+			chunk_size=0;
 		}
 	}
 
 	/* determine proper offset for chunk headers */
+	/* remove checks for lrzip < 0.6 */
 	if (control->major_version == 0) {
 		if (ENCRYPT) {
 			// Only for version 6, 7, and 8
 			header_length=33; // 25 + 8
 			// salt is first 8 bytes
 			ofs = control->minor_version < 8 ? 26 : 20;
-		} else if (control->minor_version < 4) {
-			ofs = 24;
-			header_length = 13;
-		} else if (control->minor_version == 4) {
-			ofs = 24;
-			header_length = 25;
-		} else if (control->minor_version == 5) {
-			ofs = 25;
-			header_length = 25;
-		} else if (control->minor_version < 8) {
+		} else if (control->minor_version == 6 || control->minor_version == 7) {
 			ofs = 26 + chunk_byte;
 			header_length = 1 + (chunk_byte * 3);
 		} else if (control->minor_version == 8) {
@@ -1022,9 +965,6 @@ bool get_fileinfo(rzip_control *control)
 		}
 	}
 
-	if (control->major_version == 0 && control->minor_version < 6 &&
-		!expected_size)
-			goto done;
 next_chunk:
 	stream = 0;
 	stream_head[0] = 0;
@@ -1128,26 +1068,25 @@ next_chunk:
 			goto done;
 
 	/* Chunk byte entry */
+	/* remove checks for lrzip < 0.6 */
 	if (control->major_version == 0) {
-		if(control->minor_version > 4 && !ENCRYPT) {
+		if(!ENCRYPT) {
 			if (unlikely(read(fd_in, &chunk_byte, 1) != 1))
 				fatal("Failed to read chunk_byte in get_fileinfo\n");
 			if (unlikely(chunk_byte < 1 || chunk_byte > 8))
 				fatal("Invalid chunk bytes %'d\n", chunk_byte);
 			ofs++;
-			if (control->minor_version > 5) {
-				if (unlikely(read(fd_in, &control->eof, 1) != 1))
-					fatal("Failed to read eof in get_fileinfo\n");
-				if (unlikely(read(fd_in, &chunk_size, chunk_byte) != chunk_byte))
-					fatal("Failed to read chunk_size in get_fileinfo\n");
-				chunk_size = le64toh(chunk_size);
-				if (unlikely(chunk_size < 0))
-					fatal("Invalid chunk size %'"PRId64"\n", chunk_size);
-				ofs += 1 + chunk_byte;
-				header_length = 1 + (chunk_byte * 3);
-			}
+			if (unlikely(read(fd_in, &control->eof, 1) != 1))
+				fatal("Failed to read eof in get_fileinfo\n");
+			if (unlikely(read(fd_in, &chunk_size, chunk_byte) != chunk_byte))
+				fatal("Failed to read chunk_size in get_fileinfo\n");
+			chunk_size = le64toh(chunk_size);
+			if (unlikely(chunk_size < 0))
+				fatal("Invalid chunk size %'"PRId64"\n", chunk_size);
+			ofs += 1 + chunk_byte;
+			header_length = 1 + (chunk_byte * 3);
 		}
-		else if (ENCRYPT) {
+		else {
 			// ENCRYPTED
 			// no change to chunk_byte
 			ofs+=10;
@@ -1540,7 +1479,7 @@ bool decompress_file(rzip_control *control)
 	control->fd_out = fd_out;
 	control->fd_hist = fd_hist;
 
-	print_verbose("Detected lrzip version %'d.%'d file.\n", control->major_version, control->minor_version);
+	show_version(control);
 
 	if (NO_HASH)
 		print_verbose("Not performing hash check\n");

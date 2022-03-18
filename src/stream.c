@@ -1173,7 +1173,8 @@ void *open_stream_in(rzip_control *control, int f, int n, char chunk_bytes)
 	sinfo->s[0].total_threads = 1;
 	sinfo->s[1].total_threads = total_threads - 1;
 
-	if (control->major_version == 0 && control->minor_version > 5) {
+	/* remove checks for lrzip < 0.6 */
+	if (control->major_version == 0) {
 		/* Read in flag that tells us if there are more chunks after
 		 * this. Ignored if we know the final file size */
 		print_maxverbose("Reading eof flag at %'"PRId64"\n", get_readseek(control, f));
@@ -1217,28 +1218,13 @@ again:
 		if (unlikely(read_u8(control, f, &c)))
 			goto failed;
 
-		/* Compatibility crap for versions < 0.40 */
-		if (control->major_version == 0 && control->minor_version < 4) {
-			u32 v132, v232, last_head32;
-
-			if (unlikely(read_u32(control, f, &v132)))
-				goto failed;
-			if (unlikely(read_u32(control, f, &v232)))
-				goto failed;
-			if (unlikely(read_u32(control, f, &last_head32)))
-				goto failed;
-
-			v1 = v132;
-			v2 = v232;
-			sinfo->s[i].last_head = last_head32;
-			header_length = 13;
-		} else {
+		/* remove checks for lrzip < 0.6 */
+		if (control->major_version == 0) {
 			int read_len;
 
 			print_maxverbose("Reading stream %'d header at %'"PRId64"\n", i, get_readseek(control, f));
-			if ((control->major_version == 0 && control->minor_version < 6) ||
-				ENCRYPT)
-					read_len = 8;
+			if (ENCRYPT)
+				read_len = 8;
 			else
 				read_len = sinfo->chunk_bytes;
 			if (unlikely(read_val(control, f, &v1, read_len)))
@@ -1781,25 +1767,12 @@ fill_another:
 	if (unlikely(read_u8(control, sinfo->fd, &c_type)))
 		return -1;
 
-	/* Compatibility crap for versions < 0.4 */
-	if (control->major_version == 0 && control->minor_version < 4) {
-		u32 c_len32, u_len32, last_head32;
-
-		if (unlikely(read_u32(control, sinfo->fd, &c_len32)))
-			return -1;
-		if (unlikely(read_u32(control, sinfo->fd, &u_len32)))
-			return -1;
-		if (unlikely(read_u32(control, sinfo->fd, &last_head32)))
-			return -1;
-		c_len = c_len32;
-		u_len = u_len32;
-		last_head = last_head32;
-		header_length = 13;
-	} else {
+	/* remove checks for lrzip < 0.6 */
+	if (control->major_version == 0) {
 		int read_len;
 
 		print_maxverbose("Reading ucomp header at %'"PRId64"\n", get_readseek(control, sinfo->fd));
-		if ((control->major_version == 0 && control->minor_version < 6) || ENCRYPT)
+		if (ENCRYPT)
 			read_len = 8;
 		else
 			read_len = sinfo->chunk_bytes;

@@ -299,14 +299,8 @@ static i64 runzip_chunk(rzip_control *control, int fd_in, i64 expected_size, i64
 
 	prog_tsize = (long double)expected_size / (long double)divisor[divisor_index];
 
-	/* Determine the chunk_byte width size. Versions < 0.4 used 4
-	 * bytes for all offsets, version 0.4 used 8 bytes. Versions 0.5+ use
-	 * a variable number of bytes depending on chunk size.*/
-	if (control->major_version == 0 && control->minor_version < 4)
-		chunk_bytes = 4;
-	else if (control->major_version == 0 && control->minor_version == 4)
-		chunk_bytes = 8;
-	else {
+	/* remove checks for lrzip < 0.6 */
+	if (control->major_version == 0) {
 		print_maxverbose("Reading chunk_bytes at %'"PRId64"\n", get_readseek(control, fd_in));
 		/* Read in the stored chunk byte width from the file */
 		if (unlikely(read_1g(control, fd_in, &chunk_bytes, 1) != 1))
@@ -329,11 +323,7 @@ static i64 runzip_chunk(rzip_control *control, int fd_in, i64 expected_size, i64
 	if (unlikely(!ss))
 		fatal("Failed to open_stream_in in runzip_chunk\n");
 
-	/* All chunks were unnecessarily encoded 8 bytes wide version 0.4x */
-	if (control->major_version == 0 && control->minor_version == 4)
-		control->chunk_bytes = 8;
-	else
-		control->chunk_bytes = 2;
+	control->chunk_bytes = 2;
 
 	while ((len = read_header(control, ss, &head)) || head) {
 		i64 u;
