@@ -1267,7 +1267,8 @@ bool compress_file(rzip_control *control)
 			} else
 				strcpy(control->outfile, tmpinfile);
 			strcat(control->outfile, control->suffix);
-			print_output("Output filename is: %s\n", control->outfile);
+			// print_progress("Output filename is: %s\n", control->outfile);
+			// Not needed since printed at end of decompression
 		}
 
 		if (!strcmp(control->infile, control->outfile))
@@ -1528,7 +1529,7 @@ bool decompress_file(rzip_control *control)
 
 	/* if we get here, no fatal_return(( errors during decompression */
 	print_progress("\r");
-	if (!(STDOUT | TEST_ONLY))
+	if (!(STDOUT || TEST_ONLY))
 		print_progress("Output filename is: %s: ", control->outfile);
 	if (!expected_size)
 		expected_size = control->st_size;

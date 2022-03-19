@@ -1214,10 +1214,10 @@ retry:
 		else
 			gcry_md_extract(control->hash_handle, *control->hash_gcode, control->hash_resblock, *control->hash_len);
 		if (HASH_CHECK || MAX_VERBOSE) {
-			print_output("%s: ", control->hash_label);
+			print_progress("%s: ", control->hash_label);
 			for (j = 0; j < *control->hash_len; j++)
-				print_output("%02x", control->hash_resblock[j]);
-			print_output("\n");
+				print_progress("%02x", control->hash_resblock[j]);
+			print_progress("\n");
 		}
 		/* When encrypting data, we encrypt the hash value as well */
 		if (ENCRYPT)

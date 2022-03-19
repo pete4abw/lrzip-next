@@ -463,20 +463,20 @@ i64 runzip_fd(rzip_control *control, int fd_in, int fd_out, int fd_hist, i64 exp
 				return -1;
 		for (i = 0; i < *control->hash_len; i++) {
 			if (hash_stored[i] != control->hash_resblock[i]) {
-				print_output("%s CHECK FAILED.\nStored:", control->hash_label);
+				print_err("%s CHECK FAILED.\nStored:", control->hash_label);
 				for (j = 0; j < *control->hash_len; j++)
-					print_output("%02x", hash_stored[j]);
-				print_output("\nOutput file:");
+					print_err("%02x", hash_stored[j]);
+				print_progress("\nOutput file:");
 				for (j = 0; j < *control->hash_len; j++)
-					print_output("%02x", control->hash_resblock[j]);
+					print_err("%02x", control->hash_resblock[j]);
 				fatal("\n");
 			}
 		}
 
-		print_output("%s:", control->hash_label);
+		print_progress("%s:", control->hash_label);
 		for (i = 0; i < *control->hash_len; i++)
-			print_output("%02x", control->hash_resblock[i]);
-		print_output("\n");
+			print_progress("%02x", control->hash_resblock[i]);
+		print_progress("\n");
 
 		if (CHECK_FILE) {
 			FILE *hash_fstream;
@@ -494,19 +494,19 @@ i64 runzip_fd(rzip_control *control, int fd_in, int fd_out, int fd_hist, i64 exp
 			/* We don't close the file here as it's closed in main */
 			for (i = 0; i < *control->hash_len; i++) {
 				if (hash_stored[i] != control->hash_resblock[i]) {
-					print_output("%s CHECK FAILED.\nStored: ", control->hash_label);
+					print_err("%s CHECK FAILED.\nStored: ", control->hash_label);
 					for (j = 0; j < *control->hash_len; j++)
 						print_output("%02x", hash_stored[j]);
-					print_output("\nOutput file:");
+					print_err("\nOutput file:");
 					for (j = 0; j < *control->hash_len; j++)
-						print_output("%02x", control->hash_resblock[j]);
+						print_err("%02x", control->hash_resblock[j]);
 					fatal("\n");
 				}
 			}
-			print_output("%s integrity of written file matches archive\n", control->hash_label);
+			print_progress("%s integrity of written file matches archive\n", control->hash_label);
 		}
 	} else	/* hash not stored */
-		print_output("Note this lrzip archive did not have a stored hash value.\n"
+		print_progress("Note this lrzip archive did not have a stored hash value.\n"
 				"The archive decompression was validated with crc32 and the was "
 				"calculated on decompression\n");
 
