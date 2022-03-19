@@ -8,6 +8,7 @@ lrzip-next - Long Range ZIP
 Tag v0.8.10
 This branch **lzma-21.06** is now the default branch.
 **Encrypted archives from any earlier version will not be compatible or readable.**
+**LRZIP Archives created with versions < 0.6 will no longer be supported.**
 
 Many new changes, not in the main branch, including:
 * latest LZMA and ZPAQ libraries (**ABI Compatible** with earlier versions. No need to re-compress files).
@@ -40,6 +41,7 @@ Many new changes, not in the main branch, including:
 * Configurable LOCALE settings via lrzip.conf
 * Update autofoo to remove obsolete macros
 * REMOVE 32-BIT Architecture support
+* REMOVE support for `lrzip` versions < 0.6
 
 (See original README for more historical info)
 

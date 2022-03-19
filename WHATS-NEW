@@ -9,6 +9,7 @@ LOCALE = locale (e.g. en_US, it_IT, en_AU)
 Remove support for 32 bit architecture.
 Update autofoo to replace obsolete macros.
 Cleanup configure.ac. Remove rzip large file test from v 0.24
+Remove support for lrzip archives < 0.6
 
 lrzip-next v0.8.10
 Upstream fixes, merge in whats-next.
