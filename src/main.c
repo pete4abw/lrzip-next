@@ -380,7 +380,7 @@ static const char *coptions = "bcCde::E:fghH::ikKlLnN:o:O:p:PrR:S:tT::Um:vVw:z?1
 
 int main(int argc, char *argv[])
 {
-	bool lrzcat = false, compat = false, recurse = false;
+	bool lrzncat = false, compat = false, recurse = false;
 	bool options_file = false, conf_file_compression_set = false; /* for environment and tracking of compression setting */
 	struct timeval start_time, end_time;
 	struct sigaction handler;
@@ -398,12 +398,12 @@ int main(int argc, char *argv[])
 	initialise_control(control);
 
 	av = basename(argv[0]);
-	if (!strcmp(av, "lrunzip"))
+	if (!strcmp(av, "lrznunzip"))
 		control->flags |= FLAG_DECOMPRESS;
-	else if (!strcmp(av, "lrzcat")) {
+	else if (!strcmp(av, "lrzncat")) {
 		control->flags |= FLAG_DECOMPRESS | FLAG_STDOUT;
-		lrzcat = true;
-	} else if (!strcmp(av, "lrz")) {
+		lrzncat = true;
+	} else if (!strcmp(av, "lrzn")) {
 		/* Called in gzip compatible command line mode */
 		control->flags &= ~FLAG_SHOW_PROGRESS;
 		control->flags &= ~FLAG_KEEP_FILES;
@@ -841,8 +841,8 @@ int main(int argc, char *argv[])
 					fatal("Failed to stat %s\n", infile);
 				isdir = S_ISDIR(istat.st_mode);
 				if (!recurse && (isdir || !S_ISREG(istat.st_mode))) {
-					fatal("lrzip only works directly on regular FILES.\n"
-					"Use -r recursive, lrztar or pipe through tar for compressing directories.\n");
+					fatal("lrzip-next only works directly on regular FILES.\n"
+					"Use -r recursive, lrzntar or pipe through tar for compressing directories.\n");
 				}
 				if (recurse && !isdir)
 					fatal("%s not a directory, -r recursive needs a directory\n", infile);
@@ -870,10 +870,10 @@ recursion:
 		/* If no output filename is specified, and we're using
 		 * stdin, use stdout */
 		if ((control->outname && (strcmp(control->outname, "-") == 0)) ||
-		    (!control->outname && STDIN) || lrzcat)
+		    (!control->outname && STDIN) || lrzncat)
 				set_stdout(control);
 
-		if (lrzcat) {
+		if (lrzncat) {
 			control->msgout = stderr;
 			control->outFILE = stdout;
 			register_outputfile(control, control->msgout);

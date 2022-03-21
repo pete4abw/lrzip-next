@@ -28,8 +28,8 @@ if USE_ASM
 libtmplrzip_next_la_LIBADD += lzma/ASM/liblzmaASM.la
 endif
 
-lrztardir = $(bindir)
-lrztar_SCRIPTS = lrztar
+lrzntardir = $(bindir)
+lrzntar_SCRIPTS = lrzntar
 
 bin_PROGRAMS = lrzip-next
 lrzip_next_SOURCES = \

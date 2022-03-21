@@ -37,7 +37,7 @@ dist_doc_DATA = \
 	WHATS-NEW
 
 EXTRA_DIST = \
-	src/lrztar \
+	src/lrzntar \
 	description-pak \
 	autogen.sh \
 	INSTALL \
@@ -45,17 +45,17 @@ EXTRA_DIST = \
 	$(dist_doc_DATA)
 
 install-exec-hook:
-	$(LN_S) -f lrzip-next$(EXEEXT) $(DESTDIR)$(bindir)/lrunzip$(EXEEXT)
-	$(LN_S) -f lrzip-next$(EXEEXT) $(DESTDIR)$(bindir)/lrzcat$(EXEEXT)
-	$(LN_S) -f lrztar$(EXEEXT) $(DESTDIR)$(bindir)/lrzuntar$(EXEEXT)
-	$(LN_S) -f lrzip-next$(EXEEXT) $(DESTDIR)$(bindir)/lrz$(EXEEXT)
+	$(LN_S) -f lrzip-next$(EXEEXT) $(DESTDIR)$(bindir)/lrznunzip$(EXEEXT)
+	$(LN_S) -f lrzip-next$(EXEEXT) $(DESTDIR)$(bindir)/lrzncat$(EXEEXT)
+	$(LN_S) -f lrzntar$(EXEEXT) $(DESTDIR)$(bindir)/lrznuntar$(EXEEXT)
+	$(LN_S) -f lrzip-next$(EXEEXT) $(DESTDIR)$(bindir)/lrzn$(EXEEXT)
 
 
 uninstall-local:
-	rm -f $(bindir)/lrunzip
-	rm -f $(bindir)/lrzcat
-	rm -f $(bindir)/lrzuntar
-	rm -f $(bindir)/lrz
+	rm -f $(bindir)/lrznunzip
+	rm -f $(bindir)/lrzncat
+	rm -f $(bindir)/lrznuntar
+	rm -f $(bindir)/lrzn
 
 .PHONY: doc
 

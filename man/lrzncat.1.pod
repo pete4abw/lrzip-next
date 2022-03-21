@@ -40,19 +40,19 @@
 
 =head1 NAME
 
-lrzcat - Uncompress LRZ files to STDOUT
+lrzncat - Uncompress LRZ files to STDOUT
 
 =head1 SYNOPSIS
 
-  lrzcat [options] FILE [... FILE]
+  lrzncat [options] FILE [... FILE]
 
 =head1 DESCRIPTION
 
-lrzcat is identical to C<lrzip -d -o -> used to decompress files to STDOUT.
+lrzncat is identical to C<lrzip-next -d -o -> used to decompress files to STDOUT.
 
 =head1 OPTIONS
 
-See lrzip(1).
+See lrzip-next(1).
 
 =head1 ENVIRONMENT
 
@@ -64,12 +64,12 @@ None.
 
 =head1 SEE ALSO
 
-lrzip.conf(5),
-lrzip(1),
-lrunzip(1),
-lrztar(1),
-lrzuntar(1),
-lrz(1),
+lrzip-next.conf(5),
+lrzip-next(1),
+lrznunzip(1),
+lrzntar(1),
+lrznuntar(1),
+lrzn(1),
 bzip2(1),
 gzip(1),
 lzop(1),

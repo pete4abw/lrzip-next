@@ -41,23 +41,23 @@
 
 =head1 NAME
 
-lrztar - Directory wrapper for lrzip
+lrzntar - Directory wrapper for lrzip-next
 
 =head1 SYNOPSIS
 
-  lrztar [options] DIRECTORY
-  lrztar -d [options] DIRECTORY.tar.lrz
-  lrzuntar [options] DIRECTORY.tar.lrz
+  lrzntar [options] DIRECTORY
+  lrzntar -d [options] DIRECTORY.tar.lrz
+  lrznuntar [options] DIRECTORY.tar.lrz
 
 =head1 DESCRIPTION
 
-lrztar is a wrapper for compressing and decompressing whole directories with lrzip(1)
-to corresponding file C<DIRECTORY.tar.lrz>. lrzuntar is identical to C<lrztar -d>.
-lrztar takes the same options as lrzip.
+lrzntar is a wrapper for compressing and decompressing whole directories with lrzip-next(1)
+to corresponding file C<DIRECTORY.tar.lrz>. lrznuntar is identical to C<lrzntar -d>.
+lrzntar takes the same options as lrzip-next.
 
 =head1 OPTIONS
 
-See lrzip(1).
+See lrzip-next(1).
 
 =head1 ENVIRONMENT
 
@@ -69,12 +69,12 @@ None.
 
 =head1 SEE ALSO
 
-lrzip.conf(5),
-lrzuntar(1),
-lrzip(1),
-lrunzip(1),
-lrzcat(1),
-lrz(1),
+lrzip-next.conf(5),
+lrznuntar(1),
+lrzip-next(1),
+lrznunzip(1),
+lrzncat(1),
+lrzn(1),
 bzip2(1),
 gzip(1),
 lzop(1),

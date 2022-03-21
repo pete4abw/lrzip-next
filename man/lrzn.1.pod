@@ -44,17 +44,17 @@
 
 =head1 NAME
 
-lrz - gzip compatible command line variant of lrzip
+lrzn - gzip compatible command line variant of lrzip-next
 
 
 =head1 SYNOPSIS
 
-B<lrz> [options] I<file>
+B<lrzn> [options] I<file>
 
 
 =head1 DESCRIPTION
 
-B<lrz> is identical to the B<lrzip> application, however, its command
+B<lrzn> is identical to the B<lrzip-next> application, however, its command
 line options and behaviour are made to be as compatible with B<gzip>
 as possible.
 
@@ -313,23 +313,23 @@ Default chosen by heuristic dependent on ram and chosen compression.
 
 =back
 
-See also lrzip(1)
+See also lrzip-next(1)
 
 =head1 ENVIRONMENT
 
-lrz uses the same environment and configuration files as lrzip(1)
+lrzn uses the same environment and configuration files as lrzip-next(1)
 
 =head1 FILES
 
-See lrzip(1)
+See lrzip-next(1)
 
 =head1 SEE ALSO
 
-lrzip.conf(5),
-lrzip(1),
-lrunzip(1),
-lrztar(1),
-lrzuntar(1),
+lrzip-next.conf(5),
+lrzip-next(1),
+lrznunzip(1),
+lrzntar(1),
+lrznuntar(1),
 bzip2(1),
 gzip(1),
 lzop(1),
