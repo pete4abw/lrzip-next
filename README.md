@@ -42,6 +42,7 @@ Many new changes, not in the main branch, including:
 * Update autofoo to remove obsolete macros
 * REMOVE 32-BIT Architecture support
 * REMOVE support for `lrzip` versions < 0.6
+* All filenames and symlinks and manpages now distinct from `lrzip`
 
 (See original README for more historical info)
 

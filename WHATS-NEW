@@ -1,4 +1,12 @@
 whats-next: March 2022
+lrzip-next v0.8.11
+Decouple from lrzip. All filenames unique. All man pages unique.
+lrz --> lrzn
+lrzcat --> lrzncat
+lrztar --> lrzntar
+lrzuntar --> lrznuntar
+lrzunzip --> lrznunzip
+
 LOCALE can be overridden in lrzip.conf
 A user complained that using localized redix and separators
 made confusing output. Now, a specific country locale can
