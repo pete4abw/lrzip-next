@@ -891,7 +891,7 @@ bool get_fileinfo(rzip_control *control)
 	int header_length, stream = 0, chunk = 0;
 	char *tmp, *infilecopy = NULL;
 	char chunk_byte = 0;
-	long double cratio;
+	long double cratio, bpb;
 	uchar ctype = 0;
 	uchar save_ctype = 255;
 	struct stat st;
@@ -1096,7 +1096,9 @@ next_chunk:
 
 	goto next_chunk;
 done:
+	/* compression ratio and bits per byte ratio */
 	cratio = (long double)expected_size / (long double)infile_size;
+	bpb = ((long double)infile_size / (long double)expected_size) * 8;
 	if (unlikely(ofs > infile_size))
 		fatal("Offset greater than archive size, likely corrupted/truncated archive.\n");
 
@@ -1175,7 +1177,7 @@ done:
 		if (expected_size) {
 			print_output("  Decompressed file size: %'14"PRIu64"\n", expected_size);
 			print_output("  Compressed file size:   %'14"PRIu64"\n", infile_size);
-			print_output("  Compression ratio:      %14.3Lfx\n", cratio);
+			print_output("  Compression ratio:      %14.3Lfx, bpb: %.3Lf\n", cratio, bpb);
 		} else {
 			print_output("  Decompressed file size:    Unavailable\n");
 			print_output("  Compressed file size:   %'14"PRIu64"\n", infile_size);
