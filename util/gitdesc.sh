@@ -21,7 +21,7 @@ EOF
 exit 1
 }
 
-# showw message and usage
+# show message and usage
 die() {
 	echo "$1"
 	usage
