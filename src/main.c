@@ -170,7 +170,6 @@ default chosen by heuristic dependent on ram and chosen compression\n");
 	} else
 		print_output("	-q, --quiet		don't show compression progress\n");
 	print_output("	-p, --threads value	Set processor count to override number of threads\n");
-	print_output("	-r, --recursive		operate recursively on directories\n");
 	print_output("	-v[v%s], --verbose	Increase verbosity\n", compat ? "v" : "");
 	print_output("	-V, --version		display software version and license\n");
 	print_output("\nLRZIP=NOCONFIG environment variable setting can be used to bypass lrzip.conf.\n\
@@ -311,7 +310,7 @@ static struct option long_options[] = {
 	{"threads",	required_argument,	0,	'p'},
 	{"progress",	no_argument,	0,	'P'},
 	{"quiet",	no_argument,	0,	'q'},		/* 25 */
-	{"recursive",	no_argument,	0,	'r'},
+	{"rzip-level",	required_argument,	0,	'R'},
 	{"suffix",	required_argument,	0,	'S'},
 	{"test",	no_argument,	0,	't'},
 	{"threshold",	optional_argument,	0,	'T'},
@@ -331,7 +330,6 @@ static struct option long_options[] = {
 	{"sparc",	no_argument,	0,	0},
 	{"ia64",	no_argument,	0,	0},
 	{"delta",	optional_argument,	0,	0},	/* 45 */
-	{"rzip-level",	required_argument,	0,	'R'},
 	{0,	0,	0,	0},
 };
 
@@ -343,44 +341,12 @@ static void set_stdout(struct rzip_control *control)
 	register_outputfile(control, control->msgout);
 }
 
-/* Recursively enter all directories, adding all regular files to the dirlist array */
-static void recurse_dirlist(char *indir, char **dirlist, int *entries)
-{
-	char fname[MAX_PATH_LEN];
-	struct stat istat;
-	struct dirent *dp;
-	DIR *dirp;
-
-	dirp = opendir(indir);
-	if (unlikely(!dirp))
-		fatal("Unable to open directory %s\n", indir);
-	while ((dp = readdir(dirp)) != NULL) {
-		if (!strcmp(dp->d_name, ".") || !strcmp(dp->d_name, ".."))
-			continue;
-		sprintf(fname, "%s/%s", indir, dp->d_name);
-		if (unlikely(stat(fname, &istat)))
-			fatal("Unable to stat file %s\n", fname);
-		if (S_ISDIR(istat.st_mode)) {
-			recurse_dirlist(fname, dirlist, entries);
-			continue;
-		}
-		if (!S_ISREG(istat.st_mode)) {
-			print_err("Not regular file %s\n", fname);
-			continue;
-		}
-		print_maxverbose("Added file %s\n", fname);
-		*dirlist = realloc(*dirlist, MAX_PATH_LEN * (*entries + 1));
-		strcpy(*dirlist + MAX_PATH_LEN * (*entries)++, fname);
-	}
-	closedir(dirp);
-}
-
-static const char *loptions = "bcCdDe::E:fghH::iKlL:nN:o:O:p:PqrR:S:tT::Um:vVw:z?";
-static const char *coptions = "bcCde::E:fghH::ikKlLnN:o:O:p:PrR:S:tT::Um:vVw:z?123456789";
+static const char *loptions = "bcCdDe::E:fghH::iKlL:nN:o:O:p:PqR:S:tT::Um:vVw:z?";
+static const char *coptions = "bcCde::E:fghH::ikKlLnN:o:O:p:PR:S:tT::Um:vVw:z?123456789";
 
 int main(int argc, char *argv[])
 {
-	bool lrzncat = false, compat = false, recurse = false;
+	bool lrzncat = false, compat = false;
 	bool options_file = false, conf_file_compression_set = false; /* for environment and tracking of compression setting */
 	struct timeval start_time, end_time;
 	struct sigaction handler;
@@ -584,9 +550,6 @@ int main(int argc, char *argv[])
 		case 'q':
 			control->flags &= ~FLAG_SHOW_PROGRESS;
 			break;
-		case 'r':
-			recurse = true;
-			break;
 		case 'S':
 			if (control->outname)
 				fatal("Specified output filename already, can't specify an extension.\n");
@@ -746,8 +709,6 @@ int main(int argc, char *argv[])
 	if (control->outname) {
 		if (argc > 1)
 			fatal("Cannot specify output filename with more than 1 file\n");
-		if (recurse)
-			fatal("Cannot specify output filename with recursive\n");
 	}
 	/* set suffix to default .lrz IF outname not defined */
 	if ( !control->suffix && !control->outname) control->suffix = strdup(".lrz");
@@ -822,8 +783,7 @@ int main(int argc, char *argv[])
 
 	/* One extra iteration for the case of no parameters means we will default to stdin/out */
 	for (i = 0; i <= argc; i++) {
-		char *dirlist = NULL, *infile = NULL;
-		int direntries = 0, curentry = 0;
+		char *infile = NULL;
 
 		if (i < argc)
 			infile = argv[i];
@@ -840,31 +800,14 @@ int main(int argc, char *argv[])
 				if (unlikely(stat(infile, &istat)))
 					fatal("Failed to stat %s\n", infile);
 				isdir = S_ISDIR(istat.st_mode);
-				if (!recurse && (isdir || !S_ISREG(istat.st_mode))) {
-					fatal("lrzip-next only works directly on regular FILES.\n"
-					"Use -r recursive, lrzntar or pipe through tar for compressing directories.\n");
-				}
-				if (recurse && !isdir)
-					fatal("%s not a directory, -r recursive needs a directory\n", infile);
+				if (isdir || !S_ISREG(istat.st_mode))
+					fatal("lrzip-next only works directly on regular FILES.\n");
 			}
-		}
-
-		if (recurse) {
-			if (unlikely(STDIN || STDOUT))
-				fatal("Cannot use -r recursive with STDIO\n");
-			recurse_dirlist(infile, &dirlist, &direntries);
 		}
 
 		if (INFO && STDIN)
 			fatal("Will not get file info from STDIN\n");
-recursion:
-		if (recurse) {
-			if (curentry >= direntries) {
-				infile = NULL;
-				continue;
-			}
-			infile = dirlist + MAX_PATH_LEN * curentry++;
-		}
+
 		control->infile = infile;
 
 		/* If no output filename is specified, and we're using
@@ -947,8 +890,6 @@ recursion:
 		seconds = total_time - hours * 3600 - minutes * 60;
 		if (!INFO)
 			print_progress("Total time: %02d:%02d:%05.2f\n", hours, minutes, seconds);
-		if (recurse)
-			goto recursion;
 	}
 
 	return 0;
