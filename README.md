@@ -5,7 +5,7 @@ lrzip-next - Long Range ZIP
 
 ## NEW: LZMA SDK 21.06 (Feb 2022)
 
-Tag v0.8.10
+Tag v0.8.11
 This branch **lzma-21.06** is now the default branch.
 **Encrypted archives from any earlier version will not be compatible or readable.**
 **LRZIP Archives created with versions < 0.6 will no longer be supported.**
@@ -43,6 +43,8 @@ Many new changes, not in the main branch, including:
 * REMOVE 32-BIT Architecture support
 * REMOVE support for `lrzip` versions < 0.6
 * All filenames and symlinks and manpages now distinct from `lrzip`
+* Remove -r Recursive option
+* Remove gzip option compatibility and symlink `lrzn`. `lrzip-next` options prevail.
 
 (See original README for more historical info)
 

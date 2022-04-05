@@ -21,8 +21,6 @@ lrztar \-d [lrzip-next options] <directory>
 .br
 lrzuntar [lrzip-next options] <directory>
 .br
-lrz [lrz options] <directory>
-.br
 LRZIP=NOCONFIG [lrzip-next|lrunzip] [OPTIONS] <file>
 .PP
 .SH "DESCRIPTION"
@@ -82,7 +80,6 @@ Low level Compression Options:
  \-i, \-\-info              show compressed file information
  \-p, \-\-threads value     Set processor count to override number of threads
  \-q, \-\-quiet             don't show compression progress
- \-r, \-\-recursive         operate recursively on directories
  \-v[v], \-\-verbose        Increase verbosity
  \-V, \-\-version           show version
 .br
@@ -359,12 +356,6 @@ percentage progress while compressing. Note that compression happens in
 bursts with lzma compression which is the default compression. This means
 that it will progress very rapidly for short periods and then stop for
 long periods.
-.IP "\fB-r | --recursive\fP"
-If this option is specified, lrzip-next will recursively enter the directories
-specified, compressing or decompressing every file individually in the same
-directory. Note for better compression it is recommended to instead combine
-files in a tar file rather than compress them separately, either manually
-or with the lrztar helper.
 .IP "\fB-v[v] | --verbose\fP"
 Increases verbosity. \-vv will print more messages than \-v.
 .IP "\fB-V | --version\fP"

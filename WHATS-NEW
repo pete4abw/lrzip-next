@@ -1,3 +1,9 @@
+whats-next: April 2022
+Remove recursive (-r) option. No need anymore with `tar`.
+Remove gzip compatibility options.
+Remove lrzn link to lrzip-next.
+Remove pod2man dependency and .pod files.
+
 whats-next: March 2022
 lrzip-next v0.8.11
 Decouple from lrzip. All filenames unique. All man pages unique.
