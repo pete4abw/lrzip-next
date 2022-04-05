@@ -47,10 +47,6 @@ AC_FUNC_ALLOCA
 AS_IF([test x"$ac_cv_prog_cc_c99" = xno],
 	AC_MSG_ERROR([C compiler does not support C99]))
 
-AC_CHECK_PROG([HAVE_POD2MAN], [pod2man], [yes])
-AS_IF([test "$HAVE_POD2MAN" != "yes"],
-	AC_MSG_FAILURE([pod2man is needed to generate manual from POD]))
-
 AC_CHECK_SIZEOF(short)
 AC_CHECK_SIZEOF(int)
 AC_CHECK_SIZEOF(long)
