@@ -48,14 +48,12 @@ install-exec-hook:
 	$(LN_S) -f lrzip-next$(EXEEXT) $(DESTDIR)$(bindir)/lrznunzip$(EXEEXT)
 	$(LN_S) -f lrzip-next$(EXEEXT) $(DESTDIR)$(bindir)/lrzncat$(EXEEXT)
 	$(LN_S) -f lrzntar$(EXEEXT) $(DESTDIR)$(bindir)/lrznuntar$(EXEEXT)
-	$(LN_S) -f lrzip-next$(EXEEXT) $(DESTDIR)$(bindir)/lrzn$(EXEEXT)
 
 
 uninstall-local:
 	rm -f $(bindir)/lrznunzip
 	rm -f $(bindir)/lrzncat
 	rm -f $(bindir)/lrznuntar
-	rm -f $(bindir)/lrzn
 
 .PHONY: doc
 

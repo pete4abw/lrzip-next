@@ -96,14 +96,14 @@ struct encryption encryptions[MAXENC+1] = {
 
 static rzip_control base_control, local_control, *control;
 
-static void usage(bool compat)
+static void usage(void)
 {
-	print_output("lrz%s version %s\n", compat ? "" : "ip-next", PACKAGE_VERSION);
+	print_output("%s version %s\n", PACKAGE, PACKAGE_VERSION);
 	print_output("Copyright (C) Con Kolivas 2006-2021\n");
 	print_output("Copyright (C) Peter Hyman 2007-2022\n");
 	print_output("Based on rzip ");
 	print_output("Copyright (C) Andrew Tridgell 1998-2003\n\n");
-	print_output("Usage: lrz%s [options] <file...>\n", compat ? "" : "ip");
+	print_output("Usage: lrzip-next [options] <file...>\n");
 	print_output("Compression Options:\n--------------------\n");
 	print_output("	--lzma			lzma compression (default)\n");
 	print_output("	-b, --bzip2		bzip2 compression\n");
@@ -111,13 +111,9 @@ static void usage(bool compat)
 	print_output("	-l, --lzo		lzo compression (ultra fast)\n");
 	print_output("	-n, --no-compress	no backend compression - prepare for other compressor\n");
 	print_output("	-z, --zpaq		zpaq compression (best, extreme compression, extremely slow)\n");
-	if (compat) {
-		print_output("	-1 .. -9		set lzma/bzip2/gzip compression level (1-9, default 7)\n");
-		print_output("	--fast			alias for -1\n");
-		print_output("	--best			alias for -9\n");
-	}
-	if (!compat)
-		print_output("	-L, --level level	set lzma/bzip2/gzip compression level (1-9, default 7)\n");
+	print_output("	-L#, --level #		set lzma/bzip2/gzip compression level (1-9, default 7)\n");
+	print_output("	--fast			alias for -L1\n");
+	print_output("	--best			alias for -L9\n");
 	print_output("	--dictsize		Set lzma Dictionary Size for LZMA ds=0 to 40 expressed as 2<<11, 3<<11, 2<<12, 3<<12...2<<31-1\n");
 	print_output("	--zpaqbs		Set ZPAQ Block Size overriding defaults. 1-11, 2^zpaqbs * 1MB\n");
 	print_output("    Filtering Options:\n");
@@ -129,21 +125,16 @@ static void usage(bool compat)
 	print_output("	--ia64			Use IA64 filter (for all compression modes)\n");
 	print_output("	--delta	[1..32]		Use Delta filter (for all compression modes) (1 (default) -17, then multiples of 16 to 256)\n");
 	print_output("    Additional Compression Options:\n");
-	if (compat)
-		print_output("	-c, --stdout		output to STDOUT\n");
 	print_output("	-e, --encrypt [=password] password protected sha512/aes128 encryption on compression\n");
 	print_output("	-E, --emethod [method]	Encryption Method: 1 = AES128, 2=AES256\n");
-	if (!compat)
-		print_output("	-D, --delete		delete existing files\n");
+	print_output("	-D, --delete		delete existing files\n");
 	print_output("	-f, --force		force overwrite of any existing files\n");
-	if (compat)
-		print_output("	-k, --keep		don't delete source files on de/compression\n");
 	print_output("	-K, --keep-broken	keep broken or damaged output files\n");
 	print_output("	-o, --outfile filename	specify the output file name and/or path\n");
 	print_output("	-O, --outdir directory	specify the output directory when -o is not used\n");
 	print_output("	-S, --suffix suffix	specify compressed suffix (default '.lrz')\n");
 	print_output("    Low level Compression Options:\n");
-	print_output("	-N, --nice-level value	Set nice value to value (default %'d)\n", compat ? 0 : 19);
+	print_output("	-N, --nice-level value	Set nice value to value (default 19)\n");
 	print_output("	-m, --maxram size	Set maximum available ram in hundreds of MB\n\t\t\t\tOverrides detected amount of available ram. \
 Useful for testing\n");
 	print_output("	-R, --rzip-level level	Set independent RZIP Compression Level (1-9) for pre-processing (default=compression level)\n");
@@ -156,21 +147,15 @@ default chosen by heuristic dependent on ram and chosen compression\n");
 	print_output("	-d, --decompress	decompress\n");
 	print_output("	-e, -f -o -O		Same as Compression Options\n");
 	print_output("	-t, --test		test compressed file integrity\n");
-	if (compat)
-		print_output("	-C, --check		check integrity of file written on decompression\n");
-	else
-		print_output("	-c, -C, --check		check integrity of file written on decompression\n");
+	print_output("	-c, --check		check integrity of file written on decompression\n");
 	print_output("General Options:\n----------------\n");
 	print_output("	-h, -?, --help		show help\n");
 	print_output("	-H, --hash [hash code]	Set hash to compute (default md5) 1-13 (see manpage)\n");
 	print_output("	-i, --info		show compressed file information\n");
-	if (compat) {
-		print_output("	-L, --license		display software version and license\n");
-		print_output("	-P, --progress		show compression progress\n");
-	} else
-		print_output("	-q, --quiet		don't show compression progress\n");
+	print_output("	-P, --progress		show compression progress\n");
+	print_output("	-q, --quiet		don't show compression progress\n");
 	print_output("	-p, --threads value	Set processor count to override number of threads\n");
-	print_output("	-v[v%s], --verbose	Increase verbosity\n", compat ? "v" : "");
+	print_output("	-v[v], --verbose	Increase verbosity\n");
 	print_output("	-V, --version		display software version and license\n");
 	print_output("\nLRZIP=NOCONFIG environment variable setting can be used to bypass lrzip.conf.\n\
 TMP environment variable will be used for storage of temporary files when needed.\n\
@@ -179,16 +164,15 @@ TMPDIR may also be stored in lrzip.conf file.\n\
 
 }
 
-static void license(bool compat)
+static void license(void)
 {
-	print_output("lrz%s version %s\n\
+	print_output("%s version %s\n\
 Copyright (C) Con Kolivas 2006-2016\n\
 Copyright (C) Peter Hyman 2007-2022\n\
 Based on rzip Copyright (C) Andrew Tridgell 1998-2003\n\n\
 This is free software.  You may redistribute copies of it under the terms of\n\
 the GNU General Public License <http://www.gnu.org/licenses/gpl.html>.\n\
-There is NO WARRANTY, to the extent permitted by law.\n",
-compat ? "" : "ip", PACKAGE_VERSION);
+There is NO WARRANTY, to the extent permitted by law.\n", PACKAGE, PACKAGE_VERSION);
 }
 
 static void sighandler(int sig __UNUSED__)
@@ -286,52 +270,53 @@ static void show_summary(void)
 static struct option long_options[] = {
 	{"bzip2",	no_argument,	0,	'b'},		/* 0 */
 	{"check",	no_argument,	0,	'c'},
-	{"check",	no_argument,	0,	'C'},
 	{"decompress",	no_argument,	0,	'd'},
 	{"delete",	no_argument,	0,	'D'},
-	{"encrypt",	optional_argument,	0,	'e'},	/* 5 */
-	{"emethod",	required_argument,	0,	'E'},
+	{"encrypt",	optional_argument,	0,	'e'},
+	{"emethod",	required_argument,	0,	'E'},	/* 5 */
 	{"force",	no_argument,	0,	'f'},
 	{"gzip",	no_argument,	0,	'g'},
 	{"help",	no_argument,	0,	'h'},
-	{"hash",	optional_argument,	0,	'H'},	/* 10 */
-	{"info",	no_argument,	0,	'i'},
-	{"keep-broken",	no_argument,	0,	'k'},
+	{"hash",	optional_argument,	0,	'H'},
+	{"info",	no_argument,	0,	'i'},		/* 10 */
 	{"keep-broken",	no_argument,	0,	'K'},
 	{"lzo",		no_argument,	0,	'l'},
-	{"lzma",       	no_argument,	0,	0},		/* 15 */
 	{"level",	optional_argument,	0,	'L'},
-	{"license",	no_argument,	0,	'L'},
 	{"maxram",	required_argument,	0,	'm'},
-	{"no-compress",	no_argument,	0,	'n'},
-	{"nice-level",	required_argument,	0,	'N'},	/* 20 */
+	{"no-compress",	no_argument,	0,	'n'},		/* 15 */
+	{"nice-level",	required_argument,	0,	'N'},
 	{"outfile",	required_argument,	0,	'o'},
 	{"outdir",	required_argument,	0,	'O'},
 	{"threads",	required_argument,	0,	'p'},
-	{"progress",	no_argument,	0,	'P'},
-	{"quiet",	no_argument,	0,	'q'},		/* 25 */
+	{"progress",	no_argument,	0,	'P'},		/* 20 */
+	{"quiet",	no_argument,	0,	'q'},
 	{"rzip-level",	required_argument,	0,	'R'},
 	{"suffix",	required_argument,	0,	'S'},
 	{"test",	no_argument,	0,	't'},
-	{"threshold",	optional_argument,	0,	'T'},
-	{"unlimited",	no_argument,	0,	'U'},		/* 30 */
+	{"threshold",	optional_argument,	0,	'T'},	/* 25 */
+	{"unlimited",	no_argument,	0,	'U'},
 	{"verbose",	no_argument,	0,	'v'},
 	{"version",	no_argument,	0,	'V'},
 	{"window",	required_argument,	0,	'w'},
-	{"zpaq",	no_argument,	0,	'z'},
-	{"fast",	no_argument,	0,	'1'},		/* 35 */
+	{"zpaq",	no_argument,	0,	'z'},		/* 30 */
+	{"fast",	no_argument,	0,	'1'},
 	{"best",	no_argument,	0,	'9'},
+	{"lzma",       	no_argument,	0,	0},		/* 33 - begin long opt index */
 	{"dictsize",	required_argument,	0,	0},
-	{"zpaqbs",	required_argument,	0,	0},
+	{"zpaqbs",	required_argument,	0,	0},	/* 35 */
 	{"x86",		no_argument,	0,	0},
-	{"arm",		no_argument,	0,	0},		/* 40 */
+	{"arm",		no_argument,	0,	0},
 	{"armt",	no_argument,	0,	0},
 	{"ppc",		no_argument,	0,	0},
-	{"sparc",	no_argument,	0,	0},
+	{"sparc",	no_argument,	0,	0},		/* 40 */
 	{"ia64",	no_argument,	0,	0},
-	{"delta",	optional_argument,	0,	0},	/* 45 */
+	{"delta",	optional_argument,	0,	0},
 	{0,	0,	0,	0},
 };
+
+/* constants for ease of maintenance in getopt loop */
+#define LONGSTART	33
+#define FILTERSTART	36
 
 static void set_stdout(struct rzip_control *control)
 {
@@ -341,12 +326,11 @@ static void set_stdout(struct rzip_control *control)
 	register_outputfile(control, control->msgout);
 }
 
-static const char *loptions = "bcCdDe::E:fghH::iKlL:nN:o:O:p:PqR:S:tT::Um:vVw:z?";
-static const char *coptions = "bcCde::E:fghH::ikKlLnN:o:O:p:PR:S:tT::Um:vVw:z?123456789";
+static const char *loptions = "bcdDe::E:fghH::iKlL:nN:o:O:p:PqR:S:tT::Um:vVw:z?";
 
 int main(int argc, char *argv[])
 {
-	bool lrzncat = false, compat = false;
+	bool lrzncat = false;
 	bool options_file = false, conf_file_compression_set = false; /* for environment and tracking of compression setting */
 	struct timeval start_time, end_time;
 	struct sigaction handler;
@@ -369,13 +353,6 @@ int main(int argc, char *argv[])
 	else if (!strcmp(av, "lrzncat")) {
 		control->flags |= FLAG_DECOMPRESS | FLAG_STDOUT;
 		lrzncat = true;
-	} else if (!strcmp(av, "lrzn")) {
-		/* Called in gzip compatible command line mode */
-		control->flags &= ~FLAG_SHOW_PROGRESS;
-		control->flags &= ~FLAG_KEEP_FILES;
-		compat = true;
-		long_options[1].name = "stdout";
-		long_options[11].name = "keep";
 	}
 
 	/* Get Preloaded Defaults from lrzip.conf
@@ -398,7 +375,7 @@ int main(int argc, char *argv[])
 
 	setlocale(LC_NUMERIC, control->locale);				/* for printf features. Defailt is current locale */
 
-	while ((c = getopt_long(argc, argv, compat ? coptions : loptions, long_options, &long_opt_index)) != -1) {
+	while ((c = getopt_long(argc, argv, loptions, long_options, &long_opt_index)) != -1) {
 		switch (c) {
 		case 'b':
 		case 'g':
@@ -426,13 +403,6 @@ int main(int argc, char *argv[])
 			conf_file_compression_set = false;
 			break;
 		case 'c':
-			if (compat) {
-				control->flags |= FLAG_KEEP_FILES;
-				set_stdout(control);
-				break;
-			}
-			/* FALLTHRU */
-		case 'C':
 			control->flags |= FLAG_CHECK;
 			control->flags |= FLAG_HASH;
 			break;
@@ -460,7 +430,7 @@ int main(int argc, char *argv[])
 			break;
 		case 'h':
 		case '?':
-			usage(compat);
+			usage();
 			exit(0);
 		case 'H':
 			control->flags |= FLAG_HASHED;
@@ -477,20 +447,14 @@ int main(int argc, char *argv[])
 			control->flags |= FLAG_INFO;
 			control->flags &= ~FLAG_DECOMPRESS;
 			break;
-		case 'k':
-			if (compat) {
-				control->flags |= FLAG_KEEP_FILES;
-				break;
-			}
-			/* FALLTHRU */
 		case 'K':
 			control->flags |= FLAG_KEEP_BROKEN;
 			break;
+		case '1':	/* fast and best level options */
+		case '9':
+			control->compression_level = c - '0';
+			break;
 		case 'L':
-			if (compat) {
-				license(compat);
-				exit(0);
-			}
 			control->compression_level = strtol(optarg, &endptr, 10);
 			if (*endptr)
 				fatal("Extra characters after compression level: \'%s\'\n", endptr);
@@ -560,8 +524,6 @@ int main(int argc, char *argv[])
 		case 't':
 			if (control->outname)
 				fatal("Cannot specify an output file name when just testing.\n");
-			if (compat)
-				control->flags |= FLAG_KEEP_FILES;
 			if (!KEEP_FILES)
 				fatal("Doubt that you want to delete a file when just testing.\n");
 			control->flags |= FLAG_TEST_ONLY;
@@ -597,7 +559,7 @@ int main(int argc, char *argv[])
 			}
 			break;
 		case 'V':
-			license(compat);
+			license();
 			exit(0);
 			break;
 		case 'w':
@@ -607,27 +569,16 @@ int main(int argc, char *argv[])
 			if (control->window < 1)
 				fatal("Window must be positive\n");
 			break;
-		case '1':
-		case '2':
-		case '3':
-		case '4':
-		case '5':
-		case '6':
-		case '7':
-		case '8':
-		case '9':
-			control->compression_level = c - '0';
-			break;
 		case 0:	/* these are long options without a short code */
-			if (FILTER_USED && long_opt_index >= 39 )
+			if (FILTER_USED && long_opt_index >= FILTERSTART )
 				print_output("Filter already selected. %s filter ignored.\n", long_options[long_opt_index].name);
 			else {
 				switch(long_opt_index) {
 					/* in case lzma selected, need to reset not lzma flag */
-					case 14:
+					case LONGSTART:
 						control->flags &= ~FLAG_NOT_LZMA;		/* clear alternate compression flags */
 						break;
-					case 37:
+					case LONGSTART+1:
 						/* Dictionary Size,	2<<11, 3<<11
 						 * 			2<<12, 3<<12
 						 * 			...
@@ -645,7 +596,7 @@ int main(int argc, char *argv[])
 							control->dictSize = LZMA2_DIC_SIZE_FROM_PROP(ds);
 						}
 						break;
-					case 38:
+					case LONGSTART+2:
 						if (!ZPAQ_COMPRESS)
 							print_err("--zpaqbs option only valid for ZPAQ compression. Ignored.\n");
 						else {
@@ -658,25 +609,25 @@ int main(int argc, char *argv[])
 						}
 						break;
 						/* Filtering */
-					case 39:
+					case FILTERSTART:
 						control->filter_flag = FILTER_FLAG_X86;		// x86
 						break;
-					case 40:
+					case FILTERSTART+1:
 						control->filter_flag = FILTER_FLAG_ARM;		// ARM
 						break;
-					case 41:
+					case FILTERSTART+2:
 						control->filter_flag = FILTER_FLAG_ARMT;	// ARMT
 						break;
-					case 42:
+					case FILTERSTART+3:
 						control->filter_flag = FILTER_FLAG_PPC;		// PPC
 						break;
-					case 43:
+					case FILTERSTART+4:
 						control->filter_flag = FILTER_FLAG_SPARC;	// SPARC
 						break;
-					case 44:
+					case FILTERSTART+5:
 						control->filter_flag = FILTER_FLAG_IA64;	// IA64
 						break;
-					case 45:
+					case FILTERSTART+6:
 						control->filter_flag = FILTER_FLAG_DELTA;	// DELTA
 						/* Delta Values are 1-16, then multiples of 16 to 256 */
 						if (optarg) {
@@ -693,7 +644,7 @@ int main(int argc, char *argv[])
 			}	//if filter used
 			break;	// break out of longopt switch
 		default:	//oops
-			usage(compat);
+			usage();
 			exit(1);
 
 		}	// main switch
@@ -840,12 +791,12 @@ int main(int argc, char *argv[])
 		if (!FORCE_REPLACE) {
 			if (STDIN && isatty(fileno((FILE *)stdin))) {
 				print_err("Will not read stdin from a terminal. Use -f to override.\n");
-				usage(compat);
+				usage();
 				exit (1);
 			}
-			if (!TEST_ONLY && STDOUT && isatty(fileno((FILE *)stdout)) && !compat) {
+			if (!TEST_ONLY && STDOUT && isatty(fileno((FILE *)stdout))) {
 				print_err("Will not write stdout to a terminal. Use -f to override.\n");
-				usage(compat);
+				usage();
 				exit (1);
 			}
 		}
