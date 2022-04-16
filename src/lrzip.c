@@ -924,9 +924,17 @@ bool get_fileinfo(rzip_control *control)
 
 	if (INFO) show_version(control);		// show version if not validating
 
-	if (ENCRYPT && !control->salt_pass_len)		// Only get password if needed
-		if (unlikely(!get_hash(control, 0)))
-			return false;
+	if (ENCRYPT) {
+		/* can only show info for current lrzip-next files */
+		if (control->major_version == 0) {
+			if (control->minor_version < 8)
+				fatal("Cannot show info for earlier encrypted lrzip/lrzip-next files: version %d.%d\n",
+						control->major_version, control->minor_version);
+			if (!control->salt_pass_len)		// Only get password if needed
+				if (unlikely(!get_hash(control, 0)))
+					return false;
+		}
+	}
 
 	/* remove checks for lrzip < 0.6 */
 	if (control->major_version == 0) {
@@ -942,26 +950,24 @@ bool get_fileinfo(rzip_control *control)
 			chunk_size = le64toh(chunk_size);
 			if (unlikely(chunk_size < 0))
 				fatal("Invalid chunk size %'"PRId64"\n", chunk_size);
-		} else {
-			chunk_byte=8;
-			chunk_size=0;
-		}
-	}
-
-	/* determine proper offset for chunk headers */
-	/* remove checks for lrzip < 0.6 */
-	if (control->major_version == 0) {
-		if (ENCRYPT) {
-			// Only for version 6, 7, and 8
-			header_length=33; // 25 + 8
+			/* set header offsets for earlier versions */
+			switch (control->minor_version) {
+				case 6:
+				case 7:	ofs = 26;
+					break;
+				case 8: ofs = 20;
+					break;
+			}
+			ofs += chunk_byte;
+			/* header length is the same for non-encrypted files */
+			header_length = 1 + (chunk_byte * 3);
+		} else {	/* ENCRYPTED */
+			chunk_byte=8;		// chunk byte size is always 8 for encrypted files
+			chunk_size=0;		// chunk size is unknown with encrypted files
+			header_length=33;	// 25 + 8
 			// salt is first 8 bytes
-			ofs = control->minor_version < 8 ? 26 : 20;
-		} else if (control->minor_version == 6 || control->minor_version == 7) {
-			ofs = 26 + chunk_byte;
-			header_length = 1 + (chunk_byte * 3);
-		} else if (control->minor_version == 8) {
-			ofs = 20 + chunk_byte;
-			header_length = 1 + (chunk_byte * 3);
+			if (control->minor_version == 8)
+				ofs = 20;
 		}
 	}
 
