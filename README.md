@@ -1,12 +1,9 @@
 lrzip-next - Long Range ZIP
 ======================
 
-**This is the whats-next branch of `lrzip-next`. Here new features will be tested.**
+## LZMA SDK 21.06 (Apr 2022)
 
-## NEW: LZMA SDK 21.06 (Feb 2022)
-
-Tag v0.8.11
-This branch **lzma-21.06** is now the default branch.
+Tag v0.8.12
 **Encrypted archives from any earlier version will not be compatible or readable.**
 **LRZIP Archives created with versions < 0.6 will no longer be supported.**
 

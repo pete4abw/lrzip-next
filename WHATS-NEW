@@ -1,8 +1,10 @@
 whats-next: April 2022
+lrzip-next v0.8.12
 Remove recursive (-r) option. No need anymore with `tar`.
 Remove gzip compatibility options.
 Remove lrzn link to lrzip-next.
 Remove pod2man dependency and .pod files.
+Add check for incompatible encrypted archive.
 
 whats-next: March 2022
 lrzip-next v0.8.11
