@@ -1,3 +1,9 @@
+lrzip-next: May 2022 v0.8.13
+Show error if trying to decrypt any earlier file <0.6x
+Doc updates
+Upstream bugfix
+Don't try and show compression stats if using STDOUT
+
 whats-next: April 2022
 lrzip-next v0.8.12
 Remove recursive (-r) option. No need anymore with `tar`.
