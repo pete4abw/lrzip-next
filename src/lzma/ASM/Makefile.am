@@ -4,7 +4,7 @@ MAINTAINERCLEANFILES = Makefile.in
 SRC = @srcdir@/x86
 ABSSRC = @abs_srcdir@/x86
 ASM_H  = $(SRC)/7zAsm.asm
-ASM_OPT += -g -F dwarf -I $(SRC)/
+ASM_OPT += -I $(SRC)/
 ## For LZMA Assembler Decompressor
 ASM_De = LzmaDecOpt
 ASM_F  = LzFindOpt

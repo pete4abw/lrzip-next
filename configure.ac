@@ -75,27 +75,37 @@ AC_ARG_ENABLE(
 		ASM=yes
 	)
 
+ASM_PROG=
+ASM_OPT=
 if test x"$ASM" = xyes; then
 	AC_CHECK_PROGS( ASM_PROG, nasm yasm, no,  ) # Allow test for multiple Assemblers.
 	if test x"$ASM_PROG" = xno; then
 		ASM=no
-	fi
+		ASM_PROG=
+	else
 ## only x86_64
-	case $host in
-		x86_64-*)
-			ASM_OPT="-Dx64 -f elf64"
-			;;
-		*) 
-			ASM=no
-			;;
-	esac
+		case $host in
+			x86_64-*)
+				case "$ASM_PROG" in
+					nasm)
+						ASM_OPT="-Dx64 -f elf64 -g -F dwarf"
+						;;
+					yasm)
+						ASM_OPT="-Dx64 -f elf64 -g dwarf2"
+						;;
+					*)
+						# should never get here, but in case...
+						AC_MSG_ERROR([Internal Error: No Assembler found!])
+						;;
+				esac
+				;;
+			*)
+				ASM=no
+				;;
+		esac
+	fi
 fi
 
-if test x"$ASM" = xno; then
-	ASM_PROG=
-	ASM_OPT=
-	ASM=
-fi
 AM_CONDITIONAL([USE_ASM], [test x"$ASM" = xyes])
 AC_SUBST(ASM_OPT)
 AC_SUBST(ASM_PROG)
