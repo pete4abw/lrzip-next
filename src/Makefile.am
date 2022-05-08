@@ -16,7 +16,6 @@ libtmplrzip_next_la_SOURCES = \
 	include/runzip.h \
 	include/stream.h \
 	include/util.h \
-	lzma/include/7zCrc.h \
 	lzma/include/LzmaDec.h \
 	lzma/include/LzmaLib.h
 
