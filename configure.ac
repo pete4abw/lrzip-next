@@ -152,8 +152,6 @@ case $host in
 		;;
 esac
 
-EFL_CHECK_DOXYGEN([build_doc="yes"], [build_doc="no"])
-
 AC_CONFIG_FILES([
 Makefile
 src/Makefile
@@ -182,8 +180,6 @@ echo
 echo "  Static binary......: $static"
 echo "  Host system........: $host"
 echo "  Build system.......: $build"
-echo
-echo "Documentation..........: ${build_doc}"
 echo
 echo "Compilation............: make (or gmake)"
 echo "  CPPFLAGS.............: $CPPFLAGS"
