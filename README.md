@@ -3,7 +3,7 @@ lrzip-next - Long Range ZIP
 
 ## LZMA SDK 21.06 (May 2022)
 
-Tag v0.8.13
+Tag v0.8.14
 **Encrypted archives from any earlier version will not be compatible or readable.**
 **LRZIP Archives created with versions < 0.6 will no longer be supported.**
 

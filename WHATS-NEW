@@ -1,3 +1,9 @@
+lrzip-next: May 2022 v0.8.14
+BUGFIX: fix yasm compiling (Issue #75).
+Remove incorrect reference to 7zCrc.h which caused make dist to fail.
+Remove doxygen documentation requirement (used only for liblrzip
+  which has been removed).
+
 lrzip-next: May 2022 v0.8.13
 Show error if trying to decrypt any earlier file <0.6x
 Doc updates
