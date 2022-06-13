@@ -407,6 +407,8 @@ static bool get_magic(rzip_control *control, int fd_in, unsigned char *magic)
 	memcpy(&control->major_version, &magic[4], 1);
 	memcpy(&control->minor_version, &magic[5], 1);
 
+	/* zero out compression levels so info does not show for earlier versions */
+	control->rzip_compression_level = control->compression_level = 0;
 	/* remove checks for lrzip < 0.6 */
 	if (control->major_version == 0) {
 		switch (control->minor_version) {
@@ -1224,7 +1226,9 @@ done:
 		else
 			print_output("Dunno wtf\n");
 
-		print_output("Rzip Compression Level: %d, Lrzip-next Compression Level: %d\n",
+		/* only print stored compression level for versions that have it! */
+		if (control->compression_level)
+			print_output("Rzip Compression Level: %d, Lrzip-next Compressinn Level: %d\n",
 				control->rzip_compression_level, control->compression_level);
 		/* show filter used */
 		if (FILTER_USED) {
