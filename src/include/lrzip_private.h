@@ -468,6 +468,8 @@ struct rzip_control {
 	char *suffix;
 	uchar compression_level;
 	uchar rzip_compression_level;	// separate rzip compression level
+	int comment_length;		// comment length
+	uchar *comment;			// if there is a comment, 64 chars max
 	i64 overhead;			// compressor overhead
 	i64 usable_ram;			// the most ram we'll try to use on one activity
 	i64 maxram;			// the largest chunk of ram to allocate

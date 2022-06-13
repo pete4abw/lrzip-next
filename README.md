@@ -3,7 +3,13 @@ lrzip-next - Long Range ZIP
 
 ## LZMA SDK 21.06 (May 2022)
 
-Tag v0.8.14
+Tag v0.9.0beta
+
+### NEW
+**Comments added with -C "comment" option (64 bytes max)**
+**Store Compression Levels in magic header**
+**Update INFO output**
+
 **Encrypted archives from any earlier version will not be compatible or readable.**
 **LRZIP Archives created with versions < 0.6 will no longer be supported.**
 
@@ -42,6 +48,8 @@ Many new changes, not in the main branch, including:
 * All filenames and symlinks and manpages now distinct from `lrzip`
 * Remove -r Recursive option
 * Remove gzip option compatibility and symlink `lrzn`. `lrzip-next` options prevail.
+* Users can add Comments with -C|--comment option
+* Magic header will store compression level used.
 
 (See original README for more historical info)
 

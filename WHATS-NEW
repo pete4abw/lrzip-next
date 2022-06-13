@@ -1,3 +1,7 @@
+lrzip-next: June 2022
+Add byte to store compression levels
+Add comment facility
+
 lrzip-next: May 2022 v0.8.14
 BUGFIX: fix yasm compiling (Issue #75).
 Remove incorrect reference to 7zCrc.h which caused make dist to fail.

@@ -125,6 +125,7 @@ static void usage(void)
 	print_output("	--ia64			Use IA64 filter (for all compression modes)\n");
 	print_output("	--delta	[1..32]		Use Delta filter (for all compression modes) (1 (default) -17, then multiples of 16 to 256)\n");
 	print_output("    Additional Compression Options:\n");
+	print_output("	-C, --comment [comment]	Add a comment up to 64 chars\n");
 	print_output("	-e, --encrypt [=password] password protected sha512/aes128 encryption on compression\n");
 	print_output("	-E, --emethod [method]	Encryption Method: 1 = AES128, 2=AES256\n");
 	print_output("	-D, --delete		delete existing files\n");
@@ -270,53 +271,54 @@ static void show_summary(void)
 static struct option long_options[] = {
 	{"bzip2",	no_argument,	0,	'b'},		/* 0 */
 	{"check",	no_argument,	0,	'c'},
+	{"comment",	required_argument, 0,	'C'},
 	{"decompress",	no_argument,	0,	'd'},
 	{"delete",	no_argument,	0,	'D'},
-	{"encrypt",	optional_argument,	0,	'e'},
-	{"emethod",	required_argument,	0,	'E'},	/* 5 */
+	{"encrypt",	optional_argument,	0,	'e'},	/* 5 */
+	{"emethod",	required_argument,	0,	'E'},
 	{"force",	no_argument,	0,	'f'},
 	{"gzip",	no_argument,	0,	'g'},
 	{"help",	no_argument,	0,	'h'},
-	{"hash",	optional_argument,	0,	'H'},
-	{"info",	no_argument,	0,	'i'},		/* 10 */
+	{"hash",	optional_argument,	0,	'H'},	/* 10 */
+	{"info",	no_argument,	0,	'i'},
 	{"keep-broken",	no_argument,	0,	'K'},
 	{"lzo",		no_argument,	0,	'l'},
 	{"level",	optional_argument,	0,	'L'},
-	{"maxram",	required_argument,	0,	'm'},
-	{"no-compress",	no_argument,	0,	'n'},		/* 15 */
+	{"maxram",	required_argument,	0,	'm'},	/* 15 */
+	{"no-compress",	no_argument,	0,	'n'},
 	{"nice-level",	required_argument,	0,	'N'},
 	{"outfile",	required_argument,	0,	'o'},
 	{"outdir",	required_argument,	0,	'O'},
-	{"threads",	required_argument,	0,	'p'},
-	{"progress",	no_argument,	0,	'P'},		/* 20 */
+	{"threads",	required_argument,	0,	'p'},	/* 20 */
+	{"progress",	no_argument,	0,	'P'},
 	{"quiet",	no_argument,	0,	'q'},
 	{"rzip-level",	required_argument,	0,	'R'},
 	{"suffix",	required_argument,	0,	'S'},
-	{"test",	no_argument,	0,	't'},
-	{"threshold",	optional_argument,	0,	'T'},	/* 25 */
+	{"test",	no_argument,	0,	't'},		/* 25 */
+	{"threshold",	optional_argument,	0,	'T'},
 	{"unlimited",	no_argument,	0,	'U'},
 	{"verbose",	no_argument,	0,	'v'},
 	{"version",	no_argument,	0,	'V'},
-	{"window",	required_argument,	0,	'w'},
-	{"zpaq",	no_argument,	0,	'z'},		/* 30 */
+	{"window",	required_argument,	0,	'w'},	/* 30 */
+	{"zpaq",	no_argument,	0,	'z'},
 	{"fast",	no_argument,	0,	'1'},
 	{"best",	no_argument,	0,	'9'},
-	{"lzma",       	no_argument,	0,	0},		/* 33 - begin long opt index */
-	{"dictsize",	required_argument,	0,	0},
-	{"zpaqbs",	required_argument,	0,	0},	/* 35 */
-	{"x86",		no_argument,	0,	0},
+	{"lzma",       	no_argument,	0,	0},		/* 34 - begin long opt index */
+	{"dictsize",	required_argument,	0,	0},	/* 35 */
+	{"zpaqbs",	required_argument,	0,	0},
+	{"x86",		no_argument,	0,	0},		/* 37 */
 	{"arm",		no_argument,	0,	0},
 	{"armt",	no_argument,	0,	0},
-	{"ppc",		no_argument,	0,	0},
-	{"sparc",	no_argument,	0,	0},		/* 40 */
+	{"ppc",		no_argument,	0,	0},		/* 40 */
+	{"sparc",	no_argument,	0,	0},
 	{"ia64",	no_argument,	0,	0},
-	{"delta",	optional_argument,	0,	0},
+	{"delta",	optional_argument,	0,	0},	/* 43 */
 	{0,	0,	0,	0},
 };
 
 /* constants for ease of maintenance in getopt loop */
-#define LONGSTART	33
-#define FILTERSTART	36
+#define LONGSTART	34
+#define FILTERSTART	37
 
 static void set_stdout(struct rzip_control *control)
 {
@@ -326,7 +328,7 @@ static void set_stdout(struct rzip_control *control)
 	register_outputfile(control, control->msgout);
 }
 
-static const char *loptions = "bcdDe::E:fghH::iKlL:nN:o:O:p:PqR:S:tT::Um:vVw:z?";
+static const char *loptions = "bcC:dDe::E:fghH::iKlL:nN:o:O:p:PqR:S:tT::Um:vVw:z?";
 
 int main(int argc, char *argv[])
 {
@@ -405,6 +407,16 @@ int main(int argc, char *argv[])
 		case 'c':
 			control->flags |= FLAG_CHECK;
 			control->flags |= FLAG_HASH;
+			break;
+		case 'C':	/* get comment if any */
+			if (!optarg)
+				fatal("Must provide a comment\n");
+			control->comment_length = strlen(optarg);
+			if (control->comment_length  > 64)
+				fatal("Comment string too long, %d bytes.\n", control->comment_length);
+
+			if (control->comment_length)
+				control->comment = strdup(optarg);
 			break;
 		case 'd':
 			control->flags |= FLAG_DECOMPRESS;

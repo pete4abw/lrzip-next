@@ -1,4 +1,22 @@
-lrzip-0.8x file format
+lrzip-next-0.9x file format
+
+Magic extended 2 bytes.
+
+18	lrzip-next compression levels, 0bRRRRLLLL
+	high order bits Rzip compression level (magic >> 4)
+	low order bits Lrzip compression level (magic  &15)
+19	Comment length. 0 means no comment.
+20-83	Comment 64 chars max
+
+Byte			Content
+0-19			Magic
+----
+20 - 83			Comment (if any)
+20+Comment length	RZip Chunk Data (RCD)
+RCD+			Compressed Data Blocks
+end-16 or 2		hash or CRC
+
+lrzip-next-0.8x file format
 July 2021
 get rid of dead space
 encryption is only bytes 6-13 since encryption loops are first
@@ -30,7 +48,7 @@ Magic Data
 6-13	Source File Decompressed Size
 or	If encrypted, Encryption Hash Loops + Salt (2 bytes + 6 bytes)
 14	>=1 = md5sum hash is stored at end of the archive, otherwise CRC
-	(only 0 and 1 used now, but for possible future expansion)
+	(Hashes defined in CURRENT_HASHES file)
 15	>=1 = archive is encrypted (only 1 used now, but for possible future
 	expansion)
 16	Filtering. 0=none, x86, ARM, ARMT, PPC, SPARC, IA64, DELTA (1..7)

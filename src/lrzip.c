@@ -1,6 +1,6 @@
 /*
    Copyright (C) 2006-2016,2018 Con Kolivas
-   Copyright (C) 2011, 2020 Peter Hyman
+   Copyright (C) 2011, 2022 Peter Hyman
    Copyright (C) 1998-2003 Andrew Tridgell
 
    This program is free software; you can redistribute it and/or modify
@@ -55,7 +55,8 @@
 
 #include "LzmaDec.h"		// decode for get_fileinfo
 
-#define MAGIC_LEN	(18)	// new v 0.8 magic header
+#define MAGIC_LEN	(20)	// new v 0.9 magic header
+#define MAGIC_V8_LEN	(18)	// new v 0.8 magic header
 #define OLD_MAGIC_LEN	(24)	// Just to read older versions
 #define MAGIC_HEADER	(6)	// to validate file initially
 
@@ -181,11 +182,27 @@ bool write_magic(rzip_control *control)
 		 */
 	}
 
+	/* save compression levels
+	 * high order bits, rzip compression level
+	 * low order bits lrzip-next compression level
+	 */
+	magic[18] = (control->rzip_compression_level << 4) + control->compression_level;
+
+	/* store comment length */
+	magic[19] = (char) control->comment_length;
+
 	if (unlikely(fdout_seekto(control, 0)))
 		fatal("Failed to seek to BOF to write Magic Header\n");
 
 	if (unlikely(put_fdout(control, magic, MAGIC_LEN) != MAGIC_LEN))
 		fatal("Failed to write magic header\n");
+
+	/* now write comment if any */
+	if (magic[19]) {
+		if (unlikely(put_fdout(control, control->comment, control->comment_length) != control->comment_length))
+			fatal("Failed to write comment after magic header\n");
+	}
+
 	control->magic_written = 1;
 	return true;
 }
@@ -193,6 +210,22 @@ bool write_magic(rzip_control *control)
 static inline i64 enc_loops(uchar b1, uchar b2)
 {
 	return (i64)b2 << (i64)b1;
+}
+
+// check for comments
+// Called only if comment length > 0
+
+static void  get_comment(rzip_control *control, int fd_in, unsigned char *magic)
+{
+	if (unlikely(!(control->comment = malloc(magic[19]+1))))
+		fatal("Failed to allocate memory for comment\n");
+	/* read comment */
+	if (unlikely(read(fd_in, control->comment, magic[19]) != magic[19]))
+		fatal("Failed to read comment\n");
+
+	control->comment_length = magic[19];
+	control->comment[control->comment_length] = '\0';
+	return;
 }
 
 // retriev lzma properties
@@ -353,7 +386,23 @@ static void get_magic_v8(rzip_control *control, unsigned char *magic)
 	return;
 }
 
-static bool get_magic(rzip_control *control, unsigned char *magic)
+// new lrzip-next v9 magic header format.
+
+static void get_magic_v9(rzip_control *control, int fd_in, unsigned char *magic)
+{
+	/* get compression levels
+	 * rzip level is high order bits
+	 * lrzip level is low order bits
+	 */
+	control->compression_level = magic[18] & 0b00001111;
+	control->rzip_compression_level = magic[18] >> 4;
+
+	if (magic[19])	/* get comment if there is one */
+		get_comment(control, fd_in, magic);
+
+	return;
+}
+static bool get_magic(rzip_control *control, int fd_in, unsigned char *magic)
 {
 	memcpy(&control->major_version, &magic[4], 1);
 	memcpy(&control->minor_version, &magic[5], 1);
@@ -370,6 +419,10 @@ static bool get_magic(rzip_control *control, unsigned char *magic)
 		case 8:
 			get_magic_v8(control, magic);
 			break;
+		case 9:	/* version 0.9 adds two bytes */
+			get_magic_v8(control, magic);
+			get_magic_v9(control, fd_in, magic);
+			break;
 		default:
 			print_err("lrzip version %d.%d archive is not supported. Aborting\n",
 					control->major_version, control->minor_version);
@@ -383,6 +436,7 @@ static bool get_magic(rzip_control *control, unsigned char *magic)
 static bool read_magic(rzip_control *control, int fd_in, i64 *expected_size)
 {
 	unsigned char magic[OLD_MAGIC_LEN];	// Make at least big enough for old magic
+	int bytes_to_read;			// simplify reading of magic
 
 	memset(magic, 0, sizeof(magic));
 	/* Initially read only file type and version */
@@ -392,16 +446,19 @@ static bool read_magic(rzip_control *control, int fd_in, i64 *expected_size)
 	if (unlikely(strncmp(magic, "LRZI", 4)))
 		fatal("Not an lrzip file\n");
 
-	if (magic[4] == 0 && magic[5] < 8)	// read rest of header
-	{
-		if (unlikely(read(fd_in, &magic[6], OLD_MAGIC_LEN - MAGIC_HEADER) != OLD_MAGIC_LEN - MAGIC_HEADER))
-			fatal("Failed to read magic header\n");
-	} else if (magic[4] == 0 && magic[5] == 8) { // 0.8 file
-		if (unlikely(read(fd_in, &magic[6], MAGIC_LEN - MAGIC_HEADER) != MAGIC_LEN - MAGIC_HEADER))
+	if (magic[4] == 0) {
+		if (magic[5] < 8)		/* old magic */
+			bytes_to_read = OLD_MAGIC_LEN;
+		else if (magic[5] == 8) 	/* 0.8 file */
+			bytes_to_read = MAGIC_V8_LEN;
+		else				/* ASSUME current version */
+			bytes_to_read = MAGIC_LEN;
+
+		if (unlikely(read(fd_in, &magic[6], bytes_to_read - MAGIC_HEADER) != bytes_to_read - MAGIC_HEADER))
 			fatal("Failed to read magic header\n");
 	}
 
-	if (unlikely(!get_magic(control, magic)))
+	if (unlikely(!get_magic(control, fd_in, magic)))
 		return false;
 	*expected_size = control->st_size;
 	return true;
@@ -620,31 +677,43 @@ int open_tmpinfile(rzip_control *control)
 	return fd_in;
 }
 
-static bool read_tmpinmagic(rzip_control *control)
+static bool read_tmpinmagic(rzip_control *control, int fd_in)
 {
 	/* just in case < 0.8 file */
 	char magic[OLD_MAGIC_LEN];
-	int i, tmpchar;
+	int bytes_to_read, i, tmpchar;
 
 	memset(magic, 0, sizeof(magic));
-	/* first read in MAGIC_LEN bytes. 0.8+ */
-	for (i = 0; i < MAGIC_LEN; i++) {
+	/* Initially read only file type and version */
+	for (i = 0; i < MAGIC_HEADER; i++) {
 		tmpchar = getchar();
 		if (unlikely(tmpchar == EOF))
 			fatal("Reached end of file on STDIN prematurely on v05 magic read\n");
 		magic[i] = (char)tmpchar;
 	}
-	/* if < 0.8 read in last bytes */
-	if (magic[4] == 0 && magic[5] < 8) {
-		for ( ; i < OLD_MAGIC_LEN; i++) {
-			tmpchar = getchar();
-			if (unlikely(tmpchar == EOF))
-				fatal("Reached end of file on STDIN prematurely on v05 magic read\n");
-			magic[i] = (char)tmpchar;
+
+	if (unlikely(strncmp(magic, "LRZI", 4)))
+		fatal("Not an lrzip stream\n");
+
+	if (magic[4] == 0) {
+		if (magic[5] < 8)		/* old magic */
+			bytes_to_read = OLD_MAGIC_LEN;
+		else if (magic[5] == 8) 	/* 0.8 file */
+			bytes_to_read = MAGIC_V8_LEN;
+		else				/* ASSUME current version */
+			bytes_to_read = MAGIC_LEN;
+
+		if (magic[4] == 0 && magic[5] < 8) {
+			for ( ; i < bytes_to_read; i++) {
+				tmpchar = getchar();
+				if (unlikely(tmpchar == EOF))
+					fatal("Reached end of file on STDIN prematurely on v05 magic read\n");
+				magic[i] = (char)tmpchar;
+			}
 		}
 	}
 
-	return get_magic(control, magic);
+	return get_magic(control, fd_in, magic);
 }
 
 /* Read data from stdin into temporary inputfile */
@@ -693,7 +762,7 @@ static bool open_tmpoutbuf(rzip_control *control)
 	control->out_maxlen = maxlen + control->page_size;
 	control->tmp_outbuf = buf;
 	if (!DECOMPRESS && !TEST_ONLY)
-		control->out_ofs = control->out_len = MAGIC_LEN;
+		control->out_ofs = control->out_len = MAGIC_LEN + control->comment_length;
 	return true;
 }
 
@@ -957,6 +1026,8 @@ bool get_fileinfo(rzip_control *control)
 					break;
 				case 8: ofs = 20;
 					break;
+				case 9: ofs = 22 + control->comment_length;	/* comment? Add length */
+					break;
 			}
 			ofs += chunk_byte;
 			/* header length is the same for non-encrypted files */
@@ -966,8 +1037,16 @@ bool get_fileinfo(rzip_control *control)
 			chunk_size=0;		// chunk size is unknown with encrypted files
 			header_length=33;	// 25 + 8
 			// salt is first 8 bytes
-			if (control->minor_version == 8)
-				ofs = 20;
+			if (control->major_version == 0) {
+				switch (control->minor_version) {
+					case 8:	ofs = 20;
+						break;
+					case 9: ofs = 22 + control->comment_length;
+						break;
+					default: fatal("Cannot decrypt earlier versions of lrzip-next\n");
+						 break;
+				}
+			}
 		}
 	}
 
@@ -1114,30 +1193,11 @@ done:
 				control->major_version, control->minor_version, ENCRYPT ? "Encrypted " : "");
 		if (ENCRYPT)
 			print_output("%s Encrypted ", control->enc_label);
-		print_output("file\n\n");
+		print_output("file\n");
+		if (control->comment_length)	/* print comment */
+			print_output("Archive Comment: %s\n", control->comment);
 
-		if (!expected_size)
-			print_output("Due using %s, expected decompression size not available\n",
-				ENCRYPT ? "Encryption": "Compression to STDOUT");
-		print_verbose("  Stats         Percent       Compressed /   Uncompressed\n  -------------------------------------------------------\n");
-		/* If we can't show expected size, tailor output for it */
-		if (expected_size) {
-			print_verbose("  Rzip:         %5.1f%%\t%'16"PRId64" / %'14"PRId64"\n",
-					percentage (utotal, expected_size),
-					utotal, expected_size);
-			print_verbose("  Back end:     %5.1f%%\t%'16"PRId64" / %'14"PRId64"\n",
-					percentage(ctotal, utotal),
-					ctotal, utotal);
-			print_verbose("  Overall:      %5.1f%%\t%'16"PRId64" / %'14"PRId64"\n",
-					percentage(ctotal, expected_size),
-					ctotal, expected_size);
-		} else {
-			print_verbose("  Rzip:         Unavailable\n");
-			print_verbose("  Back end:     %5.1f%%\t%'16"PRId64" / %'14"PRId64"\n", percentage(ctotal, utotal), ctotal, utotal);
-			print_verbose("  Overall:      Unavailable\n");
-		}
-
-		print_output("\n  Compression Method: ");
+		print_output("Compression Method: ");
 		if (save_ctype == CTYPE_NONE)
 			print_output("rzip alone\n");
 		else if (save_ctype == CTYPE_BZIP2)
@@ -1164,9 +1224,11 @@ done:
 		else
 			print_output("Dunno wtf\n");
 
+		print_output("Rzip Compression Level: %d, Lrzip-next Compression Level: %d\n",
+				control->rzip_compression_level, control->compression_level);
 		/* show filter used */
 		if (FILTER_USED) {
-			print_output("  Filter Used: %s",
+			print_output("Filter Used: %s",
 					((control->filter_flag == FILTER_FLAG_X86) ? "x86" :
 					((control->filter_flag == FILTER_FLAG_ARM) ? "ARM" :
 					((control->filter_flag == FILTER_FLAG_ARMT) ? "ARMT" :
@@ -1180,8 +1242,29 @@ done:
 		}
 		print_output("\n");
 
+		if (!expected_size)
+			print_output("Due to using %s, expected decompression size not available\n",
+				ENCRYPT ? "Encryption": "Compression to STDOUT");
+		print_verbose("  Stats         Percent       Compressed /   Uncompressed\n  -------------------------------------------------------\n");
+		/* If we can't show expected size, tailor output for it */
 		if (expected_size) {
-			print_output("  Decompressed file size: %'14"PRIu64"\n", expected_size);
+			print_verbose("  Rzip:         %5.1f%%\t%'16"PRId64" / %'14"PRId64"\n",
+					percentage (utotal, expected_size),
+					utotal, expected_size);
+			print_verbose("  Back end:     %5.1f%%\t%'16"PRId64" / %'14"PRId64"\n",
+					percentage(ctotal, utotal),
+					ctotal, utotal);
+			print_verbose("  Overall:      %5.1f%%\t%'16"PRId64" / %'14"PRId64"\n",
+					percentage(ctotal, expected_size),
+					ctotal, expected_size);
+		} else {
+			print_verbose("  Rzip:         Unavailable\n");
+			print_verbose("  Back end:     %5.1f%%\t%'16"PRId64" / %'14"PRId64"\n", percentage(ctotal, utotal), ctotal, utotal);
+			print_verbose("  Overall:      Unavailable\n");
+		}
+
+		if (expected_size) {
+			print_output("\n  Decompressed file size: %'14"PRIu64"\n", expected_size);
 			print_output("  Compressed file size:   %'14"PRIu64"\n", infile_size);
 			print_output("  Compression ratio:      %14.3Lfx, bpb: %.3Lf\n", cratio, bpb);
 		} else {
@@ -1232,8 +1315,10 @@ bool compress_file(rzip_control *control)
 	const char *tmp, *tmpinfile; 	/* we're just using this as a proxy for control->infile.
 					 * Spares a compiler warning
 					 */
-	int fd_in = -1, fd_out = -1;
-	char header[MAGIC_LEN];
+	int fd_in = -1, fd_out = -1, len = MAGIC_LEN + control->comment_length;
+	char *header;
+
+	header = calloc(len, 1);
 
 	control->flags |= FLAG_HASHED;
 	/* allocate result block for selected hash */
@@ -1243,7 +1328,6 @@ bool compress_file(rzip_control *control)
 		if (unlikely(!get_hash(control, 1)))
 			return false;
 	}
-	memset(header, 0, sizeof(header));
 
 	if (!STDIN) {
 		fd_in = open(control->infile, O_RDONLY);
@@ -1305,12 +1389,12 @@ bool compress_file(rzip_control *control)
 	}
 
 	/* Write zeroes to header at beginning of file */
-	if (unlikely(!STDOUT && write(fd_out, header, sizeof(header)) != sizeof(header)))
+	if (unlikely(!STDOUT && write(fd_out, header, len) != len))
 		fatal("Cannot write file header\n");
 
 	rzip_fd(control, fd_in, fd_out);
 
-	/* Wwrite magic at end b/c lzma does not tell us properties until it is done */
+	/* need to write magic after compression for expected size */
 	if (!STDOUT) {
 		if (unlikely(!write_magic(control)))
 			goto error;
@@ -1341,8 +1425,10 @@ bool compress_file(rzip_control *control)
 
 	dealloc(control->outfile);
 	dealloc(control->hash_resblock);
+	dealloc(header);
 	return true;
 error:
+	dealloc(header);
 	if (!STDIN && (fd_in > 0))
 		close(fd_in);
 	if ((!STDOUT) && (fd_out > 0))
@@ -1410,7 +1496,7 @@ bool decompress_file(rzip_control *control)
 
 	if (STDIN) {
 		fd_in = open_tmpinfile(control);
-		read_tmpinmagic(control);
+		read_tmpinmagic(control, fd_in);
 		if (ENCRYPT)
 			fatal("Cannot decompress encrypted file from STDIN\n");
 		expected_size = control->st_size;

@@ -52,6 +52,7 @@ Filtering Options (for all compression modes):
  \-\-ia64                  Use IA64 filter
  \-\-delta [=offset]       Use DELTA filter (offset 1..32. 1 default)
 Additional Compression Options:
+ \-C, \-\-comment [comment] Add a comment up to 64 chars
  \-e, \-\-encrypt[=password] Password protected SHAKE128/AES128 SHAKE256/AES256 encryption on compression
  \-E, \-\-emethod method    Select Encryption method, 1=AES 128, 2=AES 256 bit
  \-D, \-\-delete            delete existing files
@@ -169,6 +170,8 @@ compression modes. Delta offset 1 default. Delta offset is set as
 32, 19:48, 20:64...32:256.
 .\" 
 .SH "Additional Compression Options:"
+.IP "\fB-C | --comment \fR[\fIcomment\fP]"
+Add a comment for the archive up to 64 characters.
 .IP "\fB-e | --encrypt \fR[\fIpassword\fP]"
 Encrypt. This option enables high grade password encryption using a combination
 of multiply sha512 hashed password, random salt and aes128 CBC encryption.
