@@ -7,6 +7,7 @@
 ; 2020-01-02 : Peter Hyman (integrating 2018 updates)
 ; 2021-06-28 : Peter Hyman (integrating 2021 updates)
 ; 2021-08-01 : Peter Hyman (integrating 2021 updates)
+; 2022-06-22 : Peter Hyman (ignoring SDK 22.00 updates for UASM and JWASM/ASMC)
 
 ; Assumes x64 defined or not on entry
 ; ABI_CECDL is 1 if not x64

@@ -1,6 +1,7 @@
-lrzip-next: June 2022
+lrzip-next: June 2022 v 0.9.0beta
 Add byte to store compression levels
 Add comment facility
+Minor lzma SDK 22.00 updates
 
 lrzip-next: May 2022 v0.8.14
 BUGFIX: fix yasm compiling (Issue #75).

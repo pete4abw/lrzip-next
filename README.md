@@ -1,14 +1,15 @@
 lrzip-next - Long Range ZIP
 ======================
 
-## LZMA SDK 21.06 (May 2022)
+## LZMA SDK 22.00 (June 2022)
 
 Tag v0.9.0beta
 
 ### NEW
 **Comments added with -C "comment" option (64 bytes max)**
 **Store Compression Levels in magic header**
-**Update INFO output**
+**Update/Enhance INFO output**
+**LZMA SDK Update**
 
 **Encrypted archives from any earlier version will not be compatible or readable.**
 **LRZIP Archives created with versions < 0.6 will no longer be supported.**
