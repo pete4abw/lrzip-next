@@ -3,7 +3,7 @@ lrzip-next - Long Range ZIP
 
 ## LZMA SDK 22.00 (June 2022)
 
-Tag v0.9.0beta
+Tag v0.9.0
 
 ### NEW
 **Comments added with -C "comment" option (64 bytes max)**
@@ -71,7 +71,7 @@ more intelligent! Recommend downloading from master, not from past tags/releases
 **NEW**! If you just want to try `lrzip-next`, download the static binaries. No compilation
 necessary. [Visit this link to download](https://peterhyman.com/download/lrzip-next/).
 
-Verify file with gnupg key 0x467FBF7D.
+Verify file with gnupg key 0xEB2C5812.
 
 ### Build
 ```
