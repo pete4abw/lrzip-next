@@ -690,7 +690,7 @@ static bool read_tmpinmagic(rzip_control *control, int fd_in)
 	for (i = 0; i < MAGIC_HEADER; i++) {
 		tmpchar = getchar();
 		if (unlikely(tmpchar == EOF))
-			fatal("Reached end of file on STDIN prematurely on v05 magic read\n");
+			fatal("Reached end of file on STDIN prematurely on magic read\n");
 		magic[i] = (char)tmpchar;
 	}
 
@@ -705,13 +705,11 @@ static bool read_tmpinmagic(rzip_control *control, int fd_in)
 		else				/* ASSUME current version */
 			bytes_to_read = MAGIC_LEN;
 
-		if (magic[4] == 0 && magic[5] < 8) {
-			for ( ; i < bytes_to_read; i++) {
-				tmpchar = getchar();
-				if (unlikely(tmpchar == EOF))
-					fatal("Reached end of file on STDIN prematurely on v05 magic read\n");
-				magic[i] = (char)tmpchar;
-			}
+		for ( ; i < bytes_to_read; i++) {
+			tmpchar = getchar();
+			if (unlikely(tmpchar == EOF))
+				fatal("Reached end of file on STDIN prematurely on magic read\n");
+			magic[i] = (char)tmpchar;
 		}
 	}
 
