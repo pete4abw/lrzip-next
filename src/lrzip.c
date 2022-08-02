@@ -88,7 +88,30 @@ i64 get_ram(rzip_control *control)
 	mib[0] = CTL_HW;
 	mib[1] = HW_MEMSIZE;
 	sysctl(mib, 2, &ramsize, &len, NULL, 0);
-#else /* __APPLE__ */
+#elif defined(__OpenBSD__)
+# include <sys/resource.h>
+	struct rlimit rl;
+	i64 ramsize = (i64)sysconf(_SC_PHYS_PAGES) * PAGE_SIZE;
+
+	/* Raise limits all the way to the max */
+
+	if (getrlimit(RLIMIT_DATA, &rl) == -1)
+		fatal(("Failed to get limits in get_ram\n"), -1);
+
+	rl.rlim_cur = rl.rlim_max;
+	if (setrlimit(RLIMIT_DATA, &rl) == -1)
+		fatal(("Failed to set limits in get_ram\n"), -1);
+
+	/* Declare detected RAM to be either the max RAM available from
+	physical memory or the max RAM allowed by RLIMIT_DATA, whatever
+	is smaller, to prevent the heuristics from selecting
+	compression windows which cause lrzip to go into deep swap */
+
+	if (rl.rlim_max < ramsize)
+		return rl.rlim_max;
+
+	return ramsize;
+#else /* __APPLE__ or __Open_BSD__ */
 	i64 ramsize;
 	FILE *meminfo;
 	char aux[256];
