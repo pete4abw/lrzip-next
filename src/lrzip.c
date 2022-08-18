@@ -535,20 +535,17 @@ int open_tmpoutfile(rzip_control *control)
 
 	if (STDOUT && !TEST_ONLY)
 		print_verbose("Outputting to stdout.\n");
-	if (control->tmpdir) {
-		control->outfile = realloc(NULL, strlen(control->tmpdir) + 16);
-		if (unlikely(!control->outfile))
-			fatal("Failed to allocate outfile name\n");
-		strcpy(control->outfile, control->tmpdir);
-		strcat(control->outfile, "lrzipout.XXXXXX");
-	}
+	control->outfile = realloc(NULL, strlen(control->tmpdir) + 16);
+	if (unlikely(!control->outfile))
+		fatal("Failed to allocate outfile name\n");
+	strcpy(control->outfile, control->tmpdir);
+	strcat(control->outfile, "lrzipout.XXXXXX");
 
 	fd_out = mkstemp(control->outfile);
-	if (fd_out == -1) {
-		print_progress("WARNING: Failed to create out tmpfile: %s, will fail if cannot perform %scompression entirely in ram\n",
-			       control->outfile, DECOMPRESS ? "de" : "");
-	} else
-		register_outfile(control, control->outfile, TEST_ONLY || STDOUT || !KEEP_BROKEN);
+	if (fd_out == -1)
+		fatal("Failed to create out tmpfile: %s\n", control->outfile);
+
+	register_outfile(control, control->outfile, TEST_ONLY || STDOUT || !KEEP_BROKEN);
 	return fd_out;
 }
 
@@ -657,47 +654,23 @@ int open_tmpinfile(rzip_control *control)
 {
 	int fd_in = -1;
 
-	/* Use temporary directory if there is one */
-	if (control->tmpdir) {
-		control->infile = malloc(strlen(control->tmpdir) + 15);
-		if (unlikely(!control->infile))
-			fatal("Failed to allocate infile name\n");
-		strcpy(control->infile, control->tmpdir);
-		strcat(control->infile, "lrzipin.XXXXXX");
-		fd_in = mkstemp(control->infile);
-	}
+	/* Use temporary directory if there is one. /tmp is default */
+	control->infile = malloc(strlen(control->tmpdir) + 15);
+	if (unlikely(!control->infile))
+		fatal("Failed to allocate infile name\n");
+	strcpy(control->infile, control->tmpdir);
+	strcat(control->infile, "lrzipin.XXXXXX");
+	fd_in = mkstemp(control->infile);
 
-	/* Try the current directory */
-	if (fd_in == -1) {
-		dealloc(control->infile);
-		control->infile = malloc(16);
-		if (unlikely(!control->infile))
-			fatal("Failed to allocate infile name\n");
-		strcpy(control->infile, "lrzipin.XXXXXX");
-		fd_in = mkstemp(control->infile);
-	}
+	if (fd_in == -1)
+		fatal("Failed to create in tmpfile: %s\n", control->infile);
 
-	/* Use /tmp if nothing is writeable so far */
-	if (fd_in == -1) {
-		dealloc(control->infile);
-		control->infile = malloc(20);
-		if (unlikely(!control->infile))
-			fatal("Failed to allocate infile name\n");
-		strcpy(control->infile, "/tmp/lrzipin.XXXXXX");
-		fd_in = mkstemp(control->infile);
-	}
-
-	if (fd_in == -1) {
-		print_progress("WARNING: Failed to create in tmpfile: %s, will fail if cannot perform %scompression entirely in ram\n",
-			       control->infile, DECOMPRESS ? "de" : "");
-	} else {
-		register_infile(control, control->infile, (DECOMPRESS || TEST_ONLY) && STDIN);
-		/* Unlink temporary file immediately to minimise chance of files left
-		* lying around */
-		if (unlikely(unlink(control->infile))) {
-			close(fd_in);
-			fatal("Failed to unlink tmpfile: %s\n", control->infile);
-		}
+	register_infile(control, control->infile, (DECOMPRESS || TEST_ONLY) && STDIN);
+	/* Unlink temporary file immediately to minimise chance of files left
+	* lying around */
+	if (unlikely(unlink(control->infile))) {
+		close(fd_in);
+		fatal("Failed to unlink tmpfile: %s\n", control->infile);
 	}
 	return fd_in;
 }
@@ -1686,7 +1659,7 @@ bool decompress_file(rzip_control *control)
 bool initialise_control(rzip_control *control)
 {
 	time_t now_t, tdiff;
-	char localeptr[] = "./", *eptr; 	/* for environment */
+	char localeptr[] = "/tmp", *eptr; 	/* for environment. OR Default to /tmp if none set */
 	size_t len;
 
 	memset(control, 0, sizeof(rzip_control));
