@@ -1,4 +1,5 @@
 lrzip-next: August 2022 v0.9.2
+lzma SDK 22.01
 /tmp is now default TMP directory
 Address error when lrzip-next run from write-protected dir
 

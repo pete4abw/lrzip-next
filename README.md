@@ -1,7 +1,7 @@
 lrzip-next - Long Range ZIP
 ======================
 
-## LZMA SDK 22.00 (August 2022)
+## LZMA SDK 22.01 (August 2022)
 
 Tag v0.9.2
 
