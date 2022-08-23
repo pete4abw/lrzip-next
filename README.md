@@ -1,15 +1,9 @@
 lrzip-next - Long Range ZIP
 ======================
 
-## LZMA SDK 22.00 (June 2022)
+## LZMA SDK 22.00 (August 2022)
 
-Tag v0.9.0
-
-### NEW
-**Comments added with -C "comment" option (64 bytes max)**
-**Store Compression Levels in magic header**
-**Update/Enhance INFO output**
-**LZMA SDK Update**
+Tag v0.9.2
 
 **Encrypted archives from any earlier version will not be compatible or readable.**
 **LRZIP Archives created with versions < 0.6 will no longer be supported.**
@@ -51,6 +45,8 @@ Many new changes, not in the main branch, including:
 * Remove gzip option compatibility and symlink `lrzn`. `lrzip-next` options prevail.
 * Users can add Comments with -C|--comment option
 * Magic header will store compression level used.
+* BSD Support.
+* /tmp is now default temporary dir. Set TMP to override.
 
 (See original README for more historical info)
 
