@@ -40,9 +40,11 @@ Here is a summary of the options to lrzip-next.
  \-l, \-\-lzo               lzo compression (ultra fast)
  \-n, \-\-no-compress       no backend compression - prepare for other compressor
  \-z, \-\-zpaq              zpaq compression (best, extreme compression, extremely slow)
+ \-B, \-\-bzip3             bzip3 compression
  \-L, \-\-level level       Set lzma/bzip2/gzip compression level (1-9, default 7)
  \-\-dictsize = ds         Set lzma Dictionary Size for LZMA ds=0 to 40 expressed as 2<<11, 3<<11, 2<<12, 3<<12...2<<31-1
  \-\-zpaqbs = bs           Set ZPAQ Block Size overriding defaults. 1-11, 2^zpaqbs * 1MB
+ \-\-bzip3bs = bs          Set BZIP3 Block Size. 1-8, 2^bzip3bs * 1MB
 Filtering Options (for all compression modes):
  \-\-x86                   Use x86 filter
  \-\-arm                   Use ARM filter
@@ -117,6 +119,10 @@ ZPAQ compression. Uses ZPAQ compression which is from the PAQ family of
 compressors known for having some of the highest compression ratios possible
 but at the cost of being extremely slow on both compress and decompress (4x
 slower than lzma which is the default).
+.IP "\fB-B | --bzip3\fP"
+BZIP3 compression. Uses BZIP3, a statistical compressor and spiritual successor
+to BZip2. Features higher compression ratios and good performance. Usually as
+fast as BZip2 and provides ratio comparable or better than LZMA.
 .IP "\fB-L 1\&.\&.9\fP"
 Set the compression level from 1 to 9. The default is to use level 7, which
 gives good all round compression. The compression level is also strongly related
@@ -142,6 +148,11 @@ If set, Dictionary sizes will be set as
 .IP "\fB--zpaqbs=1\&.\&.11\fP (ZPAQ only)"
 Set ZPAQ Block Size from 1 to 11, 2^zpaqbs * 1MB (2MB to 2GB). This parameter
 will be passed to the zpaq backend. This value may cause the computed overhead
+* number of threads to be greater than available ram, so it may be reduced
+possibly along with usable threads.
+.IP "\fB--bzip3bs=1\&.\&.8\fP (BZIP3 only)"
+Set BZIP3 Block Size from 1 to 8, 2^zpaqbs * 1MB (2MB to 256MB). This parameter
+will be passed to the bzip3 backend. This value may cause the computed overhead
 * number of threads to be greater than available ram, so it may be reduced
 possibly along with usable threads.
 .SH "Filtering Options (for all compression modes)"
@@ -371,9 +382,9 @@ LRZIP operates in two stages. The first stage finds and encodes large chunks of
 duplicated data over potentially very long distances in the input file. The
 second stage is to use a compression algorithm to compress the output of the
 first stage. The compression algorithm can be chosen to be optimised for extreme
-size (zpaq), size (lzma - default), speed (lzo), legacy (bzip2 or gzip) or can
-be omitted entirely doing only the first stage. A one stage only compressed file
-can almost always improve both the compression size and speed done by a
+size (zpaq), size (lzma - default or bzip3), speed (lzo), legacy (bzip2 or gzip)
+or can be omitted entirely doing only the first stage. A one stage only compressed
+file can almost always improve both the compression size and speed done by a
 subsequent compression program.
 .PP
 The key difference between lrzip-next and other well known compression
@@ -445,6 +456,8 @@ lzma was written by Igor Pavlov.
 lzo was written by Markus Oberhumer.
 .br
 zpaq was written by Matt Mahoney.
+.br
+bzip3 was written by Kamila Szewczyk.
 .br
 Peter Hyman added informational output, updated LZMA SDK,
 updated ZPAQ SDK added lzma multi-threading capabilities,
