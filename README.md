@@ -47,6 +47,7 @@ Many new changes, not in the main branch, including:
 * Magic header will store compression level used.
 * BSD Support.
 * /tmp is now default temporary dir. Set TMP to override.
+* BZIP3 Support.
 
 (See original README for more historical info)
 
@@ -96,6 +97,7 @@ faster compression than standalone compressors and much faster decompression.
 * bzip2
 * lzo
 * zpaq
+* bzip3
 * rzip (pre-processed only)
 
 **lrzip-next**'s memory management scheme permits maximum use of system ram to pre-process files and then compress them.
