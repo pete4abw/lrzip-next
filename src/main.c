@@ -111,11 +111,13 @@ static void usage(void)
 	print_output("	-l, --lzo		lzo compression (ultra fast)\n");
 	print_output("	-n, --no-compress	no backend compression - prepare for other compressor\n");
 	print_output("	-z, --zpaq		zpaq compression (best, extreme compression, extremely slow)\n");
+	print_output("	-B, --bzip3		bzip3 compression\n");
 	print_output("	-L#, --level #		set lzma/bzip2/gzip compression level (1-9, default 7)\n");
 	print_output("	--fast			alias for -L1\n");
 	print_output("	--best			alias for -L9\n");
 	print_output("	--dictsize		Set lzma Dictionary Size for LZMA ds=0 to 40 expressed as 2<<11, 3<<11, 2<<12, 3<<12...2<<31-1\n");
 	print_output("	--zpaqbs		Set ZPAQ Block Size overriding defaults. 1-11, 2^zpaqbs * 1MB\n");
+	print_output("	--bzip3bs		Set bzip3 Block Size. 1-8, 2^bzip3bs * 1MB.\n");
 	print_output("    Filtering Options:\n");
 	print_output("	--x86			Use x86 filter (for all compression modes)\n");
 	print_output("	--arm			Use ARM filter (for all compression modes)\n");
@@ -220,7 +222,8 @@ static void show_summary(void)
 					(BZIP2_COMPRESS ? "BZIP2" :
 					(ZLIB_COMPRESS ? "GZIP\n" :	// No Threshold testing
 					(ZPAQ_COMPRESS ? "ZPAQ" :
-					(NO_COMPRESS ? "RZIP pre-processing only" : "wtf")))))));
+					(BZIP3_COMPRESS ? "BZIP3" :
+					(NO_COMPRESS ? "RZIP pre-processing only" : "wtf"))))))));
 			if (!LZO_COMPRESS && !ZLIB_COMPRESS)
 				print_verbose(". LZ4 Compressibility testing %s\n", (LZ4_TEST? "enabled" : "disabled"));
 			if (LZ4_TEST && control->threshold != 100)
@@ -232,6 +235,9 @@ static void show_summary(void)
 			if (ZPAQ_COMPRESS)
 				print_verbose("ZPAQ Compression Level: %'d, ZPAQ initial Block Size: %'d\n",
 					       control->zpaq_level, control->zpaq_bs);
+			if (BZIP3_COMPRESS)
+				print_verbose("BZIP3 Compression Block Size: %'d\n",
+					       control->bzip3_bs);
 			if (FILTER_USED) {
 				print_output("Filter Used: %s",
 					((control->filter_flag == FILTER_FLAG_X86) ? "x86" :
@@ -301,24 +307,26 @@ static struct option long_options[] = {
 	{"version",	no_argument,	0,	'V'},
 	{"window",	required_argument,	0,	'w'},	/* 30 */
 	{"zpaq",	no_argument,	0,	'z'},
+	{"bzip3",	no_argument,	0,	'B'},
 	{"fast",	no_argument,	0,	'1'},
 	{"best",	no_argument,	0,	'9'},
 	{"lzma",       	no_argument,	0,	0},		/* 34 - begin long opt index */
 	{"dictsize",	required_argument,	0,	0},	/* 35 */
 	{"zpaqbs",	required_argument,	0,	0},
-	{"x86",		no_argument,	0,	0},		/* 37 */
+	{"bzip3bs",	required_argument,	0,	0},
+	{"x86",		no_argument,	0,	0},		/* 38 */
 	{"arm",		no_argument,	0,	0},
 	{"armt",	no_argument,	0,	0},
-	{"ppc",		no_argument,	0,	0},		/* 40 */
+	{"ppc",		no_argument,	0,	0},		/* 41 */
 	{"sparc",	no_argument,	0,	0},
 	{"ia64",	no_argument,	0,	0},
-	{"delta",	optional_argument,	0,	0},	/* 43 */
+	{"delta",	optional_argument,	0,	0},	/* 44 */
 	{0,	0,	0,	0},
 };
 
 /* constants for ease of maintenance in getopt loop */
 #define LONGSTART	34
-#define FILTERSTART	37
+#define FILTERSTART	39
 
 static void set_stdout(struct rzip_control *control)
 {
@@ -328,7 +336,7 @@ static void set_stdout(struct rzip_control *control)
 	register_outputfile(control, control->msgout);
 }
 
-static const char *loptions = "bcC:dDe::E:fghH::iKlL:nN:o:O:p:PqR:S:tT::Um:vVw:z?";
+static const char *loptions = "bBcC:dDe::E:fghH::iKlL:nN:o:O:p:PqR:S:tT::Um:vVw:z?";
 
 int main(int argc, char *argv[])
 {
@@ -384,11 +392,12 @@ int main(int argc, char *argv[])
 		case 'l':
 		case 'n':
 		case 'z':
+		case 'B':
 			/* If some compression was chosen in lrzip.conf, allow this one time
 			 * because conf_file_compression_set will be true
 			 */
 			if ((control->flags & FLAG_NOT_LZMA) && conf_file_compression_set == false)
-				fatal("Can only use one of -l, -b, -g, -z or -n\n");
+				fatal("Can only use one of -l, -b, -g, -z, -B or -n\n");
 			/* Select Compression Mode */
 			control->flags &= ~FLAG_NOT_LZMA; 		/* must clear all compressions first */
 			if (c == 'b')
@@ -401,6 +410,8 @@ int main(int argc, char *argv[])
 				control->flags |= FLAG_NO_COMPRESS;
 			else if (c == 'z')
 				control->flags |= FLAG_ZPAQ_COMPRESS;
+			else if (c == 'B')
+				control->flags |= FLAG_BZIP3_COMPRESS;
 			/* now FLAG_NOT_LZMA will evaluate as true */
 			conf_file_compression_set = false;
 			break;
@@ -618,6 +629,18 @@ int main(int argc, char *argv[])
 							if (ds < 0 || ds > 11)
 								fatal("ZPAQ Block Size must be between 1 and 11\n");
 							control->zpaq_bs = ds;
+						}
+						break;
+					case LONGSTART+3:
+						if (!BZIP3_COMPRESS)
+							print_err("--bzip3bs option only valid for BZIP3 compression. Ignored.\n");
+						else {
+							ds = strtol(optarg, &endptr, 10);
+							if (*endptr)
+								fatal("Extra characters after block size: \'%s\'\n", endptr);
+							if (ds < 0 || ds > 11)
+								fatal("BZIP3 Block Size must be between 1 and 8\n");
+							control->bzip3_bs = ds;
 						}
 						break;
 						/* Filtering */

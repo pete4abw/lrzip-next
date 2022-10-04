@@ -203,6 +203,10 @@ bool write_magic(rzip_control *control)
 		 * zpaq_bs = magic byte & 0X0F
 		 * zpaq_level = magic_byte >> 4
 		 */
+	} else if(BZIP3_COMPRESS) {
+		/* Save block size. ZPAQ compression level is from 3 to 5, so this is sound.
+		   bzip3 blocksize is from 1 to 8 (or 0 to 7). */
+		magic[17] = 0b11111000 | (control->bzip3_bs - 1);
 	}
 
 	/* save compression levels
@@ -396,6 +400,11 @@ static void get_magic_v8(rzip_control *control, unsigned char *magic)
 		/* from LzmaDec.c */
 		for (i = 0; i < 4; i++)						// lzma2 to lzma dictionary expansion
 			control->lzma_properties[1 + i] = (Byte)(control->dictSize >> (8 * i));
+	}
+	else if ((magic[17] & 0b11111000) == 0b11111000)
+	{
+		// bzip3 block size stuff.
+		control->bzip3_bs = (magic[17] & 0b00000111) + 1;
 	}
 	else if (magic[17] & 0b10000000)	// zpaq block and compression level stored
 	{
@@ -1120,6 +1129,8 @@ next_chunk:
 				if (INFO) print_verbose("gzip");
 			} else if (ctype == CTYPE_ZPAQ) {
 				if (INFO) print_verbose("zpaq");
+			} else if (ctype == CTYPE_BZIP3) {
+				if (INFO) print_verbose("bzip3");
 			} else
 				fatal("Unknown Compression Type: %'d\n", ctype);
 			if (save_ctype == 255)
@@ -1216,6 +1227,9 @@ done:
 						(1 << control->zpaq_bs));
 			else	// early 0.8 or <0.8 file without zpaq coding in magic header
 				print_output("\n");
+		}
+		else if (save_ctype == BZIP3_COMPRESS) {
+			print_output("rzip + bzip3 -- Block Size: %d", (1 << (control->bzip3_bs - 1)) * ONE_MB);
 		}
 		else
 			print_output("Dunno wtf\n");
