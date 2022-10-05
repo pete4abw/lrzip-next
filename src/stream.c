@@ -1040,9 +1040,11 @@ bool close_streamout_threads(rzip_control *control)
 	}
 	dealloc(cthreads);
 	dealloc(control->pthreads);
-	for(i = 0; i < control->threads; i++)
-		bz3_free(states[i]);
-	free(states);
+	if(states != NULL) {
+		for(i = 0; i < control->threads; i++)
+			bz3_free(states[i]);
+		free(states);
+	}
 	return true;
 }
 
