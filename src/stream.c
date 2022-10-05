@@ -160,19 +160,26 @@ static int lz4_compresses(rzip_control *control, uchar *s_buf, i64 s_len);
 
 /* BZIP3 COMPRESSION WRAPPER */
 /* TODO: The state can be pooled to increase bzip3's performance. */
-static void bzip3_compress(rzip_control *control, uchar *c_buf, i64 *c_len, i64 s_len) {
-	struct bz3_state * s = bz3_new(MAX(s_len, ONE_MB));
-	if(!s) { print_err("Failed to allocate bz3_state\n"); return; }
-	*c_len = bz3_encode_block(s, c_buf, s_len);
-	if(bz3_last_error(s) != BZ3_OK) { print_err("Failed to compress with bz3: %s\n", bz3_strerror(s)); return; }
-	bz3_free(s);
+static struct bz3_state ** states = NULL;
+
+static void setup_states(rzip_control * control) {
+	int i;
+	states = malloc(sizeof(struct bz3_state *) * control->threads);
+	if(!states)
+		fatal("Failed to allocate memory for bzip3 states\n");
+	for (i = 0; i < control->threads; i++)
+		states[i] = bz3_new((1 << control->bzip3_bs) * ONE_MB);
 }
-static void bzip3_decompress(rzip_control *control, uchar *s_buf, i64 *s_len, i64 c_len) {
-	struct bz3_state * s = bz3_new(MAX(*s_len, ONE_MB));
-	if(!s) { print_err("Failed to allocate bz3_state\n"); return; }
-	*s_len = bz3_decode_block(s, s_buf, c_len, *s_len);
-	if(bz3_last_error(s) != BZ3_OK) { print_err("Failed to decompress with bz3: %s\n", bz3_strerror(s)); return; }
-	bz3_free(s);
+
+static void bzip3_compress(rzip_control *control, uchar *c_buf, i64 *c_len, i64 s_len, int ct) {
+	if(!states) setup_states(control);
+	*c_len = bz3_encode_block(states[ct], c_buf, s_len);
+	if(bz3_last_error(states[ct]) != BZ3_OK) { print_err("Failed to compress with bz3: %s\n", bz3_strerror(states[ct])); return; }
+}
+static void bzip3_decompress(rzip_control *control, uchar *s_buf, i64 *s_len, i64 c_len, int ct) {
+	if(!states) setup_states(control);
+	*s_len = bz3_decode_block(states[ct], s_buf, c_len, *s_len);
+	if(bz3_last_error(states[ct]) != BZ3_OK) { print_err("Failed to decompress with bz3: %s\n", bz3_strerror(states[ct])); return; }
 }
 
 /*
@@ -185,7 +192,7 @@ static void bzip3_decompress(rzip_control *control, uchar *s_buf, i64 *s_len, i6
   length in c_len
 */
 
-static int bzip3_compress_buf(rzip_control *control, struct compress_thread *cthread)
+static int bzip3_compress_buf(rzip_control *control, struct compress_thread *cthread, int current_thread)
 {
 	i64 c_len, c_size;
 	uchar *c_buf;
@@ -207,7 +214,7 @@ static int bzip3_compress_buf(rzip_control *control, struct compress_thread *cth
 	print_verbose("Starting bzip3 (bs=%d) backend...\n",
 		       control->bzip3_bs);
 
-        bzip3_compress(control, c_buf, &c_len, cthread->s_len);
+        bzip3_compress(control, c_buf, &c_len, cthread->s_len, current_thread);
 
 	if (unlikely(c_len >= cthread->c_len)) {
 		print_maxverbose("Incompressible block\n");
@@ -513,7 +520,7 @@ out_free:
 
   try to decompress a buffer. Return 0 on success and -1 on failure.
 */
-static int bzip3_decompress_buf(rzip_control *control __UNUSED__, struct uncomp_thread *ucthread)
+static int bzip3_decompress_buf(rzip_control *control __UNUSED__, struct uncomp_thread *ucthread, int current_thread)
 {
 	i64 dlen = ucthread->u_len;
 	uchar *c_buf;
@@ -528,7 +535,7 @@ static int bzip3_decompress_buf(rzip_control *control __UNUSED__, struct uncomp_
 	}
 	memcpy(ucthread->s_buf, c_buf, ucthread->c_len);
 
-	bzip3_decompress(control, ucthread->s_buf, &dlen, ucthread->c_len);
+	bzip3_decompress(control, ucthread->s_buf, &dlen, ucthread->c_len, current_thread);
 
 	if (unlikely(dlen != ucthread->u_len)) {
 		print_err("Inconsistent length after decompression. Got %'"PRId64" bytes, expected %'"PRId64"\n", dlen, ucthread->u_len);
@@ -1033,6 +1040,9 @@ bool close_streamout_threads(rzip_control *control)
 	}
 	dealloc(cthreads);
 	dealloc(control->pthreads);
+	for(i = 0; i < control->threads; i++)
+		bz3_free(states[i]);
+	free(states);
 	return true;
 }
 
@@ -1137,7 +1147,7 @@ retry_zpaq:
 		} else if(BZIP3_COMPRESS) {
 			/* compute max possible block size. NB: This code sucks but I don't want to refactor it. */
 			int save_bs = control->bzip3_bs;
-			int BZIP3BSMIN = 4;
+			int BZIP3BSMIN = 5;
 retry_bzip3:
 			do {
 				for (control->threads = save_threads; control->threads >= thread_limit; control->threads--) {
@@ -1524,7 +1534,7 @@ retry:
 		else if (ZPAQ_COMPRESS)
 			ret = zpaq_compress_buf(control, cti, current_thread);
 		else if (BZIP3_COMPRESS)
-			ret = bzip3_compress_buf(control, cti);
+			ret = bzip3_compress_buf(control, cti, current_thread);
 		else fatal("Dunno wtf compression to use!\n");
 	}
 
@@ -1790,7 +1800,7 @@ retry:
 				ret = zpaq_decompress_buf(control, uci, current_thread);
 				break;
 			case CTYPE_BZIP3:
-				ret = bzip3_decompress_buf(control, uci);
+				ret = bzip3_decompress_buf(control, uci, current_thread);
 				break;
 			default:
 				fatal("Dunno wtf decompression type to use!\n");
