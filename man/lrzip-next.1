@@ -151,7 +151,7 @@ will be passed to the zpaq backend. This value may cause the computed overhead
 * number of threads to be greater than available ram, so it may be reduced
 possibly along with usable threads.
 .IP "\fB--bzip3bs=1\&.\&.8\fP (BZIP3 only)"
-Set BZIP3 Block Size from 1 to 8, 2^zpaqbs * 1MB (2MB to 256MB). This parameter
+Set BZIP3 Block Size from 1 to 8, 2^bzip3bs * 1MB (2MB to 256MB). This parameter
 will be passed to the bzip3 backend. This value may cause the computed overhead
 * number of threads to be greater than available ram, so it may be reduced
 possibly along with usable threads.
@@ -441,6 +441,7 @@ bzip2(1),
 gzip(1),
 lzop(1),
 rzip(1),
+bzip3(1),
 zip(1)
 .\"
 .SH "AUTHOR and CREDITS"

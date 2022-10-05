@@ -1229,7 +1229,7 @@ done:
 				print_output("\n");
 		}
 		else if (save_ctype == BZIP3_COMPRESS) {
-			print_output("rzip + bzip3 -- Block Size: %d", (1 << (control->bzip3_bs - 1)) * ONE_MB);
+			print_output("rzip + bzip3 -- Block Size: %d", (1 << control->bzip3_bs) * ONE_MB);
 		}
 		else
 			print_output("Dunno wtf\n");

@@ -169,8 +169,7 @@ void setup_overhead(rzip_control *control)
 			switch (control->compression_level) {
 			case 1:
 			case 2:
-			case 3: control->bzip3_bs = 4;
-				break;  //16MB BZIP3 Default
+			case 3:
 			case 4:
 			case 5:	control->bzip3_bs = 5;
 				break;	//32MB
@@ -180,7 +179,7 @@ void setup_overhead(rzip_control *control)
 				break;	//128MB
 			case 8: case 9:	control->bzip3_bs = 8;
 				break;	//256MB
-			default: control->bzip3_bs = 4;
+			default: control->bzip3_bs = 5;
 				break;	// should never reach here
 			}
 		}

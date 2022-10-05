@@ -638,7 +638,7 @@ int main(int argc, char *argv[])
 							ds = strtol(optarg, &endptr, 10);
 							if (*endptr)
 								fatal("Extra characters after block size: \'%s\'\n", endptr);
-							if (ds < 0 || ds > 11)
+							if (ds < 0 || ds > 8)
 								fatal("BZIP3 Block Size must be between 1 and 8\n");
 							control->bzip3_bs = ds;
 						}
