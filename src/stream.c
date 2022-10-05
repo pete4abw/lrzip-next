@@ -160,26 +160,66 @@ static int lz4_compresses(rzip_control *control, uchar *s_buf, i64 s_len);
 
 /* BZIP3 COMPRESSION WRAPPER */
 /* TODO: The state can be pooled to increase bzip3's performance. */
+static pthread_mutex_t bz3_statemutex = PTHREAD_MUTEX_INITIALIZER;
 static struct bz3_state ** states = NULL;
+static int * statequeue = NULL;
 
 static void setup_states(rzip_control * control) {
 	int i;
 	states = malloc(sizeof(struct bz3_state *) * control->threads);
+	statequeue = malloc(sizeof(int) * control->threads);
+	memset(statequeue, 0, sizeof(int) * control->threads);
 	if(!states)
 		fatal("Failed to allocate memory for bzip3 states\n");
-	for (i = 0; i < control->threads; i++)
+	for (i = 0; i < control->threads; i++) {
 		states[i] = bz3_new((1 << control->bzip3_bs) * ONE_MB);
+		if(!states[i])
+			fatal("Failed to allocate %dMB bzip3 state #%d.\n", (1 << control->bzip3_bs), i);
+	}
+}
+
+static struct bz3_state * lock_state(rzip_control * control) {
+	lock_mutex(control, &bz3_statemutex);
+	int i;
+	for (i = 0; i < control->threads; i++) {
+		if (!statequeue[i]) {
+			statequeue[i] = 1;
+			unlock_mutex(control, &bz3_statemutex);
+			return states[i];
+		}
+	}
+	
+	fatal("internal error: out of thread states.");
+	return NULL;
+}
+
+static void unlock_state(rzip_control * control, struct bz3_state * state) {
+	lock_mutex(control, &bz3_statemutex);
+	int i;
+	for (i = 0; i < control->threads; i++) {
+		if (states[i] == state) {
+			statequeue[i] = 0;
+			unlock_mutex(control, &bz3_statemutex);
+			return;
+		}
+	}
+
+	fatal("internal error: state not in list.");
 }
 
 static void bzip3_compress(rzip_control *control, uchar *c_buf, i64 *c_len, i64 s_len, int ct) {
 	if(!states) setup_states(control);
-	*c_len = bz3_encode_block(states[ct], c_buf, s_len);
-	if(bz3_last_error(states[ct]) != BZ3_OK) { print_err("Failed to compress with bz3: %s\n", bz3_strerror(states[ct])); return; }
+	struct bz3_state * state = lock_state(control);
+	*c_len = bz3_encode_block(state, c_buf, s_len);
+	if(bz3_last_error(state) != BZ3_OK) { print_err("Failed to compress with bz3: %s\n", bz3_strerror(state)); return; }
+	unlock_state(control, state);
 }
 static void bzip3_decompress(rzip_control *control, uchar *s_buf, i64 *s_len, i64 c_len, int ct) {
 	if(!states) setup_states(control);
-	*s_len = bz3_decode_block(states[ct], s_buf, c_len, *s_len);
-	if(bz3_last_error(states[ct]) != BZ3_OK) { print_err("Failed to decompress with bz3: %s\n", bz3_strerror(states[ct])); return; }
+	struct bz3_state * state = lock_state(control);
+	*s_len = bz3_decode_block(state, s_buf, c_len, *s_len);
+	if(bz3_last_error(state) != BZ3_OK) { print_err("Failed to decompress with bz3: %s\n", bz3_strerror(state)); return; }
+	unlock_state(control, state);
 }
 
 /*
@@ -1044,6 +1084,7 @@ bool close_streamout_threads(rzip_control *control)
 		for(i = 0; i < control->threads; i++)
 			bz3_free(states[i]);
 		free(states);
+		free(statequeue);
 	}
 	return true;
 }
