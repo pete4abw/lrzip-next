@@ -202,7 +202,7 @@ static int bzip3_compress_buf(rzip_control *control, struct compress_thread *cth
 			return 0;
 	}
 
-	c_size = round_up_page(control, cthread->s_len + 10000);
+	c_size = round_up_page(control, cthread->s_len + cthread->s_len / 50 + 30);
 	c_buf = malloc(c_size);
 	if (!c_buf) {
 		print_err("Unable to allocate c_buf in bzip3_compress_buf\n");
