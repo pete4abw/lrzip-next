@@ -159,7 +159,6 @@ bool join_pthread(rzip_control *control, pthread_t th, void **thread_return)
 static int lz4_compresses(rzip_control *control, uchar *s_buf, i64 s_len);
 
 /* BZIP3 COMPRESSION WRAPPER */
-/* TODO: The state can be pooled to increase bzip3's performance. */
 static pthread_mutex_t bz3_statemutex = PTHREAD_MUTEX_INITIALIZER;
 static struct bz3_state ** states = NULL;
 static int * statequeue = NULL;
