@@ -184,7 +184,7 @@ void setup_overhead(rzip_control *control)
 			}
 		}
 
-		control->overhead = (i64) (1 << control->bzip3_bs) * ONE_MB * 8;
+		control->overhead = (i64) (1 << control->bzip3_bs) * ONE_MB * 6;
 	}
 
 	/* no need for zpaq computation here. do in open_stream_out() */

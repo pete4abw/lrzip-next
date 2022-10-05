@@ -1147,7 +1147,7 @@ retry_zpaq:
 		} else if(BZIP3_COMPRESS) {
 			/* compute max possible block size. NB: This code sucks but I don't want to refactor it. */
 			int save_bs = control->bzip3_bs;
-			int BZIP3BSMIN = 5;
+			int BZIP3BSMIN = 3;
 retry_bzip3:
 			do {
 				for (control->threads = save_threads; control->threads >= thread_limit; control->threads--) {
