@@ -559,8 +559,8 @@ static bool fwrite_stdout(rzip_control *control, void *buf, i64 len)
 	while (len > 0) {
 		nmemb = len;
 		ret = fwrite(offset_buf, 1, nmemb, control->outFILE);
-		if (unlikely(ret != nmemb))
-			fatal("Failed to fwrite %'"PRId32" bytes in fwrite_stdout\n", nmemb);
+		if (unlikely(ret == -1))	/* error, not underflow */
+			fatal("Failed to fwrite %'"PRId64" bytes in fwrite_stdout\n", nmemb);
 		len -= ret;
 		offset_buf += ret;
 		total += ret;
@@ -577,8 +577,9 @@ bool write_fdout(rzip_control *control, void *buf, i64 len)
 	while (len > 0) {
 		nmemb = len;
 		ret = write(control->fd_out, offset_buf, (size_t)nmemb);
-		if (unlikely(ret != nmemb))
-			fatal("Failed to write %'"PRId32" bytes to fd_out in write_fdout\n", nmemb);
+		/* error if ret == -1 only. Otherwise, buffer not wholly written */
+		if (unlikely(ret == -1))	/* error, not underflow */
+			fatal("Failed to write %'"PRId64" bytes to fd_out in write_fdout\n", nmemb);
 		len -= ret;
 		offset_buf += ret;
 	}
@@ -641,7 +642,7 @@ bool write_fdin(rzip_control *control)
 	while (len > 0) {
 		ret = len;
 		ret = write(control->fd_in, offset_buf, (size_t)ret);
-		if (unlikely(ret <= 0))
+		if (unlikely(ret == -1))
 			fatal("Failed to write to fd_in in write_fdin\n");
 		len -= ret;
 		offset_buf += ret;
