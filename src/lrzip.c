@@ -722,7 +722,7 @@ bool read_tmpinfile(rzip_control *control, int fd_in)
 	if (fd_in == -1)
 		return false;
 	if (control->flags & FLAG_SHOW_PROGRESS)
-		fprintf(control->msgout, "Copying from stdin.\n");
+		print_output("Copying from stdin.\n");
 	tmpinfp = fdopen(fd_in, "w+");
 	if (unlikely(tmpinfp == NULL))
 		fatal("Failed to fdopen in tmpfile\n");

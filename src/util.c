@@ -102,11 +102,12 @@ void fatal_exit(rzip_control *control)
 		if (!KEEP_BROKEN) {
 			print_verbose("Deleting broken file %s\n", control->outfile);
 			unlink(control->outfile);
-		} else
+		} else {
 			print_verbose("Keeping broken file %s as requested\n", control->outfile);
+			fflush(control->outputfile);
+		}
 	}
-	fprintf(control->outputfile, "Fatal error - exiting\n");
-	fflush(control->outputfile);
+	print_err("Fatal error - exiting\n");
 	exit(1);
 }
 
@@ -207,20 +208,20 @@ bool read_config(rzip_control *control)
 
 	fp = fopen("lrzip.conf", "r");
 	if (fp)
-		fprintf(control->msgout, "Using configuration file ./lrzip.conf\n");
+		print_output("Using configuration file ./lrzip.conf\n");
 	if (fp == NULL) {
 		HOME=getenv("HOME");
 		if (HOME) {
 			snprintf(homeconf, sizeof(homeconf), "%s/.lrzip/lrzip.conf", HOME);
 			fp = fopen(homeconf, "r");
 			if (fp)
-				fprintf(control->msgout, "Using configuration file %s\n", homeconf);
+				print_output("Using configuration file %s\n", homeconf);
 		}
 	}
 	if (fp == NULL) {
 		fp = fopen("/etc/lrzip/lrzip.conf", "r");
 		if (fp)
-			fprintf(control->msgout, "Using configuration file /etc/lrzip/lrzip.conf\n");
+			print_output("Using configuration file /etc/lrzip/lrzip.conf\n");
 	}
 	if (fp == NULL)
 		return false;
