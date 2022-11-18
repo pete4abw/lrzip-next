@@ -68,6 +68,13 @@ AC_ARG_ENABLE([static-bin],
 	)
 AM_CONDITIONAL([STATIC], [test x"$static" = xyes])
 
+debug=no
+AC_ARG_ENABLE([debug],
+	[AS_HELP_STRING([--enable-debug],[Compile with -Og flag for debugger @<:@default=no@:>@])],
+	[debug=$enableval]
+	)
+AM_CONDITIONAL([DEBUG], [test x"$debug" = xyes])
+
 AC_ARG_ENABLE(
 		asm,
 		[AS_HELP_STRING([--enable-asm],[Enable native Assembly code])],
@@ -86,12 +93,15 @@ if test x"$ASM" = xyes; then
 ## only x86_64
 		case $host in
 			x86_64-*)
+				ASM_OPT="-Dx64 -f elf64";
 				case "$ASM_PROG" in
 					nasm)
-						ASM_OPT="-Dx64 -f elf64 -g -F dwarf"
+						AS_IF([test x"$debug" = xyes],
+						      ASM_OPT+=" -g -F dwarf")
 						;;
 					yasm)
-						ASM_OPT="-Dx64 -f elf64 -g dwarf2"
+						AS_IF([test x"$debug" = xyes]
+						      ASM_OPT+=" -g dwarf2")
 						;;
 					*)
 						# should never get here, but in case...
@@ -139,8 +149,14 @@ AC_CHECK_FUNCS(getopt_long)
 
 AX_PTHREAD
 LIBS="$PTHREAD_LIBS $LIBS"
-CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
-CXXFLAGS="$CXXFLAGS $PTHREAD_CFLAGS"
+AS_IF([test x"$debug" = xyes],
+	 CFLAGS="-g -Og"
+	 CXXFLAGS="-g -Og",
+	 CFLAGS="$CFLAGS"
+	 CXXFLAGS="$CXXFLAGS")
+
+CFLAGS+=" $PTHREAD_CFLAGS"
+CXXFLAGS+=" $PTHREAD_CFLAGS"
 
 ## test for ARM or other non x86 processor
 ## must use -DNOJIT for compiling zpaq
@@ -180,24 +196,22 @@ echo
 echo "  Static binary......: $static"
 echo "  Host system........: $host"
 echo "  Build system.......: $build"
+AS_IF([test x"$debug" = xyes], echo "  Debugging mode.....: yes")
 echo
 echo "Compilation............: make (or gmake)"
 echo "  CPPFLAGS.............: $CPPFLAGS"
 echo "  CFLAGS...............: $CFLAGS"
 echo "  CXXFLAGS.............: $CXXFLAGS"
 echo -n "  ASM..................: "
-if test x"$ASM" != xyes; then
-	echo "no"
-else
-	echo "$ASM, using $ASM_PROG Assembler"
-	echo "  ASMFLAGS.............: $ASM_OPT"
-fi
+AS_IF([test x"$ASM" != xyes],
+	echo "no",
+	echo "$ASM[[, ]] using $ASM_PROG Assembler"
+	echo "  ASMFLAGS.............: $ASM_OPT")
 echo "  LDFLAGS..............: $LDFLAGS"
 echo
 echo "Installation...........: make install (as root if needed, with 'su' or 'sudo')"
 echo "  prefix...............: $prefix"
-if test x"$static" = xyes; then
+AS_IF([test x"$static" = xyes],
 gver=$(ldd --version | head -n1 | rev | cut -f1 -d\ | rev)
-	echo "WARNING: Static Binary will require runtime glibc libraries of the same version used to link it here: $gver. Therefore static binary may not be portable to other systems."
-fi
+	echo "WARNING: Static Binary will require runtime glibc libraries of the same version used to link it here: $gver. Therefore static binary may not be portable to other systems.")
 echo

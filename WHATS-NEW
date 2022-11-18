@@ -1,4 +1,7 @@
 lrzip-next: November 2022 v0.9.3
+Add --enable-debug switch to configure.
+
+lrzip-next: November 2022 v0.9.3
 Remove printf in code. Only use print macros in lrzip_private.h
 
 lrzip-next: August 2022 v0.9.2
