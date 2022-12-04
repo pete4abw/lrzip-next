@@ -2042,7 +2042,8 @@ int close_stream_in(rzip_control *control, void *ss)
    so do not compress any block that is incompressible by lz4. */
 static int lz4_compresses(rzip_control *control, uchar *s_buf, i64 s_len)
 {
-	int in_len, d_len, buftest_size, test_len = s_len;
+	int in_len, d_len, buftest_size;
+	i64 test_len = s_len;
 	char *c_buf = NULL, *test_buf = (char *)s_buf;
 	/* set minimum buffer test size based on the length of the test stream */
 	double pct = 101;	/* set to failure */
@@ -2087,7 +2088,7 @@ static int lz4_compresses(rzip_control *control, uchar *s_buf, i64 s_len)
 	}
 	/* if pct >0 and <1 round up so return value won't show failed */
 	return_value = (int) (pct > control->threshold ? 0 : pct < 1 ? pct+1 : pct);
-	print_maxverbose("lz4 testing %s for chunk %'"PRId32". Compressed size = %5.2F%% of test size %'d, %'d Passes\n",
+	print_maxverbose("lz4 testing %s for chunk %'"PRId64". Compressed size = %5.2F%% of test size %'d, %'d Passes\n",
 			(return_value > 0 ? "OK" : "FAILED"), s_len,
 			pct, buftest_size, workcounter);
 
