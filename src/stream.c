@@ -1192,10 +1192,14 @@ void *open_stream_in(rzip_control *control, int f, int n, char chunk_bytes)
 				goto failed;
 			}
 			sinfo->size = le64toh(sinfo->size);
-			print_maxverbose("Chunk size: %'"PRId64"\n", sinfo->size);
+			if (sinfo->size)
+				print_maxverbose("Chunk size: %'"PRId64"\n", sinfo->size);
+			else
+				/* FIXME need this to not show 0 bytes for chunk size */
+				print_maxverbose("Chunk size: smaller than 4,096 bytes\n");
 			control->st_size += sinfo->size;
 			if (unlikely(sinfo->chunk_bytes < 1 || sinfo->chunk_bytes > 8 || sinfo->size < 0)) {
-				print_err("Invalid chunk data size %'d bytes %'"PRId64"\n", sinfo->size, sinfo->chunk_bytes);
+				print_err("Invalid chunk data size %'"PRId64" bytes %d\n", sinfo->size, sinfo->chunk_bytes);
 				goto failed;
 			}
 		}
