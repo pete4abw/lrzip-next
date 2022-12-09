@@ -1052,11 +1052,8 @@ next_chunk:
 	stream_head[0] = 0;
 	stream_head[1] = stream_head[0] + header_length;
 
-	if (!ENCRYPT) {
+	if (!ENCRYPT)
 		chunk_total += chunk_size;
-		if (unlikely(chunk_byte && (chunk_byte > 8 || chunk_size <= 0)))
-			fatal("Invalid chunk data\n");
-	}
 
 	if (INFO) {
 		print_verbose("Rzip chunk:       %'d\n", ++chunk);
