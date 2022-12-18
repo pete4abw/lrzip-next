@@ -4,6 +4,8 @@ Beginning with version 0.19, Peter Hyman submitted bug fixes,
 patches, multi-threading support, assembler integration,
 SDK updating, and autoconf improvements.
 
+lrzip-next is maintained by Peter Hyman
+
 Thanks to:
 Andrew Tridgell for rzip
 Markus Oberhumer for lzo
@@ -16,8 +18,11 @@ Jukka Laurila for newer Darwin support
 George Makrydakis for lrztar, lrzuntar
 Jari Aalto for documentation and typos and git help
 Jon Tibble for nasm tests & Solaris support
-Michael Blumenkrantz for updated autotools and liblrzip!
-Serge Belyshev for encryption help and code
-Ulrich Drepper for MD5 implementation
-PolarSSL authors for sha512 + aes128 implementation
 Fernando Auil for lrzip completion
+Kamila Szewczyk for bzip3 and bzip3 integration into lrzip-next
+
+Depracated features:
+Michael Blumenkrantz for updated autotools and liblrzip! (depracated)
+Serge Belyshev for encryption help and code (replaced with libgcrypt)
+Ulrich Drepper for MD5 implementation (replaced with libgcrypt)
+PolarSSL authors for sha512 + aes128 implementation (replaced with libgcrypt)

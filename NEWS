@@ -1,5 +1,7 @@
 lrzip-next NEWS file
 
+This file is obsolete. See WHATS-NEW.
+
 Apr 2021
 With the inclusion of the LZMA2 reduced dictionary size set, the
 possibility for including more details in the magic header is there.

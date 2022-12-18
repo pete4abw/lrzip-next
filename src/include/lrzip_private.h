@@ -253,7 +253,17 @@ static inline unsigned char lzma2_prop_from_dic(u32 dicSize)
 			break;
 	return (unsigned char)i;
 }
-
+/* re-purposed for bzip3
+ * This value will be the actual block size from 32MB to 512MB - 1 */
+#define BZIP3_BLOCK_SIZE_FROM_PROP(p) (p == 8 ? 0x1FFFFFFF : (((u32)2 | ((p) & 1)) << ((p) / 2 + 24)))
+static inline unsigned char bzip3_prop_from_block_size(u32 bs)
+{
+	unsigned i;
+	for (i = 0; i <= 8; i++)
+		if (bs <= BZIP3_BLOCK_SIZE_FROM_PROP(i))
+			break;
+	return (unsigned char)i;
+}
 #define FLAG_SHOW_PROGRESS	(1 << 0)
 #define FLAG_KEEP_FILES		(1 << 1)
 #define FLAG_TEST_ONLY		(1 << 2)
@@ -278,6 +288,7 @@ static inline unsigned char lzma2_prop_from_dic(u32 dicSize)
 #define FLAG_TMP_OUTBUF		(1 << 21)
 #define FLAG_TMP_INBUF		(1 << 22)
 #define FLAG_ENCRYPT		(1 << 23)
+#define FLAG_BZIP3_COMPRESS	(1 << 24)
 
 #define NO_HASH		(!(HASH_CHECK) && !(HAS_HASH))
 
@@ -287,6 +298,7 @@ static inline unsigned char lzma2_prop_from_dic(u32 dicSize)
 #define CTYPE_LZMA 6
 #define CTYPE_GZIP 7
 #define CTYPE_ZPAQ 8
+#define CTYPE_BZIP3 9
 
 #define PASS_LEN 512
 #define HASH_LEN 64
@@ -328,7 +340,7 @@ static inline unsigned char lzma2_prop_from_dic(u32 dicSize)
 #define ARBITRARY_AT_EPOCH (ARBITRARY * pow (MOORE_TIMES_PER_SECOND, -T_ZERO))
 
 #define FLAG_VERBOSE (FLAG_VERBOSITY | FLAG_VERBOSITY_MAX)
-#define FLAG_NOT_LZMA (FLAG_NO_COMPRESS | FLAG_LZO_COMPRESS | FLAG_BZIP2_COMPRESS | FLAG_ZLIB_COMPRESS | FLAG_ZPAQ_COMPRESS)
+#define FLAG_NOT_LZMA (FLAG_NO_COMPRESS | FLAG_LZO_COMPRESS | FLAG_BZIP2_COMPRESS | FLAG_ZLIB_COMPRESS | FLAG_ZPAQ_COMPRESS | FLAG_BZIP3_COMPRESS)
 #define LZMA_COMPRESS	(!(control->flags & FLAG_NOT_LZMA))
 
 #define SHOW_PROGRESS	(control->flags & FLAG_SHOW_PROGRESS)
@@ -341,6 +353,7 @@ static inline unsigned char lzma2_prop_from_dic(u32 dicSize)
 #define BZIP2_COMPRESS	(control->flags & FLAG_BZIP2_COMPRESS)
 #define ZLIB_COMPRESS	(control->flags & FLAG_ZLIB_COMPRESS)
 #define ZPAQ_COMPRESS	(control->flags & FLAG_ZPAQ_COMPRESS)
+#define BZIP3_COMPRESS	(control->flags & FLAG_BZIP3_COMPRESS)
 #define VERBOSE		(control->flags & FLAG_VERBOSE)
 #define VERBOSITY	(control->flags & FLAG_VERBOSITY)
 #define MAX_VERBOSE	(control->flags & FLAG_VERBOSITY_MAX)
@@ -479,6 +492,8 @@ struct rzip_control {
 	u32 dictSize;			// lzma Dictionary size - set in overhead computation
 	unsigned zpaq_level;		// zpaq level
 	unsigned zpaq_bs;		// zpaq default block size
+	unsigned bzip3_bs;		// bzip3 block size code (0-8)
+	u32 bzip3_block_size;		// actual block size decoded
 	i64 window;
 	unsigned long flags;
 	i64 ramsize;

@@ -20,8 +20,10 @@ libtmplrzip_next_la_SOURCES = \
 	lzma/include/LzmaLib.h
 
 
-libtmplrzip_next_la_LIBADD = lzma/C/liblzma.la	\
-	lib/libzpaq/libzpaq.la
+libtmplrzip_next_la_LIBADD =  \
+	lzma/C/liblzma.la	\
+	lib/libzpaq/libzpaq.la \
+	lib/libbz3/libbz3.la
 
 if USE_ASM
 libtmplrzip_next_la_LIBADD += lzma/ASM/liblzmaASM.la

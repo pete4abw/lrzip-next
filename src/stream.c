@@ -42,6 +42,7 @@
 #include <zlib.h>
 #include <lzo/lzoconf.h>
 #include <lzo/lzo1x.h>
+#include <libbz3.h>
 #include <lz4.h>
 #ifdef HAVE_ERRNO_H
 # include <errno.h>
@@ -160,12 +161,57 @@ static int lz4_compresses(rzip_control *control, uchar *s_buf, i64 s_len);
 /*
   ***** COMPRESSION FUNCTIONS *****
 
-  ZPAQ, BZIP, GZIP, LZMA, LZO
+  ZPAQ, BZIP, GZIP, LZMA, LZO, BZIP3
 
   try to compress a buffer. If compression fails for whatever reason then
   leave uncompressed. Return the compression type in c_type and resulting
   length in c_len
 */
+
+static int bzip3_compress_buf(rzip_control *control, struct compress_thread *cthread, int current_thread)
+{
+	i64 c_len, c_size;
+	uchar *c_buf;
+
+	struct bz3_state *state;
+
+	if (LZ4_TEST) {
+		if (!lz4_compresses(control, cthread->s_buf, cthread->s_len))
+			return 0;
+	}
+
+	c_size = round_up_page(control, cthread->s_len + cthread->s_len / 50 + 30);
+	c_buf = malloc(c_size);
+	if (!c_buf) {
+		print_err("Unable to allocate c_buf in bzip3_compress_buf\n");
+		return -1;
+	}
+	memcpy(c_buf, cthread->s_buf, cthread->s_len);
+
+	c_len = 0;
+	print_verbose("Starting bzip3: bs=%d - %'"PRIu32" bytes backend...\n",
+		       control->bzip3_bs, control->bzip3_block_size);
+
+	state = bz3_new(control->bzip3_block_size);	// allocate bzip3 state
+	if (!state)
+		fatal("Failed to allocate %'"PRIu32" bytes bzip3 state.\n", control->bzip3_block_size);
+
+        c_len = bz3_encode_block(state, c_buf, cthread->s_len);
+
+	if (unlikely(c_len >= cthread->c_len)) {
+		print_maxverbose("Incompressible block\n");
+		/* Incompressible, leave as CTYPE_NONE */
+		dealloc(c_buf);
+		return 0;
+	}
+
+	cthread->c_len = c_len;
+	dealloc(cthread->s_buf);
+	cthread->s_buf = c_buf;
+	cthread->c_type = CTYPE_BZIP3;
+	bz3_free(state);				// free bzip3 state
+	return 0;
+}
 
 static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthread, int current_thread)
 {
@@ -453,10 +499,47 @@ out_free:
 /*
   ***** DECOMPRESSION FUNCTIONS *****
 
-  ZPAQ, BZIP, GZIP, LZMA, LZO
+  ZPAQ, BZIP, GZIP, LZMA, LZO, BZIP3
 
   try to decompress a buffer. Return 0 on success and -1 on failure.
 */
+static int bzip3_decompress_buf(rzip_control *control __UNUSED__, struct uncomp_thread *ucthread, int current_thread)
+{
+	i64 dlen = ucthread->u_len;
+	uchar *c_buf;
+	int ret = 0;
+
+	struct bz3_state *state;
+
+	c_buf = ucthread->s_buf;
+	ucthread->s_buf = malloc(round_up_page(control, dlen));
+	if (unlikely(!ucthread->s_buf)) {
+		print_err("Failed to allocate %'"PRId64" bytes for decompression\n", dlen);
+		ret = -1;
+		goto out;
+	}
+	memcpy(ucthread->s_buf, c_buf, ucthread->c_len);
+
+	state = bz3_new(control->bzip3_block_size);
+
+	dlen = bz3_decode_block(state, ucthread->s_buf, ucthread->c_len, ucthread->u_len);
+	if (bz3_last_error(state) != BZ3_OK)
+		fatal("Failed to decompress with bz3 %s\n", bz3_strerror(state));
+
+	if (unlikely(dlen != ucthread->u_len)) {
+		print_err("Inconsistent length after decompression. Got %'"PRId64" bytes, expected %'"PRId64"\n", dlen, ucthread->u_len);
+		ret = -1;
+	} else
+		dealloc(c_buf);
+out:
+	if (ret == -1) {
+		dealloc(ucthread->s_buf);
+		ucthread->s_buf = c_buf;
+	}
+	bz3_free(state);
+	return ret;
+}
+
 static int zpaq_decompress_buf(rzip_control *control __UNUSED__, struct uncomp_thread *ucthread, int current_thread)
 {
 	i64 dlen = ucthread->u_len;
@@ -1047,7 +1130,34 @@ retry_zpaq:
 				goto retry_zpaq;
 			}
 			if (control->zpaq_bs != save_bs)
-				print_verbose("ZPAQ Block Size reduced to %'d\n", control->zpaq_bs);
+				print_verbose("ZPAQ Block Size reduced to %d\n", control->zpaq_bs);
+		} else if(BZIP3_COMPRESS) {
+			/* compute max possible block size. NB: This code sucks but I don't want to refactor it. */
+			int save_bs = control->bzip3_bs;
+			u32 BZIP3BSMIN = (1 << 25);
+retry_bzip3:
+			do {
+				for (control->threads = save_threads; control->threads >= thread_limit; control->threads--) {
+					if (limit >= control->overhead * control->threads / testbufs) {
+						overhead_set = true;
+						break;
+					}
+				} // thread loop
+				if (overhead_set == true)
+					break;
+				else
+					control->bzip3_bs--;				// decrement block size
+					control->bzip3_block_size = BZIP3_BLOCK_SIZE_FROM_PROP(control->bzip3_bs);
+
+				setup_overhead(control);				// recompute overhead
+			} while (control->bzip3_block_size > BZIP3BSMIN);				// block size loop
+			if (!overhead_set && thread_limit > 1) {			// try again and lower thread_limit
+				thread_limit--;
+				control->bzip3_bs = save_bs;				// restore block size
+				goto retry_bzip3;
+			}
+			if (control->bzip3_bs != save_bs)
+				print_verbose("BZIP3 Block Size reduced to %d - %'"PRIu32"\n", control->bzip3_bs, control->bzip3_block_size);
 		}
 
 		if (control->threads != save_threads)
@@ -1093,6 +1203,8 @@ retest_malloc:
 		if (ZPAQ_COMPRESS && (limit/control->threads > 0x100000<<control->zpaq_bs))
 			// ZPAQ  buffer always larger than STREAM_BUFSIZE
 			stream_bufsize = round_up_page(control, (0x100000<<control->zpaq_bs)-0x1000);
+		else if (BZIP3_COMPRESS && (limit/control->threads > control->bzip3_block_size))
+			stream_bufsize = round_up_page(control, control->bzip3_block_size-0x1000);
 		else if (LZMA_COMPRESS && limit/control->threads > STREAM_BUFSIZE)
 			// for smaller dictionary sizes, need MAX test to bring in larger buffer from limit
 			// limit = usable ram / 2
@@ -1414,6 +1526,8 @@ retry:
 			ret = gzip_compress_buf(control, cti);
 		else if (ZPAQ_COMPRESS)
 			ret = zpaq_compress_buf(control, cti, current_thread);
+		else if (BZIP3_COMPRESS)
+			ret = bzip3_compress_buf(control, cti, current_thread);
 		else fatal("Dunno wtf compression to use!\n");
 	}
 
@@ -1677,6 +1791,9 @@ retry:
 				break;
 			case CTYPE_ZPAQ:
 				ret = zpaq_decompress_buf(control, uci, current_thread);
+				break;
+			case CTYPE_BZIP3:
+				ret = bzip3_decompress_buf(control, uci, current_thread);
 				break;
 			default:
 				fatal("Dunno wtf decompression type to use!\n");

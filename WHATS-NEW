@@ -1,8 +1,14 @@
+lrzip-next: December 2022
+bzip3 integration and doc updates
+
 lrzip-next: November 2022 v0.9.3
 Add --enable-debug switch to configure.
 
 lrzip-next: November 2022 v0.9.3
 Remove printf in code. Only use print macros in lrzip_private.h
+
+lrzip-next: October 2022 v0.9.3
+Add bzip3 support with -B option - Kamila Szewczyk
 
 lrzip-next: August 2022 v0.9.2
 lzma SDK 22.01
