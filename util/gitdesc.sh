@@ -1,8 +1,9 @@
-#!/bin/env bash
+#!/bin/sh
 # Peter Hyman, pete@peterhyman.com
 # Lucas Rademaker for MacOS and small systems compatibility.
 # December 2020
 # August 2021
+# December 2022 use sh again and remove use of which
 
 # This program will return commit references based on Tags and Annotated Tags from git describe
 
@@ -50,12 +51,16 @@ tagopt="--tags"
 init() {
 	if [ -d '.git' ] ; then
 		# Lucas Rademaker
-		# If the below does not work using sed. comment the line
-		# amd uncomment the three descrive_tag= lines below it.
-		describe_tag=$(git describe $tagopt --long --abbrev=7 | sed -E 's/^v(.*?-)g(.*)$/\1\2/')
-#		describe_tag=$(git describe $tagopt --long --abbrev=7)
-#		describe_tag=${describe_tag/v/}
-#		describe_tag=${describe_tag/g/}
+		# Some MAC systems don't have sed
+		# see if sed is in path or not
+		sed --version 1>/dev/null 2>/dev/null
+		if [ $? -eq 0 ]; then
+			describe_tag=$(git describe $tagopt --long --abbrev=7 | sed -E 's/^v(.*?-)g(.*)$/\1\2/')
+		else
+			describe_tag=$(git describe $tagopt --long --abbrev=7)
+			describe_tag=${describe_tag/v/}
+			describe_tag=${describe_tag/g/}
+		fi
 		commit=$(echo $describe_tag | cut -d- -f3)
 		tagrev=$(echo $describe_tag | cut -d- -f2)
 		version=$(echo $describe_tag | cut -d- -f1)
@@ -68,12 +73,13 @@ init() {
 		minor=$(awk '/Minor: / {printf "%s",$2; exit}' VERSION)
 		micro=$(awk '/Micro: / {printf "%s",$2; exit}' VERSION)
 	else
-		echo "Cannot find .git or VERSION file. Aborting"
-		exit 1
+		die "Cannot find .git directory or VERSION file. Aborting"
 	fi
 }
 
-[ ! $(which git) ] && die "Something very wrong: git not found."
+# don't use which as some systems may not have
+git --version 1>/dev/null 2>/dev/null
+[ $? -ne 0  ] && die "Something very wrong: git not found."
 
 [ $# -eq 0 ] && die "Must provide a command and optional argument."
 
