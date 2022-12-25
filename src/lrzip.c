@@ -82,7 +82,7 @@ i64 get_ram(rzip_control *control)
 #ifdef __APPLE__
 # include <sys/sysctl.h>
 	int mib[2];
-	size_t len;
+	size_t len=sizeof(size_t);	/* must set len to size of size_t */
 	i64 ramsize;
 
 	mib[0] = CTL_HW;
