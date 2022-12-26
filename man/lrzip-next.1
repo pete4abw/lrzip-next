@@ -11,15 +11,15 @@ lrzip-next [OPTIONS] <file>
 .br
 lrzip-next \-d [OPTIONS] <file>
 .br
-lrunzip [OPTIONS] <file>
+lrznunzip [OPTIONS] <file>
 .br
-lrzcat [OPTIONS] <file>
+lrzncat [OPTIONS] <file>
 .br
-lrztar [lrzip-next options] <directory>
+lrzntar [lrzip-next options] <directory>
 .br
-lrztar \-d [lrzip-next options] <directory>
+lrzntar \-d [lrzip-next options] <directory>
 .br
-lrzuntar [lrzip-next options] <directory>
+lrznuntar [lrzip-next options] <directory>
 .br
 LRZIP=NOCONFIG [lrzip-next|lrunzip] [OPTIONS] <file>
 .PP
@@ -433,10 +433,10 @@ with increasing ram sizes.
 Nil known.
 .SH "SEE ALSO"
 lrzip.conf(5),
-lrunzip(1),
-lrzcat(1),
-lrztar(1),
-lrzuntar(1),
+lrznunzip(1),
+lrzncat(1),
+lrzntar(1),
+lrznuntar(1),
 bzip2(1),
 gzip(1),
 lzop(1),
@@ -464,8 +464,9 @@ Peter Hyman added informational output, updated LZMA SDK,
 updated ZPAQ SDK added lzma multi-threading capabilities,
 and added filtering for all compression modes. All features in lrzip-next.
 .br
-If you wish to report a problem, or make a suggestion, then please email
-Peter Hyman, pete@peterhyman.com
+If you wish to report a problem, or make a suggestion, then please open
+an Issue on https://github.com/pete4abw/lrzip-next/issues or email the
+maintainer pete@peterhyman.com.
 .br
 lrzip-next is released under the GNU General Public License version 2.
 Please see the file COPYING for license details.
