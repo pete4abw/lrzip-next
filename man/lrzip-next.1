@@ -11,15 +11,15 @@ lrzip-next [OPTIONS] <file>
 .br
 lrzip-next \-d [OPTIONS] <file>
 .br
-lrunzip [OPTIONS] <file>
+lrznunzip [OPTIONS] <file>
 .br
-lrzcat [OPTIONS] <file>
+lrzncat [OPTIONS] <file>
 .br
-lrztar [lrzip-next options] <directory>
+lrzntar [lrzip-next options] <directory>
 .br
-lrztar \-d [lrzip-next options] <directory>
+lrzntar \-d [lrzip-next options] <directory>
 .br
-lrzuntar [lrzip-next options] <directory>
+lrznuntar [lrzip-next options] <directory>
 .br
 LRZIP=NOCONFIG [lrzip-next|lrunzip] [OPTIONS] <file>
 .PP
@@ -36,6 +36,7 @@ Here is a summary of the options to lrzip-next.
 .B Compression Options:
  \-\-lzma                  lzma compression (default)
  \-b, \-\-bzip2             bzip2 compression
+ \-B, \-\-bzip3             bzip3 compression
  \-g, \-\-gzip              gzip compression using zlib
  \-l, \-\-lzo               lzo compression (ultra fast)
  \-n, \-\-no-compress       no backend compression - prepare for other compressor
@@ -43,6 +44,7 @@ Here is a summary of the options to lrzip-next.
  \-L, \-\-level level       Set lzma/bzip2/gzip compression level (1-9, default 7)
  \-\-dictsize = ds         Set lzma Dictionary Size for LZMA ds=0 to 40 expressed as 2<<11, 3<<11, 2<<12, 3<<12...2<<31-1
  \-\-zpaqbs = bs           Set ZPAQ Block Size overriding defaults. 1-11, 2^zpaqbs * 1MB
+ \-\-bzip3bs = bs          Set BZIP3 Block Size. 1-8, 2^bzip3bs * 1MB
 Filtering Options (for all compression modes):
  \-\-x86                   Use x86 filter
  \-\-arm                   Use ARM filter
@@ -98,6 +100,10 @@ Lzma compression. Default.
 .IP "\fB-b | --bzip\fP"
 Bzip2 compression. Uses bzip2 compression for the 2nd stage, much like
 the original rzip does.
+.IP "\fB-B | --bzip3\fP"
+BZIP3 compression. Uses BZIP3, a statistical compressor and spiritual successor
+to BZip2. Features higher compression ratios and good performance. Usually as
+fast as BZip2 and provides ratio comparable or better than LZMA.
 .IP "\fB-g | --gzip\fP"
 Gzip compression. Uses gzip compression for the 2nd stage. Uses libz compress
 and uncompress functions.
@@ -142,6 +148,11 @@ If set, Dictionary sizes will be set as
 .IP "\fB--zpaqbs=1\&.\&.11\fP (ZPAQ only)"
 Set ZPAQ Block Size from 1 to 11, 2^zpaqbs * 1MB (2MB to 2GB). This parameter
 will be passed to the zpaq backend. This value may cause the computed overhead
+* number of threads to be greater than available ram, so it may be reduced
+possibly along with usable threads.
+.IP "\fB--bzip3bs=1\&.\&.8\fP (BZIP3 only)"
+Set BZIP3 Block Size from 1 to 8, 2^bzip3bs * 1MB (2MB to 256MB). This parameter
+will be passed to the bzip3 backend. This value may cause the computed overhead
 * number of threads to be greater than available ram, so it may be reduced
 possibly along with usable threads.
 .SH "Filtering Options (for all compression modes)"
@@ -371,9 +382,9 @@ LRZIP operates in two stages. The first stage finds and encodes large chunks of
 duplicated data over potentially very long distances in the input file. The
 second stage is to use a compression algorithm to compress the output of the
 first stage. The compression algorithm can be chosen to be optimised for extreme
-size (zpaq), size (lzma - default), speed (lzo), legacy (bzip2 or gzip) or can
-be omitted entirely doing only the first stage. A one stage only compressed file
-can almost always improve both the compression size and speed done by a
+size (zpaq), size (lzma - default or bzip3), speed (lzo), legacy (bzip2 or gzip)
+or can be omitted entirely doing only the first stage. A one stage only compressed
+file can almost always improve both the compression size and speed done by a
 subsequent compression program.
 .PP
 The key difference between lrzip-next and other well known compression
@@ -422,14 +433,15 @@ with increasing ram sizes.
 Nil known.
 .SH "SEE ALSO"
 lrzip.conf(5),
-lrunzip(1),
-lrzcat(1),
-lrztar(1),
-lrzuntar(1),
+lrznunzip(1),
+lrzncat(1),
+lrzntar(1),
+lrznuntar(1),
 bzip2(1),
 gzip(1),
 lzop(1),
 rzip(1),
+bzip3(1),
 zip(1)
 .\"
 .SH "AUTHOR and CREDITS"
@@ -446,12 +458,15 @@ lzo was written by Markus Oberhumer.
 .br
 zpaq was written by Matt Mahoney.
 .br
+bzip3 was written by Kamila Szewczyk.
+.br
 Peter Hyman added informational output, updated LZMA SDK,
 updated ZPAQ SDK added lzma multi-threading capabilities,
 and added filtering for all compression modes. All features in lrzip-next.
 .br
-If you wish to report a problem, or make a suggestion, then please email
-Peter Hyman, pete@peterhyman.com
+If you wish to report a problem, or make a suggestion, then please open
+an Issue on https://github.com/pete4abw/lrzip-next/issues or email the
+maintainer pete@peterhyman.com.
 .br
 lrzip-next is released under the GNU General Public License version 2.
 Please see the file COPYING for license details.
