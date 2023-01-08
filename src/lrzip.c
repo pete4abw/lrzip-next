@@ -243,14 +243,25 @@ static inline i64 enc_loops(uchar b1, uchar b2)
 
 static void  get_comment(rzip_control *control, int fd_in, unsigned char *magic)
 {
-	if (unlikely(!(control->comment = malloc(magic[19]+1))))
+	int i;
+	char tmpchar;
+	if (unlikely(!(control->comment = calloc(magic[19]+1, 1))))
 		fatal("Failed to allocate memory for comment\n");
-	/* read comment */
-	if (unlikely(read(fd_in, control->comment, magic[19]) != magic[19]))
+	/* read comment
+	 * use getchar() in case coming from STDIN
+	*/
+	if (STDIN) {
+		for ( i = 0; i < magic[19]; i++) {
+			tmpchar = getchar();
+			if (unlikely(tmpchar == EOF))
+				fatal("Reached end of file before reading comment\n");
+			control->comment[i] = (char)tmpchar;
+		}
+	}
+	else if (unlikely(read(fd_in, control->comment, magic[19]) != magic[19]))
 		fatal("Failed to read comment\n");
 
 	control->comment_length = magic[19];
-	control->comment[control->comment_length] = '\0';
 	return;
 }
 
@@ -1616,7 +1627,9 @@ bool decompress_file(rzip_control *control)
 		if (!VERBOSE) print_progress("\n");	// output LF to prevent overwriing decompression output
 	}
 	show_version(control);	// show version here to preserve output formatting
-	print_progress("Decompressing...");
+	print_progress("Decompressing...\n");
+	if (control->comment_length)
+		print_progress("Archive Comment: %s\n", control->comment);
 
 	if (unlikely(runzip_fd(control, fd_in, fd_out, fd_hist, expected_size) < 0)) {
 		clear_rulist(control);
