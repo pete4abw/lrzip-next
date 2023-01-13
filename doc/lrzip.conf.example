@@ -18,7 +18,7 @@
 # Use -U setting, Unlimited ram. Yes or No
 # UNLIMITED = NO
 
-# Compression Method, rzip, gzip, bzip2, lzo, or lzma (default), or zpaq. (-n -g -b -l --lzma -z)
+# Compression Method, rzip, gzip, bzip2, bzip3, lzo, or lzma (default), or zpaq. (-n -g -b -B -l --lzma -z)
 # May be overridden by command line compression choice.
 # COMPRESSIONMETHOD = lzma
 
@@ -42,9 +42,25 @@
 # Show HASH value on Compression even if Verbose is off, YES (-H)
 # Set Hash Method 1-MAXHASH
 # Default hash is 1: MD5
-# See CURRENT_HASHES file for list
-# HASH = YES
-# HASH = 1..MAXHASH
+
+# These Message Digests are used to compute and evaluate hash values.
+
+#  0 CRC         - 32 bit CRC
+#  1 MD5         - MD5 Checksum
+#  2 RIPEMD      - RACE Integrity Primitives Evaluation Message Digest
+#  3 SHA256      - Secure Hash Algorithm 2, 256 bit
+#  4 SHA384      - Secure Hash Algorithm 2, 384 bit
+#  5 SHA512      - Secure Hash Algorithm 2, 512 bit
+#  6 SHA3_256    - Secure Hash Algorithm 3, 256 bit
+#  7 SHA3_512    - Secure Hash Algorithm 3, 512 bit
+#  8 SHAKE128_16 - Extendable Output Function (XOF) 128 bit, 16 byte output
+#  9 SHAKE128_32 - Extendable Output Function (XOF) 128 bit, 32 byte output
+# 10 SHAKE128_64 - Extendable Output Function (XOF) 128 bit, 64 byte output
+# 11 SHAKE256_16 - Extendable Output Function (XOF) 256 bit, 16 byte output
+# 12 SHAKE256_32 - Extendable Output Function (XOF) 256 bit, 32 byte output
+# 13 SHAKE256_64 - Extendable Output Function (XOF) 256 bit, 64 byte output
+
+# HASH = YES | 1..MAXHASH
 
 # Default output directory (-O)
 # OUTPUTDIRECTORY = location
@@ -76,10 +92,14 @@
 
 # Whether to use encryption on compression YES, NO (-e)
 # OR Encryption Method
-# Method - 1,,NAXENC
-# See CURRENT_ENCMETHODS for list.
-# ENCRYPT = NO
-# ENCRYPT = 1..MAXENC
+# Method - 1,,MAXENC
+# These Encryption Methods are used to secure lrzip-next files.
+
+#  0 NONE    - No Encryption
+#  1 AES 128 - 128 bit AES with 16 Byte key and 16 Byte Initialization Vector
+#  2 AES 256 - 256 bit AES with 32 Byte key and 16 Byte Initialization Vector
+
+# ENCRYPT = NO | 1..MAXENC
 
 # Override default LOCALE
 # Will control how radix and separators are presented.

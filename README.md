@@ -1,10 +1,11 @@
 lrzip-next - Long Range ZIP
 ======================
 
-## LZMA SDK 22.01 (August 2022)
+## LZMA SDK 22.01 (October 2022)
 
-Tag v0.9.3
+Tag v0.10.0
 
+**NEW bzip3 integration with -B option** (by Kamila Szewczyk)
 **Encrypted archives from any earlier version will not be compatible or readable.**
 **LRZIP Archives created with versions < 0.6 will no longer be supported.**
 
@@ -47,10 +48,13 @@ Many new changes, not in the main branch, including:
 * Magic header will store compression level used.
 * BSD Support.
 * /tmp is now default temporary dir. Set TMP to override.
+* BZIP3 Support - Kamila Szewczyk
+* add --enable-debug switch to configure.
 
 (See original README for more historical info)
 
 ### Download and Build
+
 `$ git clone https://github.com/pete4abw/lrzip-next`\
 or if you desire to also download the **lrzip-fe** front end\
 `$ git clone --recurse-submodules https://github.com/pete4abw/lrzip-next`
@@ -94,6 +98,7 @@ faster compression than standalone compressors and much faster decompression.
 * lzma (default)
 * gzip
 * bzip2
+* bzip3
 * lzo
 * zpaq
 * rzip (pre-processed only)
