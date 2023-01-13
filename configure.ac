@@ -174,6 +174,7 @@ src/Makefile
 src/lzma/Makefile
 src/lzma/C/Makefile
 src/lib/libzpaq/Makefile
+src/lib/libbz3/Makefile
 doc/Makefile
 man/Makefile
 ])
