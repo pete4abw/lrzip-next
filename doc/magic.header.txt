@@ -1,3 +1,20 @@
+lrzip-next-0.10x file format
+
+Byte 17 retasked to include BZIP3 block size
+17	LZMA Properties using LZMA2 encoding for dictionary size only
+or
+17	ZPAQ Properties. 0b1CCCBBBB where CCC is compression level, BBBB is
+	block size. CCC can be 3-5 only. High order bit always set.
+	ZPAQ Compression level 3 = 0b1011BBBB
+	ZPAQ Compression level 4 = 0b1100BBBB
+	ZPAQ Compression level 5 = 0b1101BBBB
+or
+17	BZIP3 Properties. 0b1111BBBB where BBBB is 0-8. Allowable BZIP3 block
+	sizes. High order bits of 0b1111 distinguish BZIP3 block size from
+	ZPAQ compression level which can only be 3-5. When all high order bits
+	are set, it cannot be ZPAQ. 0b1111BBBB implies a ZPAQ level of 7 which
+	is out of range.
+
 lrzip-next-0.9x file format
 
 Magic extended 2 bytes.
