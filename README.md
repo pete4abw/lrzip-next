@@ -3,7 +3,7 @@ lrzip-next - Long Range ZIP
 
 ## LZMA SDK 22.01 (October 2022)
 
-Tag v0.9.3
+Tag v0.10.0
 
 **NEW bzip3 integration with -B option** (by Kamila Szewczyk)
 **Encrypted archives from any earlier version will not be compatible or readable.**
@@ -49,6 +49,7 @@ Many new changes, not in the main branch, including:
 * BSD Support.
 * /tmp is now default temporary dir. Set TMP to override.
 * BZIP3 Support - Kamila Szewczyk
+* add --enable-debug switch to configure.
 
 (See original README for more historical info)
 

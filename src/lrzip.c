@@ -466,6 +466,7 @@ static bool get_magic(rzip_control *control, int fd_in, unsigned char *magic)
 			get_magic_v8(control, magic);
 			break;
 		case 9:	/* version 0.9 adds two bytes */
+		case 10:
 			get_magic_v8(control, magic);
 			get_magic_v9(control, fd_in, magic);
 			break;
@@ -1044,7 +1045,9 @@ bool get_fileinfo(rzip_control *control)
 					break;
 				case 8: ofs = 20;
 					break;
-				case 9: ofs = 22 + control->comment_length;	/* comment? Add length */
+				case 9:
+				case 10:
+					ofs = 22 + control->comment_length;	/* comment? Add length */
 					break;
 			}
 			ofs += chunk_byte;
@@ -1059,7 +1062,9 @@ bool get_fileinfo(rzip_control *control)
 				switch (control->minor_version) {
 					case 8:	ofs = 20;
 						break;
-					case 9: ofs = 22 + control->comment_length;
+					case 9:
+					case 10:
+						ofs = 22 + control->comment_length;
 						break;
 					default: fatal("Cannot decrypt earlier versions of lrzip-next\n");
 						 break;
