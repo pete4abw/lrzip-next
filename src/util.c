@@ -166,26 +166,11 @@ void setup_overhead(rzip_control *control)
 		}
 		control->overhead = (i64) (1 << control->zpaq_bs) * ONE_MB;	// times 8 or 16. Out for now
 	} else if(BZIP3_COMPRESS) {
-		if(control->bzip3_block_size == 0) {
-			switch (control->compression_level) {
-			case 1:
-			case 2:
-			case 3:
-			case 4:
-			case 5:	control->bzip3_bs = 0;
-				break;	//32MB
-			case 6:	control->bzip3_bs = 2;
-				break;	//64MB
-			case 7:	control->bzip3_bs = 4;
-				break;	//128MB
-			case 8:	control->bzip3_bs = 6;
-				break;	//256MB
-			case 9: control->bzip3_bs = 8;
-				break;	//512MB-1
-			default: control->bzip3_bs = 0;
-				break;	// should never reach here
-			}
-		}
+		/* if block size property 0-8 not set...*/
+		if (control->bzip3_block_size == 0)
+			control->bzip3_bs = control->compression_level - 1;
+
+		/* compute actual block size */
 		control->bzip3_block_size = BZIP3_BLOCK_SIZE_FROM_PROP(control->bzip3_bs);
 		control->overhead = (i64) control->bzip3_block_size * 6;
 	}
