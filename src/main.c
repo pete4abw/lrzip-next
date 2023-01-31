@@ -617,6 +617,7 @@ int main(int argc, char *argv[])
 							if (ds < 0 || ds > 40)
 								fatal("Dictionary Size must be between 0 and 40 for 2^12 (4KB) to 2^31 (4GB)\n");
 							control->dictSize = LZMA2_DIC_SIZE_FROM_PROP(ds);
+							control->force_bs = 1;	// force size
 						}
 						break;
 					case LONGSTART+2:
@@ -629,6 +630,7 @@ int main(int argc, char *argv[])
 							if (ds < 0 || ds > 11)
 								fatal("ZPAQ Block Size must be between 1 and 11\n");
 							control->zpaq_bs = ds;
+							control->force_bs = 1;	// force size
 						}
 						break;
 					case LONGSTART+3:
@@ -642,6 +644,7 @@ int main(int argc, char *argv[])
 								fatal("BZIP3 Block Size must be between 0 and 8\n");
 							control->bzip3_bs = ds;
 							control->bzip3_block_size = BZIP3_BLOCK_SIZE_FROM_PROP(ds);
+							control->force_bs = 1;	// force size
 						}
 						break;
 						/* Filtering */
