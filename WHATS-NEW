@@ -1,3 +1,10 @@
+lrzip-next: January 2023
+New bzip3 block size settings. Use 0-8 for compression levels
+1-9. 32MB-511MB
+
+Permit maximum use of block/dictionary sizes while reducing
+threads to accoodate. See commit message.
+
 lrzip-next: January 2023 v0.10.0
 Merge to main branch
 
