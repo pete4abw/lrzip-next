@@ -39,6 +39,7 @@ dist_doc_DATA = \
 
 EXTRA_DIST = \
 	src/lrzntar \
+	util/gitdesc.sh \
 	description-pak \
 	autogen.sh \
 	INSTALL \

@@ -10,3 +10,5 @@ libbz3_la_SOURCES = \
 bzip3docdir = @docdir@/bzip3
 bzip3doc_DATA = \
        LICENSE
+
+EXTRA_DIST = $(bzip3doc_DATA)
