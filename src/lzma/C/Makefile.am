@@ -22,6 +22,7 @@ liblzma_la_SOURCES = \
 	Bra.c \
 	BraIA64.c \
 	../include/Compiler.h \
+	../include/7zTypes.h \
 	CpuArch.c	../include/CpuArch.h \
 	Delta.c		../include/Delta.h \
 	LzFind.c 	../include/LzFind.h \

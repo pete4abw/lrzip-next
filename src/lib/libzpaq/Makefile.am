@@ -14,3 +14,5 @@ zpaqdoc_DATA = \
        doc/COPYING \
        doc/readme.txt \
        doc/zpaq206.pdf
+
+EXTRA_DIST = $(zpaqdoc_DATA)
