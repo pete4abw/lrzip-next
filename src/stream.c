@@ -42,7 +42,6 @@
 #include <zlib.h>
 #include <lzo/lzoconf.h>
 #include <lzo/lzo1x.h>
-#include <libbz3.h>
 #include <lz4.h>
 #ifdef HAVE_ERRNO_H
 # include <errno.h>
@@ -66,6 +65,8 @@
 #include "Bra.h"	//Filters
 #include "Delta.h"	//Delta Filter
 
+/* bzip3 */
+#include "lib/libbz3/libbz3.h"
 
 /* This is not needed since it is defined in lrzip_private.h
  * #define STREAM_BUFSIZE (1024 * 1024 * 10)
