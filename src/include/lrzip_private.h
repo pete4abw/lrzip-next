@@ -255,7 +255,7 @@ static inline unsigned char lzma2_prop_from_dic(u32 dicSize)
 }
 /* re-purposed for bzip3
  * This value will be the actual block size from 32MB to 512MB - 1 */
-#define BZIP3_BLOCK_SIZE_FROM_PROP(p) (p == 8 ? 0x1FFFFFFF : (((u32)2 | ((p) & 1)) << ((p) / 2 + 24)))
+#define BZIP3_BLOCK_SIZE_FROM_PROP(p) (p == 8 ? 0x1FF00000 : (((u32)2 | ((p) & 1)) << ((p) / 2 + 24)))
 static inline unsigned char bzip3_prop_from_block_size(u32 bs)
 {
 	unsigned i;
