@@ -494,6 +494,7 @@ struct rzip_control {
 	unsigned zpaq_bs;		// zpaq default block size
 	unsigned bzip3_bs;		// bzip3 block size code (0-8)
 	u32 bzip3_block_size;		// actual block size decoded
+	char force_bs;			// flag to NOT recompute max bs or min threads
 	i64 window;
 	unsigned long flags;
 	i64 ramsize;

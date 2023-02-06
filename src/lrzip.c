@@ -1690,19 +1690,16 @@ bool decompress_file(rzip_control *control)
 bool initialise_control(rzip_control *control)
 {
 	time_t now_t, tdiff;
-	char localeptr[] = "/tmp", *eptr; 	/* for environment. OR Default to /tmp if none set */
+	char *eptr; 				/* for environment. OR Default to /tmp if none set */
 	size_t len;
-
+	/* set all values to 0 */
 	memset(control, 0, sizeof(rzip_control));
 	control->locale = "";			/* empty string for default locale */
 	control->msgout = stderr;
 	control->msgerr = stderr;
 	register_outputfile(control, control->msgout);
 	control->flags = FLAG_SHOW_PROGRESS | FLAG_KEEP_FILES | FLAG_THRESHOLD;
-	control->filter_flag = 0;		/* filter flag. Default to none */
 	control->compression_level = 7;		/* compression level default */
-	control->rzip_compression_level = 0;	/* rzip compression level default will equal compression level unless explicitly set */
-	control->dictSize = 0;			/* Dictionary Size for lzma. 0 means program decides */
 	control->ramsize = get_ram(control);	/* if something goes wrong, exit from get_ram */
 	control->threshold = 100;		/* default for no threshold limiting */
 	/* for testing single CPU */
@@ -1736,7 +1733,7 @@ bool initialise_control(rzip_control *control)
 	if (!eptr)
 		eptr = getenv("TEMP");
 	if (!eptr)
-		eptr = localeptr;
+		eptr = "/tmp";
 	len = strlen(eptr);
 
 	control->tmpdir = malloc(len + 2);
@@ -1747,8 +1744,6 @@ bool initialise_control(rzip_control *control)
 		control->tmpdir[len] = '/'; 	/* need a trailing slash */
 		control->tmpdir[len + 1] = '\0';
 	}
-
-	/* just in case, set pointers for hash and encryptions */
 
 	return true;
 }

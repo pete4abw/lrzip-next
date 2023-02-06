@@ -170,17 +170,6 @@ void setup_overhead(rzip_control *control)
 		if (control->bzip3_block_size == 0)
 			control->bzip3_bs = control->compression_level - 1;
 
-		/* Compression Level and Block Size Computation
-		 * 1 = 32MB
-		 * 2 = 48MB
-		 * 3 = 64MB
-		 * 4 = 96MB
-		 * 5 = 128MB
-		 * 6 = 196MB
-		 * 7 = 256MB
-		 * 8 = 384MB
-		 * 9 = 512MB-1
-		 */
 		/* compute actual block size */
 		control->bzip3_block_size = BZIP3_BLOCK_SIZE_FROM_PROP(control->bzip3_bs);
 		control->overhead = (i64) control->bzip3_block_size * 6;

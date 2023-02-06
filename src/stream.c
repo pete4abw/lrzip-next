@@ -1066,6 +1066,7 @@ void *open_stream_out(rzip_control *control, int f, unsigned int n, i64 chunk_li
 	 * no back end compression. We limit the total regardless to 1/3 ram
 	 * for when the OS lies due to heavy overcommit. */
 	testbufs = NO_COMPRESS ? 1 : 2;
+	limit = control->usable_ram/testbufs;			// this is max chunk limit based on ram and compression window
 
 	/* Reduce threads one by one and then reduce dictionary size
 	* This block only has to be done once since memory never
@@ -1073,12 +1074,17 @@ void *open_stream_out(rzip_control *control, int f, unsigned int n, i64 chunk_li
 
 	if (save_threads == 0) {
 		save_threads = control->threads;		// save threads for loops
-		limit = control->usable_ram/testbufs;		// this is max chunk limit based on ram and compression window
 		bool overhead_set = false;
 
 		int thread_limit = control->threads >= PROCESSORS / 2  ? (control->threads / 2) : control->threads;	// control thread loop
-		uchar exponent = lzma2_prop_from_dic(control->dictSize);	// lzma2 coding for dictsize spec
-		if (LZMA_COMPRESS) {
+		if (control->force_bs) {			// don't try and reduce max memory usage!
+			for ( ; control->threads > 1; control->threads-- ) {
+				if (limit >= (control->overhead * control->threads / testbufs))
+					break;
+			}
+			print_maxverbose("open_stream_out(): not recomputing thread memory use!\n");
+		} else if (LZMA_COMPRESS) {
+			uchar exponent = lzma2_prop_from_dic(control->dictSize);	// lzma2 coding for dictsize spec
 			u32 save_dictSize = control->dictSize;	// save dictionary
 			u32 DICTSIZEMIN = (1 << 24);		// minimum dictionary size (16MB)
 			uchar save_exponent = exponent;		// save exponent
