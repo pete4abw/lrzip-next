@@ -32,6 +32,7 @@ dist_doc_DATA = \
 	BUGS \
 	ChangeLog \
 	COPYING \
+	FEATURES \
 	README.md \
 	README-NOT-BACKWARD-COMPATIBLE \
 	TODO \
