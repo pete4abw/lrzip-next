@@ -190,7 +190,7 @@ static int bzip3_compress_buf(rzip_control *control, struct compress_thread *cth
 	memcpy(c_buf, cthread->s_buf, cthread->s_len);
 
 	c_len = 0;
-	print_verbose("Starting bzip3: bs=%d - %'"PRIu32" bytes backend...\n",
+	print_maxverbose("Starting bzip3: bs=%d - %'"PRIu32" bytes backend...\n",
 		       control->bzip3_bs, control->bzip3_block_size);
 
 	state = bz3_new(control->bzip3_block_size);	// allocate bzip3 state
@@ -249,7 +249,7 @@ static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthr
 
 	sprintf(method,"%d%d,%d,%d",control->zpaq_level,control->zpaq_bs,zpaq_redundancy,zpaq_type);
 
-	print_verbose("Starting zpaq backend compression thread %d...\nZPAQ: Method selected: %s: level=%d, bs=%d, redundancy=%d, type=%s\n",
+	print_maxverbose("Starting zpaq backend compression thread %d...\nZPAQ: Method selected: %s: level=%d, bs=%d, redundancy=%d, type=%s\n",
 		       current_thread, method, control->zpaq_level, control->zpaq_bs, zpaq_redundancy, (zpaq_type == 0 ? "binary/random" : "text"));
 
         zpaq_compress(c_buf, &c_len, cthread->s_buf, cthread->s_len, &method[0],
