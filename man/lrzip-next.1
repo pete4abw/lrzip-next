@@ -2,26 +2,21 @@
 .\" Comment lines for readability
 .\"
 .nh
-.TH "lrzip-next" 1 "April 2022" "lrzip-next Command Reference" ""
+.TH "lrzip-next" 1 "February 2023" "lrzip-next Command Reference" ""
 .SH "NAME"
 lrzip-next \- a large-file compression program
 .SH "SYNOPSIS"
 .PP
+.nf
 lrzip-next [OPTIONS] <file>
-.br
 lrzip-next \-d [OPTIONS] <file>
-.br
 lrznunzip [OPTIONS] <file>
-.br
 lrzncat [OPTIONS] <file>
-.br
 lrzntar [lrzip-next options] <directory>
-.br
 lrzntar \-d [lrzip-next options] <directory>
-.br
 lrznuntar [lrzip-next options] <directory>
-.br
 LRZIP=NOCONFIG [lrzip-next|lrunzip] [OPTIONS] <file>
+.fi
 .PP
 .SH "DESCRIPTION"
 .PP
@@ -44,7 +39,7 @@ Here is a summary of the options to lrzip-next.
  \-L, \-\-level level       Set lzma/bzip2/gzip compression level (1-9, default 7)
  \-\-dictsize = ds         Set lzma Dictionary Size for LZMA ds=0 to 40 expressed as 2<<11, 3<<11, 2<<12, 3<<12...2<<31-1
  \-\-zpaqbs = bs           Set ZPAQ Block Size overriding defaults. 1-11, 2^zpaqbs * 1MB
- \-\-bzip3bs = bs          Set BZIP3 Block Size. 1-8, 2^bzip3bs * 1MB
+ \-\-bzip3bs = bs          Set BZIP3 Block Size. 0-8, 32MB - 511MB
 Filtering Options (for all compression modes):
  \-\-x86                   Use x86 filter
  \-\-arm                   Use ARM filter
@@ -130,31 +125,59 @@ to how much memory lrzip-next uses. See the \-w option for details.
 .IP "\fB--dictsize=0\&.\&.40\fP (LZMA only)"
 Set Dictionary Size for LZMA from 2^12 (4KB) to 2^32-1 (4GB-1). Normally this
 option is not useful since lrzip-next will set and sometimes change the dictionary
-size depending on the compression level selected and usable ram available. If
-sufficient ram is not available, Dictionary size will be reduced until total
-overhead * number of threads will fit in ram.
+size depending on the compression level selected and usable ram available.
 .br
-If set, Dictionary sizes will be set as
+If set, Dictionary sizes will be set as follows and will be fixed. If sufficient
+ram is not available, lrzip-next will fail. Values are per thread.
 .br
-0:  2 * 2^11, 1:  3 * 2^11; 4,096, 6,144
-.br
-2:  2 * 2^12, 3:  3 * 2^12; 8,192, 12,288
-.br
+.nf
+0:  2 * 2^11, 1:  3 * 2^10; 4,096, 6,144
+2:  2 * 2^12, 3:  3 * 2^11; 8,192, 12,288
  ...
-.br
-38: 2 * 2^30, 39: 3 * 2^30; 2,147,483,648, 3,221,225,472
-.br
+38: 2 * 2^30, 39: 3 * 2^29; 2,147,483,648, 3,221,225,472
 40: 2 * 2^31 - 1; 4,294,967,295
+.fi
 .IP "\fB--zpaqbs=1\&.\&.11\fP (ZPAQ only)"
 Set ZPAQ Block Size from 1 to 11, 2^zpaqbs * 1MB (2MB to 2GB). This parameter
-will be passed to the zpaq backend. This value may cause the computed overhead
-* number of threads to be greater than available ram, so it may be reduced
-possibly along with usable threads.
-.IP "\fB--bzip3bs=1\&.\&.8\fP (BZIP3 only)"
-Set BZIP3 Block Size from 1 to 8, 2^bzip3bs * 1MB (2MB to 256MB). This parameter
-will be passed to the bzip3 backend. This value may cause the computed overhead
-* number of threads to be greater than available ram, so it may be reduced
-possibly along with usable threads.
+will be passed to the zpaq backend. Normally, lrzip-next will set and sometimes
+reduce the zpaq block size depending on compression level and usable ram
+available.
+.br
+If set, the zpaq block size will be set as follows and will be fixed. If sufficient
+ram is not available, lrzip-next will fail. Values are per thread.
+.br
+.nf
+1  = 2^1*1MB  =    2MB
+2  = 2^2*1MB  =    4MB
+3  = 2^3*1MB  =    8MB
+4  = 2^4*1MB  =   16MB
+5  = 2^5*1MB  =   32MB
+6  = 2^6*1MB  =   64MB
+7  = 2^7*1MB  =  128MB
+8  = 2^8*1MB  =  256MB
+9  = 2^9*1MB  =  512MB
+10 = 2^10*1MB = 1024MB
+11 = 2^11*1MB = 2048MB
+.fi
+.IP "\fB--bzip3bs=0\&.\&.8\fP (BZIP3 only)"
+Set BZIP3 Block Size from 0 to 8, 2^bzip3bs * 1MB (32MB to 511MB). This parameter
+will be passed to the bzip3 backend. Normally, lrzip-next will set and sometimes
+reduce the bzip3 block size depending on compression level and usable ram
+available.
+.br
+If set, the bzip3 block size will be set as follows and will be fixed. If sufficient
+ram is not available, lrzip-next will fail. Values are per thread.
+.br
+.nf
+0 = 2^25   =  32MB
+1 = 3*2^24 =  48MB
+2 = 2^26   =  64MB
+3 = 3*2^25 =  96MB
+4 = 2^27   = 128MB
+5 = 3*2^26 = 192MB
+6 = 2^28   = 256MB
+.fi
+.\"
 .SH "Filtering Options (for all compression modes)"
 .IP "\fB--x86\fP"
 Unconditionally use x86 filter prior to compression. Works for all
@@ -179,7 +202,7 @@ Unconditionally use DELTA filter prior to compression. Works for all
 compression modes. Delta offset 1 default. Delta offset is set as
 1-17, then 32..256 in multiples of 16. e.g. An offset of 18 would be
 32, 19:48, 20:64...32:256.
-.\" 
+.\"
 .SH "Additional Compression Options:"
 .IP "\fB-C | --comment \fR[\fIcomment\fP]"
 Add a comment for the archive up to 64 characters.
@@ -203,17 +226,20 @@ is used, there must be no space between the option and the password. e.g.
 .IP
 These options may be used for Encryption, Decryption, or Test under the following
 conditions.
-.br
+.nf
 If output is to STDOUT, then the option cannot be used during compression.
-.br
 If input is from STDIN, then the password must be on the command line.
-.br
 If lrzip-next is embedded in a \fBtar -I lrzip-next [options]\fP command, then
 this option cannot be used.
-.IP "\fB-E | --emethod\fR[\fIencryption method\fP]"
-Select encryption method to use: 1=AES 128 bit, 2=AES 256 bit encryption.
-AES 128 uses SHAKE128 hashing for key generation, and AES 256 uses
-SHAKE256 hashing.
+.fi
+.IP "\fB-E | --emethod\fR [\fIencryption method\fP]"
+.nf
+Select encryption method to use:
+1=AES 128 bit encryption
+2=AES 256 bit encryption
+AES 128 uses SHAKE128 hashing for key generation
+AES 256 uses SHAKE256 hashing
+.fi
 .IP "\fB-D | --delete\fP"
 If this option is specified then lrzip-next will delete the
 source file after successful compression or decompression. When this
@@ -322,33 +348,22 @@ requested.
 .br
 Hash values can be 1-13 and are defined as follows:
 .br
+.nf
  0 CRC         - 32 bit CRC
-.br
  1 MD5         - MD5 Checksum
-.br
  2 RIPEMD      - RACE Integrity Primitives Evaluation Message Digest
-.br
  3 SHA256      - Secure Hash Algorithm 2, 256 bit
-.br
  4 SHA384      - Secure Hash Algorithm 2, 384 bit
-.br
  5 SHA512      - Secure Hash Algorithm 2, 512 bit
-.br
  6 SHA3_256    - Secure Hash Algorithm 3, 256 bit
-.br
  7 SHA3_512    - Secure Hash Algorithm 3, 512 bit
-.br
  8 SHAKE128_16 - Extendable Output Function (XOF) 128 bit, 16 byte output
-.br
  9 SHAKE128_32 - Extendable Output Function (XOF) 128 bit, 32 byte output
-.br
 10 SHAKE128_64 - Extendable Output Function (XOF) 128 bit, 64 byte output
-.br
 11 SHAKE256_16 - Extendable Output Function (XOF) 256 bit, 16 byte output
-.br
 12 SHAKE256_32 - Extendable Output Function (XOF) 256 bit, 32 byte output
-.br
 13 SHAKE256_64 - Extendable Output Function (XOF) 256 bit, 64 byte output
+.fi
 .IP "\fB-i | --info\fP"
 This shows information about a compressed file. It shows the compressed size,
 the decompressed size, the compression ratio, what compression was used and
@@ -408,6 +423,7 @@ might achieve a much lower compression ratio than lrzip-next can achieve.
 LRZIP recognises a configuration file that contains default settings.
 This configuration is searched for in the current directory, /etc/lrzip,
 and $HOME/.lrzip. The configuration filename must be \fBlrzip.conf\fP.
+.\"
 .SH "ENVIRONMENT"
 By default, lrzip-next will search for and use a configuration file, lrzip.conf.
 If the user wishes to bypass the file, a startup ENV variable may be set.
@@ -430,7 +446,15 @@ the rzip first stage, and extending the compression windows to scale
 with increasing ram sizes.
 .\"
 .SH "BUGS"
-Nil known.
+.PP
+Please report!
+
+.nh
+If you wish to report a problem, or make a suggestion, then please open
+an Issue at \fBhttps://github.com/pete4abw/lrzip-next/issues\fP or email the
+maintainer pete@peterhyman.com.
+.fi
+.\"
 .SH "SEE ALSO"
 lrzip.conf(5),
 lrznunzip(1),
@@ -445,28 +469,16 @@ bzip3(1),
 zip(1)
 .\"
 .SH "AUTHOR and CREDITS"
-.br
+.PP
 lrzip was conceived and written by Con Kolivas
-.br
 lrzip-next is maintained by Peter Hyman.
-.br
 rzip was written by Andrew Tridgell.
-.br
 lzma was written by Igor Pavlov.
-.br
 lzo was written by Markus Oberhumer.
-.br
 zpaq was written by Matt Mahoney.
-.br
 bzip3 was written by Kamila Szewczyk.
-.br
-Peter Hyman added informational output, updated LZMA SDK,
-updated ZPAQ SDK added lzma multi-threading capabilities,
-and added filtering for all compression modes. All features in lrzip-next.
-.br
-If you wish to report a problem, or make a suggestion, then please open
-an Issue on https://github.com/pete4abw/lrzip-next/issues or email the
-maintainer pete@peterhyman.com.
-.br
+
 lrzip-next is released under the GNU General Public License version 2.
 Please see the file COPYING for license details.
+
+This manpage was written by Peter Hyman (pete@peterhyman.com)
