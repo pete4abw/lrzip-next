@@ -48,27 +48,29 @@ tagopt="--tags"
 # if tagrev > 0 then add it and commit to micro version
 # Expected format is:
 # v#.#.#-#-g#######
+#
+# Disable for what's next and other dev branches
 init() {
-	if [ -d '.git' ] ; then
-		# Lucas Rademaker
-		# Some MAC systems don't have sed
-		# see if sed is in path or not
-		sed --version 1>/dev/null 2>/dev/null
-		if [ $? -eq 0 ]; then
-			describe_tag=$(git describe $tagopt --long --abbrev=7 | sed -E 's/^v(.*?-)g(.*)$/\1\2/')
-		else
-			describe_tag=$(git describe $tagopt --long --abbrev=7)
-			describe_tag=${describe_tag/v/}
-			describe_tag=${describe_tag/g/}
-		fi
-		commit=$(echo $describe_tag | cut -d- -f3)
-		tagrev=$(echo $describe_tag | cut -d- -f2)
-		version=$(echo $describe_tag | cut -d- -f1)
-		micro=$(echo $version | cut -d. -f3)
-		[ $tagrev -gt 0 ] && micro=$micro-$tagrev-$commit
-		minor=$(echo $version | cut -d. -f2)
-		major=$(echo $version | cut -d. -f1)
-	elif [ -r VERSION ] ; then
+#	if [ -d '.git' ] ; then
+#		# Lucas Rademaker
+#		# Some MAC systems don't have sed
+#		# see if sed is in path or not
+#		sed --version 1>/dev/null 2>/dev/null
+#		if [ $? -eq 0 ]; then
+#			describe_tag=$(git describe $tagopt --long --abbrev=7 | sed -E 's/^v(.*?-)g(.*)$/\1\2/')
+#		else
+#			describe_tag=$(git describe $tagopt --long --abbrev=7)
+#			describe_tag=${describe_tag/v/}
+#			describe_tag=${describe_tag/g/}
+#		fi
+#		commit=$(echo $describe_tag | cut -d- -f3)
+#		tagrev=$(echo $describe_tag | cut -d- -f2)
+#		version=$(echo $describe_tag | cut -d- -f1)
+#		micro=$(echo $version | cut -d. -f3)
+#		[ $tagrev -gt 0 ] && micro=$micro-$tagrev-$commit
+#		minor=$(echo $version | cut -d. -f2)
+#		major=$(echo $version | cut -d. -f1)
+	if [ -r VERSION ] ; then
 		major=$(awk '/Major: / {printf "%s",$2; exit}' VERSION)
 		minor=$(awk '/Minor: / {printf "%s",$2; exit}' VERSION)
 		micro=$(awk '/Micro: / {printf "%s",$2; exit}' VERSION)
