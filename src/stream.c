@@ -252,8 +252,9 @@ static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthr
 	print_maxverbose("Starting zpaq backend compression thread %d...\nZPAQ: Method selected: %s: level=%d, bs=%d, redundancy=%d, type=%s\n",
 		       current_thread, method, control->zpaq_level, control->zpaq_bs, zpaq_redundancy, (zpaq_type == 0 ? "binary/random" : "text"));
 
+	/* Suppress Progress if Max Verbose */
         zpaq_compress(c_buf, &c_len, cthread->s_buf, cthread->s_len, &method[0],
-			control->msgout, SHOW_PROGRESS ? true: false, current_thread);
+			control->msgout, (SHOW_PROGRESS && !MAX_VERBOSE) ? true: false, current_thread);
 
 	if (unlikely(c_len >= cthread->c_len)) {
 		print_maxverbose("Incompressible block\n");
@@ -556,8 +557,10 @@ static int zpaq_decompress_buf(rzip_control *control __UNUSED__, struct uncomp_t
 	}
 
 	dlen = 0;
+
+	/* Suppress Progress if Max Verbose */
 	zpaq_decompress(ucthread->s_buf, &dlen, c_buf, ucthread->c_len,
-			control->msgout, SHOW_PROGRESS ? true: false, current_thread);
+			control->msgout, (SHOW_PROGRESS && !MAX_VERBOSE) ? true: false, current_thread);
 
 	if (unlikely(dlen != ucthread->u_len)) {
 		print_err("Inconsistent length after decompression. Got %'"PRId64" bytes, expected %'"PRId64"\n", dlen, ucthread->u_len);
