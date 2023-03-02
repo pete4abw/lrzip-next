@@ -1258,16 +1258,16 @@ retry:
 	       (1.0 + st->stats.match_bytes) / st->stats.literal_bytes);
 
 	if (!STDIN)
-		print_progress("%s - ", control->infile);
+		print_output("%s - ", control->infile);
 	else
-		print_progress("STDIN - ");
+		print_output("STDIN - ");
 
 	if (!STDOUT)
-		print_progress("Compression Ratio: %.3f. bpb: %.3f. Average Compression Speed: %6.3fMB/s.\n",
+		print_output("Compression Ratio: %.3f. bpb: %.3f. Average Compression Speed: %6.3fMB/s.\n",
 				1.0 * s.st_size / s2.st_size,
 				8.0 * s2.st_size / s.st_size, chunkmbs);
 	else
-		print_progress("Cannot compute compression ratio with STDOUT\n");
+		print_output("Cannot compute compression ratio with STDOUT\n");
 
 	clear_sslist(st);
 	gcry_md_close(control->hash_handle);
