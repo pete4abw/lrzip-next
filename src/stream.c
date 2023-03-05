@@ -190,8 +190,8 @@ static int bzip3_compress_buf(rzip_control *control, struct compress_thread *cth
 	memcpy(c_buf, cthread->s_buf, cthread->s_len);
 
 	c_len = 0;
-	print_maxverbose("Starting bzip3: bs=%d - %'"PRIu32" bytes backend...\n",
-		       control->bzip3_bs, control->bzip3_block_size);
+	print_maxverbose("Starting bzip3 backend compression thread %d... block size = %d - %'"PRIu32" bytes...\n",
+		       current_thread, control->bzip3_bs, control->bzip3_block_size);
 
 	state = bz3_new(control->bzip3_block_size);	// allocate bzip3 state
 	if (!state)
@@ -379,7 +379,7 @@ static int lzma_compress_buf(rzip_control *control, struct compress_thread *cthr
 			return 0;
 	}
 
-	print_maxverbose("Starting lzma back end compression thread %'d...\n", current_thread);
+	print_maxverbose("Starting lzma backend compression thread %'d...\n", current_thread);
 retry:
 	dlen = round_up_page(control, cthread->s_len * 1.02); // add 2% for lzma overhead to prevent memory overrun
 	c_buf = malloc(dlen);
@@ -505,7 +505,7 @@ out_free:
 
   try to decompress a buffer. Return 0 on success and -1 on failure.
 */
-static int bzip3_decompress_buf(rzip_control *control __UNUSED__, struct uncomp_thread *ucthread, int current_thread)
+static int bzip3_decompress_buf(rzip_control *control __UNUSED__, struct uncomp_thread *ucthread)
 {
 	i64 dlen = ucthread->u_len;
 	uchar *c_buf;
@@ -1803,7 +1803,7 @@ retry:
 				ret = zpaq_decompress_buf(control, uci, current_thread);
 				break;
 			case CTYPE_BZIP3:
-				ret = bzip3_decompress_buf(control, uci, current_thread);
+				ret = bzip3_decompress_buf(control, uci);
 				break;
 			default:
 				fatal("Dunno wtf decompression type to use!\n");
