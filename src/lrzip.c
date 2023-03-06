@@ -1698,7 +1698,8 @@ bool initialise_control(rzip_control *control)
 	control->msgout = stderr;
 	control->msgerr = stderr;
 	register_outputfile(control, control->msgout);
-	control->flags = FLAG_SHOW_PROGRESS | FLAG_KEEP_FILES | FLAG_THRESHOLD;
+	/* set initial flags */
+	control->flags = FLAG_OUTPUT | FLAG_SHOW_PROGRESS | FLAG_KEEP_FILES | FLAG_THRESHOLD;
 	control->compression_level = 7;		/* compression level default */
 	control->ramsize = get_ram(control);	/* if something goes wrong, exit from get_ram */
 	control->threshold = 100;		/* default for no threshold limiting */
