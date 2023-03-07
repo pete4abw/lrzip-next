@@ -1,4 +1,4 @@
-lrzip-next: March 2023
+lrzip-next: March 2023 v0.10.3
 Add -Q | --very-quiet option from Upstream.
 Suppress ALL output. Will need to check $? variable.
 
