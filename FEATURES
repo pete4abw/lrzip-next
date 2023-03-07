@@ -1,6 +1,6 @@
 lrzip-next features file.
 
-Last updated 6-February 2023
+Last updated 6-March 2023
 
 Many new changes, not in the lrzip, including:
 * latest LZMA and ZPAQ libraries (**ABI Compatible** with earlier versions. No need to re-compress files).
@@ -44,3 +44,4 @@ Many new changes, not in the lrzip, including:
 * BZIP3 Support - Kamila Szewczyk
 * add --enable-debug switch to configure.
 * when setting dictsize, zpaqbs, bzip3bs, do not change size. Reduce threads as required or fail!
+* -Q | --very-quiet option to suppress ALL output.

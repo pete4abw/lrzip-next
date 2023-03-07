@@ -2,7 +2,7 @@
 .\" Comment lines for readability
 .\"
 .nh
-.TH "lrzip-next" 1 "February 2023" "lrzip-next Command Reference" ""
+.TH "lrzip-next" 1 "February 2023" "lrzip-next Command Reference"
 .SH "NAME"
 lrzip-next \- a large-file compression program
 .SH "SYNOPSIS"
@@ -78,6 +78,7 @@ Low level Compression Options:
  \-i, \-\-info              show compressed file information
  \-p, \-\-threads value     Set processor count to override number of threads
  \-q, \-\-quiet             don't show compression progress
+ \-Q, \-\-very-quiet        don't show any output
  \-v[v], \-\-verbose        Increase verbosity
  \-V, \-\-version           show version
 .br
@@ -385,6 +386,8 @@ percentage progress while compressing. Note that compression happens in
 bursts with lzma compression which is the default compression. This means
 that it will progress very rapidly for short periods and then stop for
 long periods.
+.IP "\fB-Q | --very-quiet\fP"
+Suppress ALL output, even summary.
 .IP "\fB-v[v] | --verbose\fP"
 Increases verbosity. \-vv will print more messages than \-v.
 .IP "\fB-V | --version\fP"

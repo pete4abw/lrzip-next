@@ -157,6 +157,7 @@ default chosen by heuristic dependent on ram and chosen compression\n");
 	print_output("	-i, --info		show compressed file information\n");
 	print_output("	-P, --progress		show compression progress\n");
 	print_output("	-q, --quiet		don't show compression progress\n");
+	print_output("	-Q, --very-quiet	don't show any output\n");
 	print_output("	-p, --threads value	Set processor count to override number of threads\n");
 	print_output("	-v[v], --verbose	Increase verbosity\n");
 	print_output("	-V, --version		display software version and license\n");
@@ -171,7 +172,7 @@ static void license(void)
 {
 	print_output("%s version %s\n\
 Copyright (C) Con Kolivas 2006-2016\n\
-Copyright (C) Peter Hyman 2007-2022\n\
+Copyright (C) Peter Hyman 2007-2023\n\
 Based on rzip Copyright (C) Andrew Tridgell 1998-2003\n\n\
 This is free software.  You may redistribute copies of it under the terms of\n\
 the GNU General Public License <http://www.gnu.org/licenses/gpl.html>.\n\
@@ -298,24 +299,25 @@ static struct option long_options[] = {
 	{"threads",	required_argument,	0,	'p'},	/* 20 */
 	{"progress",	no_argument,	0,	'P'},
 	{"quiet",	no_argument,	0,	'q'},
+	{"very-quiet",	no_argument,	0,	'Q'},
 	{"rzip-level",	required_argument,	0,	'R'},
-	{"suffix",	required_argument,	0,	'S'},
-	{"test",	no_argument,	0,	't'},		/* 25 */
+	{"suffix",	required_argument,	0,	'S'},	/* 25 */
+	{"test",	no_argument,	0,	't'},
 	{"threshold",	optional_argument,	0,	'T'},
 	{"unlimited",	no_argument,	0,	'U'},
 	{"verbose",	no_argument,	0,	'v'},
-	{"version",	no_argument,	0,	'V'},
-	{"window",	required_argument,	0,	'w'},	/* 30 */
+	{"version",	no_argument,	0,	'V'},		/* 30 */
+	{"window",	required_argument,	0,	'w'},
 	{"zpaq",	no_argument,	0,	'z'},
 	{"bzip3",	no_argument,	0,	'B'},
 	{"fast",	no_argument,	0,	'1'},
-	{"best",	no_argument,	0,	'9'},
-	{"lzma",       	no_argument,	0,	0},		/* 35 - begin long opt index */
+	{"best",	no_argument,	0,	'9'},		/* 35 */
+	{"lzma",       	no_argument,	0,	0},		/* 36 - begin long opt index */
 	{"dictsize",	required_argument,	0,	0},
 	{"zpaqbs",	required_argument,	0,	0},
 	{"bzip3bs",	required_argument,	0,	0},
-	{"x86",		no_argument,	0,	0},		/* 39 - begin filter start*/
-	{"arm",		no_argument,	0,	0},		/* 40 */
+	{"x86",		no_argument,	0,	0},		/* 40 - begin filter start*/
+	{"arm",		no_argument,	0,	0},
 	{"armt",	no_argument,	0,	0},
 	{"ppc",		no_argument,	0,	0},
 	{"sparc",	no_argument,	0,	0},
@@ -325,8 +327,8 @@ static struct option long_options[] = {
 };
 
 /* constants for ease of maintenance in getopt loop */
-#define LONGSTART	35
-#define FILTERSTART	39
+#define LONGSTART	36
+#define FILTERSTART	40
 
 static void set_stdout(struct rzip_control *control)
 {
@@ -336,7 +338,7 @@ static void set_stdout(struct rzip_control *control)
 	register_outputfile(control, control->msgout);
 }
 
-static const char *loptions = "bBcC:dDe::E:fghH::iKlL:nN:o:O:p:PqR:S:tT::Um:vVw:z?";
+static const char *loptions = "bBcC:dDe::E:fghH::iKlL:nN:o:O:p:PqQR:S:tT::Um:vVw:z?";
 
 int main(int argc, char *argv[])
 {
@@ -537,6 +539,10 @@ int main(int argc, char *argv[])
 		case 'q':
 			control->flags &= ~FLAG_SHOW_PROGRESS;
 			break;
+		case 'Q':
+			control->flags &= ~FLAG_SHOW_PROGRESS;
+			control->flags &= ~FLAG_OUTPUT;
+			break;
 		case 'S':
 			if (control->outname)
 				fatal("Specified output filename already, can't specify an extension.\n");
@@ -726,8 +732,14 @@ int main(int argc, char *argv[])
 	}
 
 	if (VERBOSE && !SHOW_PROGRESS) {
-		print_err("Cannot have -v and -q options. -v wins.\n");
+		print_err("Cannot have -v and -q | Q options. -v wins.\n");
 		control->flags |= FLAG_SHOW_PROGRESS;
+		control->flags |= FLAG_OUTPUT;
+	}
+
+	if (INFO && !SHOW_OUTPUT) {
+		print_err("Cannot show info with -Q option. Turning on output\n");
+		control->flags |= FLAG_OUTPUT;
 	}
 
 	if (UNLIMITED && control->window) {
