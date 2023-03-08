@@ -68,6 +68,10 @@
 /* bzip3 */
 #include "lib/libbz3/libbz3.h"
 
+/* zstd */
+#include <zstd.h>
+#include <zstd_errors.h>
+
 /* This is not needed since it is defined in lrzip_private.h
  * #define STREAM_BUFSIZE (1024 * 1024 * 10)
  */
@@ -162,12 +166,80 @@ static int lz4_compresses(rzip_control *control, uchar *s_buf, i64 s_len);
 /*
   ***** COMPRESSION FUNCTIONS *****
 
-  ZPAQ, BZIP, GZIP, LZMA, LZO, BZIP3
+  ZPAQ, BZIP, GZIP, LZMA, LZO, BZIP3, ZSTD
 
   try to compress a buffer. If compression fails for whatever reason then
   leave uncompressed. Return the compression type in c_type and resulting
   length in c_len
 */
+
+static int zstd_compress_buf(rzip_control *control, struct compress_thread *cthread, int current_thread)
+{
+	u32 dlen = round_up_page(control, cthread->s_len);
+	size_t zstd_ret;
+	uchar *c_buf;
+
+	if (LZ4_TEST) {
+		if (!lz4_compresses(control, cthread->s_buf, cthread->s_len))
+			return 0;
+	}
+
+	c_buf = malloc(dlen);
+	if (!c_buf) {
+		print_err("Unable to allocate c_buf in zstd_compress_buf\n");
+		return -1;
+	}
+
+	/* ZSTD compression methods are enumerated from 1 to 9
+	 * similar to lrzip-next compression evels. Enumerations are:
+	 * ZSTD_fast=1,
+	 * ZSTD_dfast=2,
+	 * ZSTD_greedy=3,
+	 * ZSTD_lazy=4,
+	 * ZSTD_lazy2=5,
+	 * ZSTD_btlazy2=6,
+	 * ZSTD_btopt=7,
+	 * ZSTD_btultra=8,
+	 * ZSTD_btultra2=9
+	 */
+
+	print_maxverbose("Starting zstd backend compression thread %d... \n", current_thread);
+
+	zstd_ret = ZSTD_compress( (void *)c_buf, (size_t) dlen,
+			      (const void *)cthread->s_buf, (size_t) cthread->s_len,
+			      control->compression_level );
+
+	/* if compressed data is bigger then original data leave as
+	 * CTYPE_NONE */
+
+	if (zstd_ret == ZSTD_error_dstSize_tooSmall) {
+		print_maxverbose("Incompressible block\n");
+		/* Incompressible, leave as CTYPE_NONE */
+		dealloc(c_buf);
+		return 0;
+	}
+
+	if (unlikely(ZSTD_isError(zstd_ret))) {
+		dealloc(c_buf);
+		print_maxverbose("zstd compress failed\n");
+		return -1;
+	}
+
+	/* zstd_ret is return size, not dlen */
+	dlen = zstd_ret;
+	if (unlikely(dlen >= cthread->c_len)) {
+		print_maxverbose("Incompressible block\n");
+		/* Incompressible, leave as CTYPE_NONE */
+		dealloc(c_buf);
+		return 0;
+	}
+
+	cthread->c_len = dlen;
+	dealloc(cthread->s_buf);
+	cthread->s_buf = c_buf;
+	cthread->c_type = CTYPE_ZSTD;
+	return 0;
+}
 
 static int bzip3_compress_buf(rzip_control *control, struct compress_thread *cthread, int current_thread)
 {
@@ -501,10 +573,48 @@ out_free:
 /*
   ***** DECOMPRESSION FUNCTIONS *****
 
-  ZPAQ, BZIP, GZIP, LZMA, LZO, BZIP3
+  ZPAQ, BZIP, GZIP, LZMA, LZO, BZIP3, ZSTD
 
   try to decompress a buffer. Return 0 on success and -1 on failure.
 */
+static int zstd_decompress_buf(rzip_control *control __UNUSED__, struct uncomp_thread *ucthread)
+{
+	u32 dlen = ucthread->u_len;
+	int ret = 0;
+	size_t zstd_ret;
+	uchar *c_buf;
+
+	c_buf = ucthread->s_buf;
+	ucthread->s_buf = malloc(round_up_page(control, dlen));
+	if (unlikely(!ucthread->s_buf)) {
+		print_err("Failed to allocate %'d bytes for decompression\n", dlen);
+		ret = -1;
+		goto out;
+	}
+
+	zstd_ret = ZSTD_decompress( (void *) ucthread->s_buf, (size_t) dlen,
+				      (const void *) c_buf, (size_t) ucthread->c_len );
+
+	if (unlikely(ZSTD_isError(zstd_ret))) {
+		print_err("Failed to decompress buffer - zstd_err=%'d - %s\n", zstd_ret,
+				ZSTD_getErrorName(zstd_ret));
+		ret = -1;
+		goto out;
+	}
+
+	if (unlikely(dlen != ucthread->u_len)) {
+		print_err("Inconsistent length after decompression. Got %'d bytes, expected %'"PRId64"\n", dlen, ucthread->u_len);
+		ret = -1;
+	} else
+		dealloc(c_buf);
+out:
+	if (ret == -1) {
+		dealloc(ucthread->s_buf);
+		ucthread->s_buf = c_buf;
+	}
+	return ret;
+}
+
 static int bzip3_decompress_buf(rzip_control *control __UNUSED__, struct uncomp_thread *ucthread)
 {
 	i64 dlen = ucthread->u_len;
@@ -1538,6 +1648,8 @@ retry:
 			ret = zpaq_compress_buf(control, cti, current_thread);
 		else if (BZIP3_COMPRESS)
 			ret = bzip3_compress_buf(control, cti, current_thread);
+		else if (ZSTD_COMPRESS)
+			ret = zstd_compress_buf(control, cti, current_thread);
 		else fatal("Dunno wtf compression to use!\n");
 	}
 
@@ -1804,6 +1916,9 @@ retry:
 				break;
 			case CTYPE_BZIP3:
 				ret = bzip3_decompress_buf(control, uci);
+				break;
+			case CTYPE_ZSTD:
+				ret = zstd_decompress_buf(control, uci);
 				break;
 			default:
 				fatal("Dunno wtf decompression type to use!\n");

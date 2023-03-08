@@ -290,6 +290,7 @@ static inline unsigned char bzip3_prop_from_block_size(u32 bs)
 #define FLAG_ENCRYPT		(1 << 23)
 #define FLAG_BZIP3_COMPRESS	(1 << 24)
 #define FLAG_OUTPUT		(1 << 25)
+#define FLAG_ZSTD_COMPRESS	(1 << 26)
 
 #define NO_HASH		(!(HASH_CHECK) && !(HAS_HASH))
 
@@ -300,6 +301,7 @@ static inline unsigned char bzip3_prop_from_block_size(u32 bs)
 #define CTYPE_GZIP 7
 #define CTYPE_ZPAQ 8
 #define CTYPE_BZIP3 9
+#define CTYPE_ZSTD 10
 
 #define PASS_LEN 512
 #define HASH_LEN 64
@@ -341,7 +343,8 @@ static inline unsigned char bzip3_prop_from_block_size(u32 bs)
 #define ARBITRARY_AT_EPOCH (ARBITRARY * pow (MOORE_TIMES_PER_SECOND, -T_ZERO))
 
 #define FLAG_VERBOSE (FLAG_VERBOSITY | FLAG_VERBOSITY_MAX)
-#define FLAG_NOT_LZMA (FLAG_NO_COMPRESS | FLAG_LZO_COMPRESS | FLAG_BZIP2_COMPRESS | FLAG_ZLIB_COMPRESS | FLAG_ZPAQ_COMPRESS | FLAG_BZIP3_COMPRESS)
+#define FLAG_NOT_LZMA (FLAG_NO_COMPRESS | FLAG_LZO_COMPRESS | FLAG_BZIP2_COMPRESS \
+	       | FLAG_ZLIB_COMPRESS | FLAG_ZPAQ_COMPRESS | FLAG_BZIP3_COMPRESS | FLAG_ZSTD_COMPRESS)
 #define LZMA_COMPRESS	(!(control->flags & FLAG_NOT_LZMA))
 
 #define SHOW_PROGRESS	(control->flags & FLAG_SHOW_PROGRESS)
@@ -355,6 +358,7 @@ static inline unsigned char bzip3_prop_from_block_size(u32 bs)
 #define ZLIB_COMPRESS	(control->flags & FLAG_ZLIB_COMPRESS)
 #define ZPAQ_COMPRESS	(control->flags & FLAG_ZPAQ_COMPRESS)
 #define BZIP3_COMPRESS	(control->flags & FLAG_BZIP3_COMPRESS)
+#define ZSTD_COMPRESS	(control->flags & FLAG_ZSTD_COMPRESS)
 #define VERBOSE		(control->flags & FLAG_VERBOSE)
 #define VERBOSITY	(control->flags & FLAG_VERBOSITY)
 #define MAX_VERBOSE	(control->flags & FLAG_VERBOSITY_MAX)
