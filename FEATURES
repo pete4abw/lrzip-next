@@ -45,3 +45,4 @@ Many new changes, not in the lrzip, including:
 * add --enable-debug switch to configure.
 * when setting dictsize, zpaqbs, bzip3bs, do not change size. Reduce threads as required or fail!
 * -Q | --very-quiet option to suppress ALL output.
+* zstd backend.

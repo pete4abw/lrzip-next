@@ -2,7 +2,7 @@
 .\" Comment lines for readability
 .\"
 .nh
-.TH "lrzip-next" 1 "February 2023" "lrzip-next Command Reference"
+.TH "lrzip-next" 1 "March 2023" "lrzip-next Command Reference"
 .SH "NAME"
 lrzip-next \- a large-file compression program
 .SH "SYNOPSIS"
@@ -36,6 +36,7 @@ Here is a summary of the options to lrzip-next.
  \-l, \-\-lzo               lzo compression (ultra fast)
  \-n, \-\-no-compress       no backend compression - prepare for other compressor
  \-z, \-\-zpaq              zpaq compression (best, extreme compression, extremely slow)
+ \-Z, \-\-zstd              zstd compression
  \-L, \-\-level level       Set lzma/bzip2/gzip compression level (1-9, default 7)
  \-\-dictsize = ds         Set lzma Dictionary Size for LZMA ds=0 to 40 expressed as 2<<11, 3<<11, 2<<12, 3<<12...2<<31-1
  \-\-zpaqbs = bs           Set ZPAQ Block Size overriding defaults. 1-11, 2^zpaqbs * 1MB
@@ -119,6 +120,10 @@ ZPAQ compression. Uses ZPAQ compression which is from the PAQ family of
 compressors known for having some of the highest compression ratios possible
 but at the cost of being extremely slow on both compress and decompress (4x
 slower than lzma which is the default).
+.IP "\fB-Z | --zstd\fP"
+ZSTD compression. Uses Zstandard compression. Compression levels are set according
+to the lrzip-next compression level selected using the simple zstd API. Compression
+levels are fast (1)..btultra2 (22)  as enumerated in zstd.h.
 .IP "\fB-L 1\&.\&.9\fP"
 Set the compression level from 1 to 9. The default is to use level 7, which
 gives good all round compression. The compression level is also strongly related
@@ -469,17 +474,21 @@ gzip(1),
 lzop(1),
 rzip(1),
 bzip3(1),
-zip(1)
+zip(1),
+zstd(1)
 .\"
 .SH "AUTHOR and CREDITS"
 .PP
-lrzip was conceived and written by Con Kolivas
+.nf
+lrzip was conceived and written by Con Kolivas.
 lrzip-next is maintained by Peter Hyman.
 rzip was written by Andrew Tridgell.
 lzma was written by Igor Pavlov.
 lzo was written by Markus Oberhumer.
 zpaq was written by Matt Mahoney.
 bzip3 was written by Kamila Szewczyk.
+zstd was written by Yann Collet.
+.fi
 
 lrzip-next is released under the GNU General Public License version 2.
 Please see the file COPYING for license details.

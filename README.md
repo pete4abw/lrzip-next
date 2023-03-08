@@ -1,9 +1,9 @@
 lrzip-next - Long Range ZIP
 ======================
 
-## LZMA SDK 22.01 (February 2023)
+## LZMA SDK 22.01 (March 2023)
 
-Tag v0.10.2
+Tag v0.10.4
 
 See **FEATURES** file for list of lrzip-next enhancements.
 
@@ -25,7 +25,7 @@ $ git submodule update --init (to download lrzip-fe)
 more intelligent! Recommend downloading from master, not from past tags/releases.
 
 **NEW**! If you just want to try `lrzip-next`, download the static binaries. No compilation
-necessary. [Visit this link to download](https://peterhyman.com/download/lrzip-next/).
+necessary. See [Releases](https://github.com/pete4abw/lrzip-next/releases).
 
 Verify file with gnupg key 0xEB2C5812.
 
@@ -57,6 +57,7 @@ faster compression than standalone compressors and much faster decompression.
 * bzip3
 * lzo
 * zpaq
+* zstd
 * rzip (pre-processed only)
 
 **lrzip-next**'s memory management scheme permits maximum use of system ram to pre-process files and then compress them.
