@@ -22,7 +22,7 @@ ls -l $1 1>>$TESTFILE
 
 for i in 1 2 3 4 5 6 7 8 9
 do
-	for j in bzip2 bzip3 gzip lzo lzma zpaq
+	for j in bzip2 bzip3 gzip lzo lzma zpaq zstd
 	do
 		sync
 		sleep 1

@@ -1146,6 +1146,8 @@ next_chunk:
 				if (INFO) print_verbose("zpaq");
 			} else if (ctype == CTYPE_BZIP3) {
 				if (INFO) print_verbose("bzip3");
+			} else if (ctype == CTYPE_ZSTD) {
+				if (INFO) print_verbose("zstd");
 			} else
 				fatal("Unknown Compression Type: %'d\n", ctype);
 			if (save_ctype == 255)
@@ -1245,6 +1247,9 @@ done:
 		}
 		else if (save_ctype == CTYPE_BZIP3) {
 			print_output("rzip + bzip3 -- Block Size: %d - %'"PRIu32"\n", control->bzip3_bs, control->bzip3_block_size);
+		}
+		else if (save_ctype == CTYPE_ZSTD) {
+			print_output("rzip + zstd\n");
 		}
 		else
 			print_output("Dunno wtf\n");

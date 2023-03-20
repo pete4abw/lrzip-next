@@ -287,6 +287,8 @@ bool read_config(rzip_control *control)
 				control->flags |= FLAG_ZPAQ_COMPRESS;
 			else if (isparameter(parametervalue, "bzip3"))
 				control->flags |= FLAG_BZIP3_COMPRESS;
+			else if (isparameter(parametervalue, "zstd"))
+				control->flags |= FLAG_ZSTD_COMPRESS;
 			else if (!isparameter(parametervalue, "lzma")) /* oops, not lzma! */
 				fatal("CONF.FILE error. Invalid compression method %s specified\n", parametervalue);
 		}

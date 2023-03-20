@@ -112,6 +112,7 @@ static void usage(void)
 	print_output("	-l, --lzo		lzo compression (ultra fast)\n");
 	print_output("	-n, --no-compress	no backend compression - prepare for other compressor\n");
 	print_output("	-z, --zpaq		zpaq compression (best, extreme compression, extremely slow)\n");
+	print_output("	-Z, --zstd		zstd compression\n");
 	print_output("	-L#, --level #		set lzma/bzip2/gzip compression level (1-9, default 7)\n");
 	print_output("	--fast			alias for -L1\n");
 	print_output("	--best			alias for -L9\n");
@@ -224,7 +225,8 @@ static void show_summary(void)
 					(ZLIB_COMPRESS ? "GZIP\n" :	// No Threshold testing
 					(ZPAQ_COMPRESS ? "ZPAQ" :
 					(BZIP3_COMPRESS ? "BZIP3" :
-					(NO_COMPRESS ? "RZIP pre-processing only" : "wtf"))))))));
+					(ZSTD_COMPRESS ? "ZSTD\n" :
+					(NO_COMPRESS ? "RZIP pre-processing only" : "wtf")))))))));
 			if (!LZO_COMPRESS && !ZLIB_COMPRESS)
 				print_verbose(". LZ4 Compressibility testing %s\n", (LZ4_TEST? "enabled" : "disabled"));
 			if (LZ4_TEST && control->threshold != 100)
@@ -309,26 +311,27 @@ static struct option long_options[] = {
 	{"version",	no_argument,	0,	'V'},		/* 30 */
 	{"window",	required_argument,	0,	'w'},
 	{"zpaq",	no_argument,	0,	'z'},
+	{"zstd",	no_argument,	0,	'Z'},
 	{"bzip3",	no_argument,	0,	'B'},
-	{"fast",	no_argument,	0,	'1'},
-	{"best",	no_argument,	0,	'9'},		/* 35 */
-	{"lzma",       	no_argument,	0,	0},		/* 36 - begin long opt index */
+	{"fast",	no_argument,	0,	'1'},		/* 35 */
+	{"best",	no_argument,	0,	'9'},
+	{"lzma",       	no_argument,	0,	0},		/* 37 - begin long opt start */
 	{"dictsize",	required_argument,	0,	0},
 	{"zpaqbs",	required_argument,	0,	0},
-	{"bzip3bs",	required_argument,	0,	0},
-	{"x86",		no_argument,	0,	0},		/* 40 - begin filter start*/
+	{"bzip3bs",	required_argument,	0,	0},	/* 40 */
+	{"x86",		no_argument,	0,	0},		/* 41 - begin filter start*/
 	{"arm",		no_argument,	0,	0},
 	{"armt",	no_argument,	0,	0},
 	{"ppc",		no_argument,	0,	0},
-	{"sparc",	no_argument,	0,	0},
+	{"sparc",	no_argument,	0,	0},		/* 45 */
 	{"ia64",	no_argument,	0,	0},
-	{"delta",	optional_argument,	0,	0},	/* 45 */
+	{"delta",	optional_argument,	0,	0},
 	{0,	0,	0,	0},
 };
 
 /* constants for ease of maintenance in getopt loop */
-#define LONGSTART	36
-#define FILTERSTART	40
+#define LONGSTART	37
+#define FILTERSTART	41
 
 static void set_stdout(struct rzip_control *control)
 {
@@ -338,7 +341,7 @@ static void set_stdout(struct rzip_control *control)
 	register_outputfile(control, control->msgout);
 }
 
-static const char *loptions = "bBcC:dDe::E:fghH::iKlL:nN:o:O:p:PqQR:S:tT::Um:vVw:z?";
+static const char *loptions = "bBcC:dDe::E:fghH::iKlL:nN:o:O:p:PqQR:S:tT::Um:vVw:zZ?";
 
 int main(int argc, char *argv[])
 {
@@ -394,6 +397,7 @@ int main(int argc, char *argv[])
 		case 'l':
 		case 'n':
 		case 'z':
+		case 'Z':
 		case 'B':
 			/* If some compression was chosen in lrzip.conf, allow this one time
 			 * because conf_file_compression_set will be true
@@ -412,6 +416,8 @@ int main(int argc, char *argv[])
 				control->flags |= FLAG_NO_COMPRESS;
 			else if (c == 'z')
 				control->flags |= FLAG_ZPAQ_COMPRESS;
+			else if (c == 'Z')
+				control->flags |= FLAG_ZSTD_COMPRESS;
 			else if (c == 'B')
 				control->flags |= FLAG_BZIP3_COMPRESS;
 			/* now FLAG_NOT_LZMA will evaluate as true */
