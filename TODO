@@ -1,5 +1,9 @@
 TODO for lrzip-next program
 
+Integrate ZSTD library into lrzip-next.
+This, to allow building of static lrzip-next.
+Some distros do not include static libraries.
+
 ZPAQ progress does not show progress in 7.15. show_progress
 function not called properly on compression.
 

@@ -1,6 +1,6 @@
 lrzip-next features file.
 
-Last updated 11-March 2023
+Last updated 20-March 2023
 
 Many new changes, not in the lrzip.
 
@@ -23,6 +23,7 @@ COMPRESSION/DECOMPRESSION
 * Users can add Comments with -C|--comment option
 * Magic header will store compression level used.
 * BZIP3 Support - Kamila Szewczyk
+* ZSTD Support
 
 HASHING/ENCRYPTION
 * Substitute libgcrypt functions for separate sources for **md5** and **sha512** hash functions, and **aes 128 bit** encryption.\

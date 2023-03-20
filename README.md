@@ -55,6 +55,7 @@ faster compression than standalone compressors and much faster decompression.
 * bzip3
 * lzo
 * zpaq
+* zstd
 * rzip (pre-processed only)
 
 **lrzip-next**'s memory management scheme permits maximum use of system ram to pre-process files and then compress them.

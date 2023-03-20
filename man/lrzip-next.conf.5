@@ -1,6 +1,6 @@
-.TH "lrzip.conf" "5" "January 2009, updated December 2022" "" ""
+.TH "lrzip.conf" "5" "January 2009, updated March 2023" "lrzip-next"
 .SH "NAME"
-lrzip.conf \- Configuration File for lrzip
+lrzip.conf \- Configuration File for lrzip-next
 .SH "DESCRIPTION"
 .PP
 This file if used, will be read by the lrzip program\&, parsed\&,
@@ -34,7 +34,7 @@ Parameter values are not case sensitive except where specified\&.
 # Use -U setting, Unlimited ram. Yes or No
 # \fBUNLIMITED = NO\fP
 
-# Compression Method, rzip, gzip, bzip2, bzip3, lzo, or lzma (default), or zpaq. (-n -g -b -l --lzma -z)
+# Compression Method, rzip, gzip, bzip2, bzip3, lzo, lzma (default), zpaq or zstd. (-n -g -b -l --lzma -z -Z)
 # May be overriden by command line compression choice.
 # \fBCOMPRESSIONMETHOD = lzma\fP
 
@@ -128,4 +128,4 @@ no warning will be given and lrzip will simply delete the source
 or replace the output file!
 .PP
 .SH "SEE ALSO"
-lrzip(1)
+lrzip-next(1)
