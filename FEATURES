@@ -1,48 +1,55 @@
 lrzip-next features file.
 
-Last updated 6-March 2023
+Last updated 20-March 2023
 
-Many new changes, not in the lrzip, including:
+Many new changes, not in the lrzip.
+
+COMPRESSION/DECOMPRESSION
 * latest LZMA and ZPAQ libraries (**ABI Compatible** with earlier versions. No need to re-compress files).
-* more helpful usage messages.
 * filters for x86 and other processors, and delta.
 * ASM LZMA DeCompressor (up to 40% faster. x86_64 only).
 * ASM LZMA Match Finder (x86_64 only).
 * ability to set rzip pre-compression level independently of compression level.
 * variable compressibility threshold testing.
 * ability to set specific LZMA Dictionary Size.
-* improved info reporting, column alignment, improved formatting, thousands separator.
+* when setting dictsize, zpaqbs, bzip3bs, do not change size. Reduce threads as required or fail!
 * improved memory management favoring large chunk and dictionary sizes over maxmizing number of threads.
 * improved ZPAQ processing by analyzing data prior to sending to compressor.
-* many bug fixes including validating a file prior to decompression (prevents corrupt file decompression before it starts!).
-* use of git describe to present current version without changing configure.ac.
-* lz4 Threshold testing (replaces lzo).
-* File info `lrzip-next -i` will now fetch info from encrypted files.
-* `lrzip-next -i` will not print percent info when file size is not known.
-* `lrzip-next -i` will format data with thousands separators.
-* Substitute libgcrypt functions for separate sources for **md5** and **sha512** hash functions, and **aes 128 bit** encryption.\
-(This will allow for future bug fixes and possibly using different encryption methods through a standard library.)
-* SCRYPT (Bitcoin style) Key Derivation.
-* lzma match finder x86_64 Assembler module.
 * ZPAQ 7.15 library (Levels 3-5, random and text modes only. Binary mode (e8e9) covered by lzma-next filters).
 * ZPAQ compression settings stored in magic header. Will show in INFO output.
 * ZPAQ Compression Block Size can be independently set from 2MB to 2GB.
+* many bug fixes including validating a file prior to decompression (prevents corrupt file decompression before it starts!).
+* lz4 Threshold testing (replaces lzo).
+* Users can add Comments with -C|--comment option
+* Magic header will store compression level used.
+* BZIP3 Support - Kamila Szewczyk
+* ZSTD Support
+
+HASHING/ENCRYPTION
+* Substitute libgcrypt functions for separate sources for **md5** and **sha512** hash functions, and **aes 128 bit** encryption.\
+(This will allow for future bug fixes and possibly using different encryption methods through a standard library.)
+* SCRYPT (Bitcoin style) Key Derivation.
 * 13 Hash options (see CURRENT_HASHES)
 * 2 Encryption options (see CURRENT_ENCMETHODS)
 * Configurable with `lrzip.conf` file
-* Configurable LOCALE settings via lrzip.conf
-* Update autofoo to remove obsolete macros
+
+BUILD
+* use of git describe to present current version without changing configure.ac.
 * REMOVE 32-BIT Architecture support
 * REMOVE support for `lrzip` versions < 0.6
+* Update autofoo to remove obsolete macros
 * All filenames and symlinks and manpages now distinct from `lrzip`
 * Remove -r Recursive option
 * Remove gzip option compatibility and symlink `lrzn`. `lrzip-next` options prevail.
-* Users can add Comments with -C|--comment option
-* Magic header will store compression level used.
+* add --enable-debug switch to configure.
+
+GENERAL/OUTPUT
+* more helpful usage messages.
+* improved info reporting, column alignment, improved formatting, thousands separator.
+* File info `lrzip-next -i` will now fetch info from encrypted files with password.
+* `lrzip-next -i` will not print percent info when file size is not known.
+* `lrzip-next -i` will format data with thousands separators.
+* Configurable LOCALE settings via lrzip.conf
 * BSD Support.
 * /tmp is now default temporary dir. Set TMP to override.
-* BZIP3 Support - Kamila Szewczyk
-* add --enable-debug switch to configure.
-* when setting dictsize, zpaqbs, bzip3bs, do not change size. Reduce threads as required or fail!
 * -Q | --very-quiet option to suppress ALL output.
-* zstd backend.

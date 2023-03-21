@@ -1,16 +1,12 @@
 TODO for lrzip-next program
 
+Integrate ZSTD library into lrzip-next.
+This, to allow building of static lrzip-next.
+Some distros do not include static libraries.
+
 ZPAQ progress does not show progress in 7.15. show_progress
 function not called properly on compression.
 
 See if ram management can be improved. Specifically
 to check Available RAM, not just Total RAM. Needed
 for low ram systems without swap.
-
-Use git describe to manage version numbers, not hard code in
-configure.ac
-
-Figure out why swapfile is used on larger compressions.
-If swap is off, compression still runs fine.
-
-Update documentation for new Hash and Encryption options.

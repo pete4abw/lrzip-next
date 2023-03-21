@@ -1,7 +1,9 @@
+lrzip-next: March 2023 v0.10.4
+zstd compression/decompression backend
+
 lrzip-next: March 2023 v0.10.3
 Add -Q | --very-quiet option from Upstream.
 Suppress ALL output. Will need to check $? variable.
-Add zstd backend.
 
 lrzip-next: February 2023 v0.10.2
 Permit maximum use of block/dictionary sizes while reducing

@@ -3,9 +3,7 @@ lrzip-next - Long Range ZIP
 
 ## LZMA SDK 22.01 (March 2023)
 
-Tag v0.10.4
-
-See **FEATURES** file for list of lrzip-next enhancements.
+See **FEATURES** and **WHATS-NEW** files for list of lrzip-next enhancements.
 
 (See original README for more historical info)
 
@@ -25,7 +23,7 @@ $ git submodule update --init (to download lrzip-fe)
 more intelligent! Recommend downloading from master, not from past tags/releases.
 
 **NEW**! If you just want to try `lrzip-next`, download the static binaries. No compilation
-necessary. See [Releases](https://github.com/pete4abw/lrzip-next/releases).
+necessary. Get current x86_64 binaries in [Releases](https://github.com/pete4abw/lrzip-next/releases).
 
 Verify file with gnupg key 0xEB2C5812.
 
