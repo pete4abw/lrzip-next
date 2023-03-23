@@ -178,6 +178,7 @@ static int zstd_compress_buf(rzip_control *control, struct compress_thread *cthr
 	u32 dlen = round_up_page(control, cthread->s_len);
 	size_t zstd_ret;
 	uchar *c_buf;
+	int zstd_compression_level[] = {2,4,5,7,12,15,17,18,22};	/* compression level mapping */
 
 	if (LZ4_TEST) {
 		if (!lz4_compresses(control, cthread->s_buf, cthread->s_len))
@@ -190,24 +191,30 @@ static int zstd_compress_buf(rzip_control *control, struct compress_thread *cthr
 		return -1;
 	}
 
-	/* ZSTD compression methods are enumerated from 1 to 9
-	 * similar to lrzip-next compression evels. Enumerations are:
-	 * ZSTD_fast=1,
-	 * ZSTD_dfast=2,
-	 * ZSTD_greedy=3,
-	 * ZSTD_lazy=4,
-	 * ZSTD_lazy2=5,
-	 * ZSTD_btlazy2=6,
-	 * ZSTD_btopt=7,
-	 * ZSTD_btultra=8,
-	 * ZSTD_btultra2=9
+	/* ZSTD strategies are mapped from ZSTD compression levels.
+	 * lrzip-next compression levels will be remapped between 1 and 22
+	 * zstd compression level will be max level for each strategy
+	 * mapping defined in clevels.h.
+	 * ZSTD_fast=1,		zstd level 2,  lrzip-next level 1
+	 * ZSTD_dfast=2,	zstd level 4,  lrzip-next level 2
+	 * ZSTD_greedy=3,	zstd level 5,  lrzip-next level 3
+	 * ZSTD_lazy=4,		zstd level 7,  lrzip-next level 4
+	 * ZSTD_lazy2=5,	zstd level 12, lrzip-next level 5
+	 * ZSTD_btlazy2=6,	zstd level 15, lrzip-next level 6
+	 * ZSTD_btopt=7,	zstd level 17, lrzip-next level 7
+	 * ZSTD_btultra=8,	zstd level 18, lrzip-next level 8
+	 * ZSTD_btultra2=9	zstd level 22, lrzip-next level 9
 	 */
 
-	print_maxverbose("Starting zstd backend compression thread %d... \n", current_thread);
+
+
+	print_maxverbose("Starting zstd backend compression thread %d. Using zstd compression level %d\n",
+			current_thread, zstd_compression_level[control->compression_level-1]);
 
 	zstd_ret = ZSTD_compress( (void *)c_buf, (size_t) dlen,
 			      (const void *)cthread->s_buf, (size_t) cthread->s_len,
-			      control->compression_level );
+			      /* map zstd compression level */
+			      zstd_compression_level[control->compression_level-1] );
 
 	/* if compressed data is bigger then original data leave as
 	 * CTYPE_NONE */
