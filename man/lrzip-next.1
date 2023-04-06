@@ -41,6 +41,7 @@ Here is a summary of the options to lrzip-next.
  \-\-dictsize = ds         Set lzma Dictionary Size for LZMA ds=0 to 40 expressed as 2<<11, 3<<11, 2<<12, 3<<12...2<<31-1
  \-\-zpaqbs = bs           Set ZPAQ Block Size overriding defaults. 1-11, 2^zpaqbs * 1MB
  \-\-bzip3bs = bs          Set BZIP3 Block Size. 0-8, 32MB - 511MB
+ \-\-zstd-level = level    Set zstd level (1-22). zstd strategy will be selected as per simple API spec.
 Filtering Options (for all compression modes):
  \-\-x86                   Use x86 filter
  \-\-arm                   Use ARM filter
@@ -121,9 +122,23 @@ compressors known for having some of the highest compression ratios possible
 but at the cost of being extremely slow on both compress and decompress (4x
 slower than lzma which is the default).
 .IP "\fB-Z | --zstd\fP"
-ZSTD compression. Uses Zstandard compression. Compression levels are set according
-to the lrzip-next compression level selected using the simple zstd API. Compression
-levels are fast (1)..btultra2 (22)  as enumerated in zstd.h.
+ZSTD compression. Compression levels and strategy are set according to
+the lrzip-next compression level selected using the simple zstd API.
+(see --zstd-level option which bypasses this).
+.br
+.nf
+LRZIP-NEXT Level  ZSTD Level    ZSTD Strategy
+================  ==========    =============
+         1             2           ZSTD_fast
+         2             4          ZSTD_dfast
+         3             5         ZSTD_greedy
+         4             7           ZSTD_lazy
+         5            12          ZSTD_lazy2
+         6            15        ZSTD_btlazy2
+         7            17          ZSTD_btopt
+         8            18        ZSTD_btultra
+         9            22       ZSTD_btultra2
+.fi
 .IP "\fB-L 1\&.\&.9\fP"
 Set the compression level from 1 to 9. The default is to use level 7, which
 gives good all round compression. The compression level is also strongly related
@@ -182,6 +197,24 @@ ram is not available, lrzip-next will fail. Values are per thread.
 4 = 2^27   = 128MB
 5 = 3*2^26 = 192MB
 6 = 2^28   = 256MB
+.fi
+.IP "\fB--zstd-levels=1\&.\&.22\fP (ZSTD only)"
+Manually set zstd level which will also set zstd strategy for simple API compression.
+This bypasses auto setting of zstd levels based on lrzip-next compression levels. zstd
+strategies will be set according to level as defined in zstd clevels.h.
+.br
+.nf
+ZSTD Level    ZSTD Strategy
+==========    =============
+   1-2           ZSTD_fast
+   3-4          ZSTD_dfast
+     5         ZSTD_greedy
+   6-7           ZSTD_lazy
+  8-12          ZSTD_lazy2
+ 13-15        ZSTD_btlazy2
+ 16-17          ZSTD_btopt
+    18        ZSTD_btultra
+ 19-22       ZSTD_btultra2
 .fi
 .\"
 .SH "Filtering Options (for all compression modes)"
