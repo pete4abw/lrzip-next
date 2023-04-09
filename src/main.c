@@ -430,11 +430,13 @@ int main(int argc, char *argv[])
 			 * because conf_file_compression_set will be true
 			 */
 			if ((control->flags & FLAG_NOT_LZMA) && conf_file_compression_set == false)
-				fatal("Can only use one of -l, -b, -g, -z, -B or -n\n");
+				fatal("Can only use one of -l, -b, -B, -g, -z, -Z or -n\n");
 			/* Select Compression Mode */
 			control->flags &= ~FLAG_NOT_LZMA; 		/* must clear all compressions first */
 			if (c == 'b')
 				control->flags |= FLAG_BZIP2_COMPRESS;
+			else if (c == 'B')
+				control->flags |= FLAG_BZIP3_COMPRESS;
 			else if (c == 'g')
 				control->flags |= FLAG_ZLIB_COMPRESS;
 			else if (c == 'l')
@@ -445,8 +447,6 @@ int main(int argc, char *argv[])
 				control->flags |= FLAG_ZPAQ_COMPRESS;
 			else if (c == 'Z')
 				control->flags |= FLAG_ZSTD_COMPRESS;
-			else if (c == 'B')
-				control->flags |= FLAG_BZIP3_COMPRESS;
 			/* now FLAG_NOT_LZMA will evaluate as true */
 			conf_file_compression_set = false;
 			break;
