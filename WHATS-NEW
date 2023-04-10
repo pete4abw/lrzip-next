@@ -1,3 +1,7 @@
+lrzip-next: April 2023 v0.11.0
+Store zstd compression info.
+Update magic header.
+
 lrzip-next: April 2023 v0.10.6
 Permit independent setting of zstd compression level (1-22).
 Zstd strategy will be selected according to defaults.
