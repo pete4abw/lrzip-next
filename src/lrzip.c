@@ -55,7 +55,8 @@
 
 #include "LzmaDec.h"		// decode for get_fileinfo
 
-#define MAGIC_LEN	(20)	// new v 0.9 magic header
+#define MAGIC_LEN	(21)	// new v0.11 magic header
+#define MAGIC_V9_LEN	(20)	// new v 0.9 magic header
 #define MAGIC_V8_LEN	(18)	// new v 0.8 magic header
 #define OLD_MAGIC_LEN	(24)	// Just to read older versions
 #define MAGIC_HEADER	(6)	// to validate file initially
@@ -160,9 +161,6 @@ bool write_magic(rzip_control *control)
 		'L', 'R', 'Z', 'I', LRZIP_MAJOR_VERSION, LRZIP_MINOR_VERSION
 	};
 
-	 /* In encrypted files, the size is left unknown
-	 * and instead the salt is stored here to preserve space. */
-	// FIXME. I think we can do better. 8 bytes is no reason to save space
 	if (ENCRYPT) {
 		memcpy(&magic[6], &control->salt, 8);
 		magic[15] = control->enc_code;	/* write whatever encryption code */
@@ -171,10 +169,6 @@ bool write_magic(rzip_control *control)
 		i64 esize = htole64(control->st_size);	// we know file size even when piped
 		memcpy(&magic[6], &esize, 8);
 	}
-	/* This is a flag that the archive contains an hash sum at the end
-	 * which can be used as an integrity check instead of crc check.
-	 * crc is still stored for compatibility with 0.5 versions.
-	 */
 	if (HAS_HASH)
 		magic[14] = control->hash_code;	/* write whatever hash */
 
@@ -187,35 +181,42 @@ bool write_magic(rzip_control *control)
 				((control->delta / 16) + 16 -1) << 3));	// delta offset-1, if applicable
 		magic[16] += control->filter_flag;			// filter flag
 	}
-
+	/* new CTYPE byte v0.11x */
 	/* save LZMA dictionary size */
-	if (LZMA_COMPRESS)
-		magic[17] = lzma2_prop_from_dic(control->dictSize);
+	if (LZMA_COMPRESS) {
+		magic[17] = 1;
+		magic[18] = lzma2_prop_from_dic(control->dictSize);
+	}
 	else if (ZPAQ_COMPRESS) {
 		/* Save zpaq compression level and block size as one byte */
 		/* High order bits = 128 + (16 * Compression Level 3-5)
 		 * Low order bits = Block Size 1-11
-		 * 128 necessary to distinguish in decoding LZMA which is 1-40
-		 * 1CCC BBBB in binary */
-		magic[17] = 0b10000000 + (control->zpaq_level << 4) + control->zpaq_bs;
-		/* Decoding would be
-		 * magic byte & 127 (clear high bit)
-		 * zpaq_bs = magic byte & 0X0F
-		 * zpaq_level = magic_byte >> 4
-		 */
-	} else if (BZIP3_COMPRESS)
+		 * 0CCC BBBB in binary */
+		magic[17] = 2;
+		magic[18] = (control->zpaq_level << 4) + control->zpaq_bs;
+	}
+	else if (BZIP3_COMPRESS) {
 		/* bzip3 block size codes will be 0-8, so set all high order bits to
 		 * distinguish from zpaq, then add actual block size code */
-		magic[17] = 0b11110000 + bzip3_prop_from_block_size(control->bzip3_block_size);
-
+		magic[17] = 3;
+		magic[18] = bzip3_prop_from_block_size(control->bzip3_block_size);
+	}
+	else if  (ZSTD_COMPRESS) {
+		/* zstd compression level and strategy are stored in bytes
+		 *  17 and 18. Compression level, 1-22 will be in byte 18,
+		 *  strategy, 1-9,  will be in high order bits of byte 17.
+		*/
+		magic[17] = (control->zstd_strategy << 4) + 4;
+		magic[18] = control->zstd_level;
+	}
 	/* save compression levels
 	 * high order bits, rzip compression level
 	 * low order bits lrzip-next compression level
 	 */
-	magic[18] = (control->rzip_compression_level << 4) + control->compression_level;
+	magic[19] = (control->rzip_compression_level << 4) + control->compression_level;
 
 	/* store comment length */
-	magic[19] = (char) control->comment_length;
+	magic[20] = (char) control->comment_length;
 
 	if (unlikely(fdout_seekto(control, 0)))
 		fatal("Failed to seek to BOF to write Magic Header\n");
@@ -224,7 +225,7 @@ bool write_magic(rzip_control *control)
 		fatal("Failed to write magic header\n");
 
 	/* now write comment if any */
-	if (magic[19]) {
+	if (magic[20]) {
 		if (unlikely(put_fdout(control, control->comment, control->comment_length) != control->comment_length))
 			fatal("Failed to write comment after magic header\n");
 	}
@@ -241,27 +242,27 @@ static inline i64 enc_loops(uchar b1, uchar b2)
 // check for comments
 // Called only if comment length > 0
 
-static void  get_comment(rzip_control *control, int fd_in, unsigned char *magic)
+static void  get_comment(rzip_control *control, int fd_in, unsigned char *magic, int offset)
 {
 	int i;
 	char tmpchar;
-	if (unlikely(!(control->comment = calloc(magic[19]+1, 1))))
+	if (unlikely(!(control->comment = calloc(magic[offset]+1, 1))))
 		fatal("Failed to allocate memory for comment\n");
 	/* read comment
 	 * use getchar() in case coming from STDIN
 	*/
 	if (STDIN) {
-		for ( i = 0; i < magic[19]; i++) {
+		for ( i = 0; i < magic[offset]; i++) {
 			tmpchar = getchar();
 			if (unlikely(tmpchar == EOF))
 				fatal("Reached end of file before reading comment\n");
 			control->comment[i] = (char)tmpchar;
 		}
 	}
-	else if (unlikely(read(fd_in, control->comment, magic[19]) != magic[19]))
+	else if (unlikely(read(fd_in, control->comment, magic[offset]) != magic[offset]))
 		fatal("Failed to read comment\n");
 
-	control->comment_length = magic[19];
+	control->comment_length = magic[offset];		// already null terminated
 	return;
 }
 
@@ -442,10 +443,66 @@ static void get_magic_v9(rzip_control *control, int fd_in, unsigned char *magic)
 	control->rzip_compression_level = magic[18] >> 4;
 
 	if (magic[19])	/* get comment if there is one */
-		get_comment(control, fd_in, magic);
+		get_comment(control, fd_in, magic, 19);
 
 	return;
 }
+
+static void get_magic_v11(rzip_control *control, int fd_in, unsigned char *magic)
+{
+	int i;
+	/* repeat some of v8 */
+	if (!magic[15])	// not encrypted
+		get_expected_size(control, magic);
+	get_encryption(control, &magic[15], &magic[6]);
+
+	// get filter
+	if (magic[16])
+		get_filter(control, &magic[16]);
+
+	// magic[17] is now ctype. 1=lzma, 2=zpaq, 3=bzip3, 4=zstd
+	if (magic[17] == 1)
+	{
+		// lzma
+		control->dictSize = LZMA2_DIC_SIZE_FROM_PROP(magic[18]);	// decode dictionary
+		control->lzma_properties[0] = LZMA_LC_LP_PB;			// constant for lc, lp, pb 0x5D
+		/* from LzmaDec.c */
+		for (i = 0; i < 4; i++)						// lzma2 to lzma dictionary expansion
+			control->lzma_properties[1 + i] = (Byte)(control->dictSize >> (8 * i));
+	}
+	else if (magic[17] == 2)				// zpaq block and compression level stored
+	{
+		control->zpaq_bs = magic[18] & 0b00001111;	// low order bits are block size
+		control->zpaq_level = magic[18] >> 4;		// divide by 16
+	}
+	else if (magic[17] == 3)				// bzip3block sizes/levels stored
+	{
+		control->bzip3_bs = magic[18] & 0b00001111;	// bzip3 block size code 0 to 8
+		control->bzip3_block_size = BZIP3_BLOCK_SIZE_FROM_PROP(control->bzip3_bs);	// Real Block Size
+	}
+	else if ((magic[17] & 0b00001111) == 4)			// zstd uses high bits of byte 17
+	{
+		control->zstd_strategy = magic[17] >> 4;	// zstd strategy 1-9
+		control->zstd_level = magic[18];		// zstd level 1-22
+	}
+	else							// Corrupt file
+		fatal("Invalid compression type %d stored in magic header. Aborting...\n", magic[17]);
+
+	get_hash_from_magic(control, &magic[14]);
+
+	/* get compression levels
+	 * rzip level is high order bits
+	 * lrzip level is low order bits
+	 */
+	control->compression_level = magic[19] & 0b00001111;
+	control->rzip_compression_level = magic[19] >> 4;
+
+	if (magic[20])	/* get comment if there is one */
+		get_comment(control, fd_in, magic, 20);
+
+	return;
+}
+
 static bool get_magic(rzip_control *control, int fd_in, unsigned char *magic)
 {
 	memcpy(&control->major_version, &magic[4], 1);
@@ -469,6 +526,9 @@ static bool get_magic(rzip_control *control, int fd_in, unsigned char *magic)
 		case 10:
 			get_magic_v8(control, magic);
 			get_magic_v9(control, fd_in, magic);
+			break;
+		case 11:
+			get_magic_v11(control, fd_in, magic);
 			break;
 		default:
 			print_err("lrzip version %d.%d archive is not supported. Aborting\n",
@@ -494,12 +554,26 @@ static bool read_magic(rzip_control *control, int fd_in, i64 *expected_size)
 		fatal("Not an lrzip file\n");
 
 	if (magic[4] == 0) {
-		if (magic[5] < 8)		/* old magic */
-			bytes_to_read = OLD_MAGIC_LEN;
-		else if (magic[5] == 8) 	/* 0.8 file */
-			bytes_to_read = MAGIC_V8_LEN;
-		else				/* ASSUME current version */
-			bytes_to_read = MAGIC_LEN;
+		switch (magic[5])
+		{
+			case 6:
+			case 7:
+				bytes_to_read = OLD_MAGIC_LEN;
+				break;
+			case 8:
+				bytes_to_read = MAGIC_V8_LEN;
+				break;
+			case 9:
+			case 10:
+				bytes_to_read = MAGIC_V9_LEN;
+				break;
+			case 11:
+				bytes_to_read = MAGIC_LEN;
+				break;
+			default:
+				fatal("Unknown lrzip-next version %d. Aborting...\n", magic[5]);
+				break;
+		}
 
 		if (unlikely(read(fd_in, &magic[6], bytes_to_read - MAGIC_HEADER) != bytes_to_read - MAGIC_HEADER))
 			fatal("Failed to read magic header\n");
@@ -717,12 +791,26 @@ static bool read_tmpinmagic(rzip_control *control, int fd_in)
 		fatal("Not an lrzip stream\n");
 
 	if (magic[4] == 0) {
-		if (magic[5] < 8)		/* old magic */
-			bytes_to_read = OLD_MAGIC_LEN;
-		else if (magic[5] == 8) 	/* 0.8 file */
-			bytes_to_read = MAGIC_V8_LEN;
-		else				/* ASSUME current version */
-			bytes_to_read = MAGIC_LEN;
+		switch (magic[5])
+		{
+			case 6:
+			case 7:
+				bytes_to_read = OLD_MAGIC_LEN;
+				break;
+			case 8:
+				bytes_to_read = MAGIC_V8_LEN;
+				break;
+			case 9:
+			case 10:
+				bytes_to_read = MAGIC_V9_LEN;
+				break;
+			case 11:
+				bytes_to_read = MAGIC_LEN;
+				break;
+			default:
+				fatal("Unknown lrzip-next version %d. Aborting...\n", magic[5]);
+				break;
+		}
 
 		for ( ; i < bytes_to_read; i++) {
 			tmpchar = getchar();
@@ -1041,13 +1129,16 @@ bool get_fileinfo(rzip_control *control)
 			/* set header offsets for earlier versions */
 			switch (control->minor_version) {
 				case 6:
-				case 7:	ofs = 26;
+				case 7:	ofs = OLD_MAGIC_LEN + 2;
 					break;
-				case 8: ofs = 20;
+				case 8: ofs = MAGIC_V8_LEN + 2;
 					break;
 				case 9:
 				case 10:
-					ofs = 22 + control->comment_length;	/* comment? Add length */
+					ofs = MAGIC_V9_LEN + 2 + control->comment_length;	/* comment? Add length */
+					break;
+				case 11:
+					ofs = MAGIC_LEN + 2 + control->comment_length;
 					break;
 			}
 			ofs += chunk_byte;
@@ -1060,11 +1151,14 @@ bool get_fileinfo(rzip_control *control)
 			// salt is first 8 bytes
 			if (control->major_version == 0) {
 				switch (control->minor_version) {
-					case 8:	ofs = 20;
+					case 8:	ofs = MAGIC_V8_LEN + 2;
 						break;
 					case 9:
 					case 10:
-						ofs = 22 + control->comment_length;
+						ofs = MAGIC_V9_LEN + 2 + control->comment_length;
+						break;
+					case 11:
+						ofs = MAGIC_LEN + 2 + control->comment_length;
 						break;
 					default: fatal("Cannot decrypt earlier versions of lrzip-next\n");
 						 break;
@@ -1249,7 +1343,7 @@ done:
 			print_output("rzip + bzip3 -- Block Size: %d - %'"PRIu32"\n", control->bzip3_bs, control->bzip3_block_size);
 		}
 		else if (save_ctype == CTYPE_ZSTD) {
-			print_output("rzip + zstd\n");
+			print_output("rzip + zstd -- zstd level: %d, zstd strategy: %d\n", control->zstd_level, control->zstd_strategy);
 		}
 		else
 			print_output("Dunno wtf\n");

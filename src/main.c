@@ -59,6 +59,8 @@
 #include "stream.h"
 #include <locale.h>
 
+#include <zstd.h>
+
 #define MAX_PATH_LEN 4096
 
 // progress flag
@@ -93,6 +95,26 @@ struct encryption encryptions[MAXENC+1] = {
 	{ "AES256",	2, GCRY_CIPHER_AES256,	32, 16 },
 };
 
+const int zstd_compression_level[10] = {-1,2,4,5,7,12,15,17,18,22};	/* compression level mapping */
+const char *zstd_strategies[10] = { "none", "fast", "dfast", "greedy", "lazy",
+	"lazy2", "btlazy2", "btopt", "btultra", "btultra2" };
+
+/* ZSTD strategies are mapped from ZSTD compression levels.
+ * lrzip-next compression levels will be remapped between 1 and 22
+ * zstd compression level will be max level for each strategy
+ * mapping defined in clevels.h.
+ * ZSTD_fast=1,		zstd level 2,  lrzip-next level 1
+ * ZSTD_dfast=2,	zstd level 4,  lrzip-next level 2
+ * ZSTD_greedy=3,	zstd level 5,  lrzip-next level 3
+ * ZSTD_lazy=4,		zstd level 7,  lrzip-next level 4
+ * ZSTD_lazy2=5,	zstd level 12, lrzip-next level 5
+ * ZSTD_btlazy2=6,	zstd level 15, lrzip-next level 6
+ * ZSTD_btopt=7,	zstd level 17, lrzip-next level 7
+ * ZSTD_btultra=8,	zstd level 18, lrzip-next level 8
+ * ZSTD_btultra2=9	zstd level 22, lrzip-next level 9
+ */
+
+
 
 static rzip_control base_control, local_control, *control;
 
@@ -119,6 +141,7 @@ static void usage(void)
 	print_output("	--dictsize		Set lzma Dictionary Size for LZMA ds=0 to 40 expressed as 2<<11, 3<<11, 2<<12, 3<<12...2<<31-1\n");
 	print_output("	--zpaqbs		Set ZPAQ Block Size overriding defaults. 1-11, 2^zpaqbs * 1MB\n");
 	print_output("	--bzip3bs		Set bzip3 Block Size. 0-8, 32MB to 511MB.\n");
+	print_output("	--zstd-level		Set zstd level (1-22)\n");
 	print_output("    Filtering Options:\n");
 	print_output("	--x86			Use x86 filter (for all compression modes)\n");
 	print_output("	--arm			Use ARM filter (for all compression modes)\n");
@@ -225,7 +248,7 @@ static void show_summary(void)
 					(ZLIB_COMPRESS ? "GZIP\n" :	// No Threshold testing
 					(ZPAQ_COMPRESS ? "ZPAQ" :
 					(BZIP3_COMPRESS ? "BZIP3" :
-					(ZSTD_COMPRESS ? "ZSTD\n" :
+					(ZSTD_COMPRESS ? "ZSTD" :
 					(NO_COMPRESS ? "RZIP pre-processing only" : "wtf")))))))));
 			if (!LZO_COMPRESS && !ZLIB_COMPRESS)
 				print_verbose(". LZ4 Compressibility testing %s\n", (LZ4_TEST? "enabled" : "disabled"));
@@ -241,6 +264,9 @@ static void show_summary(void)
 			if (BZIP3_COMPRESS)
 				print_verbose("BZIP3 Compression Block Size: %'"PRIu32"\n",
 					       control->bzip3_block_size);
+			if (ZSTD_COMPRESS)
+				print_verbose("ZSTD Compression Level: %d, ZSTD Compression Strategy: %s\n",
+						control->zstd_level, zstd_strategies[control->zstd_strategy]);
 			if (FILTER_USED) {
 				print_output("Filter Used: %s",
 					((control->filter_flag == FILTER_FLAG_X86) ? "x86" :
@@ -319,19 +345,20 @@ static struct option long_options[] = {
 	{"dictsize",	required_argument,	0,	0},
 	{"zpaqbs",	required_argument,	0,	0},
 	{"bzip3bs",	required_argument,	0,	0},	/* 40 */
-	{"x86",		no_argument,	0,	0},		/* 41 - begin filter start*/
+	{"zstd-level",	required_argument,	0,	0},
+	{"x86",		no_argument,	0,	0},		/* 42 - begin filter start*/
 	{"arm",		no_argument,	0,	0},
 	{"armt",	no_argument,	0,	0},
-	{"ppc",		no_argument,	0,	0},
-	{"sparc",	no_argument,	0,	0},		/* 45 */
+	{"ppc",		no_argument,	0,	0},		/* 45 */
+	{"sparc",	no_argument,	0,	0},
 	{"ia64",	no_argument,	0,	0},
 	{"delta",	optional_argument,	0,	0},
-	{0,	0,	0,	0},
+	{0,	0,	0,	0},				/* 49 */
 };
 
 /* constants for ease of maintenance in getopt loop */
 #define LONGSTART	37
-#define FILTERSTART	41
+#define FILTERSTART	42
 
 static void set_stdout(struct rzip_control *control)
 {
@@ -403,11 +430,13 @@ int main(int argc, char *argv[])
 			 * because conf_file_compression_set will be true
 			 */
 			if ((control->flags & FLAG_NOT_LZMA) && conf_file_compression_set == false)
-				fatal("Can only use one of -l, -b, -g, -z, -B or -n\n");
+				fatal("Can only use one of -l, -b, -B, -g, -z, -Z or -n\n");
 			/* Select Compression Mode */
 			control->flags &= ~FLAG_NOT_LZMA; 		/* must clear all compressions first */
 			if (c == 'b')
 				control->flags |= FLAG_BZIP2_COMPRESS;
+			else if (c == 'B')
+				control->flags |= FLAG_BZIP3_COMPRESS;
 			else if (c == 'g')
 				control->flags |= FLAG_ZLIB_COMPRESS;
 			else if (c == 'l')
@@ -418,8 +447,6 @@ int main(int argc, char *argv[])
 				control->flags |= FLAG_ZPAQ_COMPRESS;
 			else if (c == 'Z')
 				control->flags |= FLAG_ZSTD_COMPRESS;
-			else if (c == 'B')
-				control->flags |= FLAG_BZIP3_COMPRESS;
 			/* now FLAG_NOT_LZMA will evaluate as true */
 			conf_file_compression_set = false;
 			break;
@@ -659,7 +686,27 @@ int main(int argc, char *argv[])
 							control->force_bs = 1;	// force size
 						}
 						break;
-						/* Filtering */
+					case LONGSTART+4:
+						if (!ZSTD_COMPRESS)
+							print_err("--zstd-level option only valid for ZSTD compression. Ignored.\n");
+						else {
+							ds = strtol(optarg, &endptr, 10);
+							if (*endptr)
+								fatal("Extra characters after zstd level: \'%s\'\n", endptr);
+							if (ds < 1 || ds > 22)
+								fatal("ZSTD Level must be between 1 and 22.\n");
+							control->zstd_level = ds;
+							/* Set strategy for zstd */
+							int local;
+							for (local = ZSTD_fast; local <= ZSTD_btultra2; local++)
+								if (control->zstd_level <= zstd_compression_level[local])
+								{
+									control->zstd_strategy=local;
+									break;
+								}
+						}
+						break;
+					/* Filtering */
 					case FILTERSTART:
 						control->filter_flag = FILTER_FLAG_X86;		// x86
 						break;
@@ -735,6 +782,15 @@ int main(int argc, char *argv[])
 		control->enc_gcode  = &encryptions[control->enc_code].gcode;
 		control->enc_keylen = &encryptions[control->enc_code].keylen;
 		control->enc_ivlen  = &encryptions[control->enc_code].ivlen;
+	}
+
+	/* set zstd compression and strategy if not explicitly done */
+	if (ZSTD_COMPRESS) {
+		if (!control->zstd_level)
+		{
+			control->zstd_level = zstd_compression_level[control->compression_level];
+			control->zstd_strategy = control->compression_level;
+		}
 	}
 
 	if (VERBOSE && !SHOW_PROGRESS) {
