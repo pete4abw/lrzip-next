@@ -1,4 +1,76 @@
+lrzip-next-0.11x file format
+Peter Hyman
+April 2023
+Adds CTYPE byte for methods that have stored values.
+Will store compression info for BZIP3, LZMA, ZPAQ, ZSTD.
+
+Byte	Content
+0-20	Magic
+21-84	Comment (if byte 20 > 0)
+----
+21+	RZip Chunk Data (RCD)
+RCD+	Compressed Data Blocks
+end-##	Selected hash (see CURRENT_HASHES)
+
+Magic Data
+----------
+0-3	LRZI
+4	LRZIP-NEXT Major Version
+5	LRZIP-NEXT Minor Version
+6-13	Source File Decompressed Size
+or	If encrypted, Encryption Hash Loops + Salt (2 bytes + 6 bytes)
+14	>=1 = md5sum hash is stored at end of the archive, otherwise CRC
+	(Hashes defined in CURRENT_HASHES file)
+15	>=1 = archive is encrypted. 1=AES128, 2=AES256
+16	Filtering. 0=none, x86, ARM, ARMT, PPC, SPARC, IA64, DELTA (1..7)
+	high order 5 bits will contain delta offset, 0..31
+	Filtering is for all compression methods.
+17	CTYPE: 0=NONE/OTHER, 1:LZMA, 2:ZPAQ, 3:BZIP3, 4:ZSTD.
+	If ZSTD, high 4 bits will contain ZSTD Strategy (1-9).
+18	LZMA Properties using LZMA2 encoding for dictionary size only
+or
+18	ZPAQ Properties. 0b0CCCBBBB where CCC is compression level, BBBB is
+	block size. (high bit set is no longer needed)
+or
+18	BZIP3 Properties. 0b0000BBBB where BBBB is 0-8. Allowable BZIP3 block
+	sizes.
+or
+18	ZSTD Properties. 0b000CCCCC where CCCCC is 1-22. ZSTD Strategy will
+	be stored in high order bits of CTYPE (1-9).
+19	lrzip-next compression levels, 0bRRRRLLLL
+	high order bits Rzip compression level (magic >> 4)
+	low order bits Lrzip compression level (magic & 15)
+20	Comment length. 0 means no comment.
+21-84	Comment 64 chars max
+
+Encrypted salt (bytes 6->13 in magic if encrypted):
+0->1	Encoded number of loops to hash password
+2->7	Random data
+(RCD0 is set to 8 bytes always on encrypted files)
+
+Rzip Chunk Data:
+0	Data offsets byte width (meaning length is < (2 * 8)^RCD0)
+1	Flag that there is no chunk beyond this
+(RCD0 bytes)	Chunk decompressed size (not stored in encrypted file)
+(Header data is also encrypted in encrypted files)
+XX	Stream 0 header data
+XX	Stream 1 header data
+
+Stream Header Data:
+Byte:
+0	Compressed data type
+(RCD0 bytes)	Compressed data length
+(RCD0 bytes)	Uncompressed data length
+(RCD0 bytes)	Next block head
+
+Data blocks:
+0->(end-2) data
+(end-1)->end crc data
+(end - hash size) for md5
+
 lrzip-next-0.10x file format
+Peter Hyman
+January 2023
 
 Byte 17 retasked to include BZIP3 block size
 17	LZMA Properties using LZMA2 encoding for dictionary size only
@@ -16,6 +88,8 @@ or
 	is out of range.
 
 lrzip-next-0.9x file format
+Peter Hyman
+July 2022
 
 Magic extended 2 bytes.
 
@@ -34,7 +108,9 @@ RCD+			Compressed Data Blocks
 end-16 or 2		hash or CRC
 
 lrzip-next-0.8x file format
+Peter Hyman
 July 2021
+
 get rid of dead space
 encryption is only bytes 6-13 since encryption loops are first
 two bytes of salt.
