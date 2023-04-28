@@ -305,7 +305,6 @@ static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthr
 
 	c_len = 0;
         /* Compression level can be 1 to 5, zpaq version 7.15
-	 * 1 and 2 faile however, so only levels 3-5 are used
 	 * Data types are determined by zpaq_redundancy
 	 * Type 0 = binary/random. Type 1 = text. Type 2 and 3 not used due to e8e9 */
 	zpaq_redundancy = 256-(compressibility * 2.55);		/* 0, hard, 255, easy. Inverse of lz4_compresses */

@@ -51,6 +51,7 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <fcntl.h>
+#include <math.h>
 #include "lrzip_private.h"
 #include "util.h"
 #ifdef HAVE_CTYPE_H
@@ -141,8 +142,7 @@ void setup_overhead(rzip_control *control)
 		 * where default is 16KB */
 		control->overhead = ((i64)control->dictSize * 23 / 2) + (6 * ONE_MB) + 16384;
 	} else if (ZPAQ_COMPRESS) {
-		control->zpaq_level = (control->compression_level < 4 ? 3 :
-					(control->compression_level < 8 ? 4 : 5));
+		control->zpaq_level = (int) round(((float) control->compression_level * 5 / 9));
 		if (control->zpaq_bs == 0) {
 			switch (control->compression_level) {
 			case 1:

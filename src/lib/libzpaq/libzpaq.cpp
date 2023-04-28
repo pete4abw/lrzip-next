@@ -2148,7 +2148,7 @@ int Decoder::decompress() {
   }
   else {
     if (curr==0) {
-      for (int i=0; i<4; ++i) curr=curr<<8|get();
+      for (int i=0; i<4; ++i) curr=curr<<8|in->get();
       if (curr==0) return -1;
     }
     --curr;
