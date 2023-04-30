@@ -1,3 +1,6 @@
+lrzip-next: April 2023 v0.11.1
+Fix ZPAQ Decompression code so all levels can be decoded.
+
 lrzip-next: April 2023 v0.11.0
 Store zstd compression info.
 Update magic header.
