@@ -153,8 +153,8 @@ AC_CHECK_FUNCS(getopt_long)
 AX_PTHREAD
 LIBS="$PTHREAD_LIBS $LIBS"
 AS_IF([test x"$debug" = xyes],
-	 CFLAGS="-g -Og"
-	 CXXFLAGS="-g -Og",
+	 CFLAGS="-g -Og -DDEBUG"
+	 CXXFLAGS="-g -Og -DDEBUG",
 	 CFLAGS="$CFLAGS"
 	 CXXFLAGS="$CXXFLAGS")
 
