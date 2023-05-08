@@ -1524,6 +1524,11 @@ void compressBlock(StringBuffer* in, Writer* out, const char* method,
 
 typedef int64_t i64;
 
+void libzpaq::error(const char* msg) {  // print message and exit
+    fprintf(stderr, "ZPAQ Error: %s\n", msg);
+    exit(1);
+}
+
 struct bufRead: public libzpaq::Reader {
 	uchar *s_buf;
 	i64 *s_len;
@@ -1593,11 +1598,21 @@ extern "C" void zpaq_compress(uchar *c_buf, i64 *c_len, uchar *s_buf, i64 s_len,
 {
 	i64 total_len = s_len;
 	int last_pct = 100;
+	int n; // for StringBuffer
 
 	bufRead bufR(s_buf, &s_len, total_len, &last_pct, progress, thread, msgout);
 	bufWrite bufW(c_buf, c_len);
 
-	compress (&bufR, &bufW, (const char *) method,  NULL, NULL, true);
+	/* use StringBuffer now and call compressBlock directly with full buffer */
+	// compress (&bufR, &bufW, (const char *) method, 0, 0, true);
+	libzpaq::StringBuffer sb(s_len);	// init sb to length of buffer
+	sb.write(0, s_len);			// set out ptr to 0
+	n=bufR.read((char*)sb.data(), s_len);	// read all data to sb
+	s_buf = (uchar *) realloc(s_buf,1);	// resize s_buf so that it does not take up memory
+	if (n)
+		compressBlock(&sb, &bufW, (const char *) method, NULL, NULL, true);	// call compressBlock directly
+	else
+		libzpaq::error("Serious error: no data to compress!");		// something wrong
 }
 
 extern "C" void zpaq_decompress(uchar *s_buf, i64 *d_len, uchar *c_buf, i64 c_len,
@@ -1610,11 +1625,6 @@ extern "C" void zpaq_decompress(uchar *s_buf, i64 *d_len, uchar *c_buf, i64 c_le
 	bufWrite bufW(s_buf, d_len);
 
 	decompress(&bufR, &bufW);
-}
-
-void libzpaq::error(const char* msg) {  // print message and exit
-    fprintf(stderr, "ZPAQ Error: %s\n", msg);
-    exit(1);
 }
 
 #endif  // LIBZPAQ_H

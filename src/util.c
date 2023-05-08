@@ -164,7 +164,17 @@ void setup_overhead(rzip_control *control)
 				break;	// should never reach here
 			}
 		}
-		control->overhead = (i64) (1 << control->zpaq_bs) * ONE_MB;	// times 8 or 16. Out for now
+		/* Overhead computation is 2^bs * 1MB + per thread overhead
+		 * taken from zpaq documentation. Amounts per thread are
+		 * approximate, but should reduce swap usage.
+		 * see http://mattmahoney.net/dc/zpaq.html
+		 */
+		control->overhead = (i64) (1 << control->zpaq_bs) * ONE_MB +
+			(control->zpaq_level == 1 ? 128 * ONE_MB :
+			 (control->zpaq_level == 2 ? 450 * ONE_MB :
+			  (control->zpaq_level == 3 ? 450 * ONE_MB :
+			   (control->zpaq_level == 4 ? 550 * ONE_MB :
+			    850 * ONE_MB))));
 	} else if(BZIP3_COMPRESS) {
 		/* if block size property 0-8 not set...*/
 		if (control->bzip3_block_size == 0)
