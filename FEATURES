@@ -1,6 +1,6 @@
 lrzip-next features file.
 
-Last updated 20-March 2023
+Last updated 8-May 2023
 
 Many new changes, not in the lrzip.
 
@@ -15,7 +15,7 @@ COMPRESSION/DECOMPRESSION
 * when setting dictsize, zpaqbs, bzip3bs, do not change size. Reduce threads as required or fail!
 * improved memory management favoring large chunk and dictionary sizes over maxmizing number of threads.
 * improved ZPAQ processing by analyzing data prior to sending to compressor.
-* ZPAQ 7.15 library (Levels 3-5, random and text modes only. Binary mode (e8e9) covered by lzma-next filters).
+* ZPAQ 7.15 library (Levels 1-5, random and text modes only. Binary mode (e8e9) covered by lzma-next filters).
 * ZPAQ compression settings stored in magic header. Will show in INFO output.
 * ZPAQ Compression Block Size can be independently set from 2MB to 2GB.
 * many bug fixes including validating a file prior to decompression (prevents corrupt file decompression before it starts!).

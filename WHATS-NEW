@@ -1,3 +1,8 @@
+lrzip-next: May 8, 2023 v 0.11.2
+Fix ZPAQ so large blocks can be sent to backend.
+Use compressBlock function to do this with StringBuffer
+class.
+
 lrzip-next: April 2023 v0.11.1
 Fix ZPAQ Decompression code so all levels can be decoded.
 
