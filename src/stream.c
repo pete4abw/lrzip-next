@@ -327,6 +327,7 @@ static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthr
 		dealloc(c_buf);
 		return 0;
 	}
+	print_maxverbose("ZPAQ Thread %d Completed\n", current_thread);
 
 	cthread->c_len = c_len;
 	dealloc(cthread->s_buf);
