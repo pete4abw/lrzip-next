@@ -2,7 +2,7 @@
 
 # Copyright (C) George Makrydakis 2009-2011,2013
 # Copyright (C) Con Kolivas 2011-2012,2016,2018,2021
-# Updated 2022 Peter Hyman for lrzip-next
+# Updated 2022, 2023  Peter Hyman for lrzip-next
 
 # A bash wrapper for Con Kolivas' excellent lrzip utility. For the time
 # being, lrzip does not like pipes, so we had to do this. It is kind of
@@ -106,10 +106,10 @@ Notice:
             i="./"
         fi
         [ ! -z "$s" ] && {
-            lrzcat ${p[@]// /\\ } "$s" | tar x -C "$i"
+            lrzncat ${p[@]// /\\ } "$s" | tar x -C "$i"
             x=$?
         } || {
-            lrzcat ${p[@]// /\\ } | tar x -C "$i"
+            lrzncat ${p[@]// /\\ } | tar x -C "$i"
             x=$?
         }
     } || {
