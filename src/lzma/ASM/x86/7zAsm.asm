@@ -8,6 +8,7 @@
 ; 2021-06-28 : Peter Hyman (integrating 2021 updates)
 ; 2021-08-01 : Peter Hyman (integrating 2021 updates)
 ; 2022-06-22 : Peter Hyman (ignoring SDK 22.00 updates for UASM and JWASM/ASMC)
+; 2023-05-11 : Peter Hyman (add .note.GNU-stack at ENDP to prevent linker warning)
 
 ; Assumes x64 defined or not on entry
 ; ABI_CECDL is 1 if not x64
@@ -37,6 +38,13 @@
 
 %macro  MY_ENDP 0
 	ret
+	; GNU stack is used here to prevent linker warning
+	; warning: LzFindOpt.o: missing .note.GNU-stack section implies executable stack
+	; NOTE: This behaviour is deprecated and will be removed in a future version of the linker
+
+	SECTION .note.GNU-stack noalloc noexec nowrite progbits
+
+	; will be appended to x86 ASM files
 %endmacro
 
 %ifdef x64
