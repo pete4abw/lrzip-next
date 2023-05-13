@@ -61,7 +61,7 @@ static const u32 crc32Table[256] = {
 };
 
 static u32 crc32sum(u32 crc, u8 * RESTRICT buf, size_t size) {
-    while (size--) crc = crc32Table[(crc ^ *(buf++)) & 0xff] ^ (crc >> 8);
+    while (size--) crc = crc32Table[((crc >> 24) ^ *(buf++)) & 0xff] ^ (crc << 8);
     return crc;
 }
 
@@ -79,6 +79,13 @@ static u32 crc32sum(u32 crc, u8 * RESTRICT buf, size_t size) {
 #define LZP_MIN_MATCH 40
 
 #define MATCH 0xf2
+
+static u32 lzp_upcast(const u8 * ptr) {
+    // val = *(u32 *)ptr; - written this way to avoid UB
+    u32 val;
+    memcpy(&val, ptr, sizeof(val));
+    return val;
+}
 
 static s32 lzp_encode_block(const u8 * RESTRICT in, const u8 * in_end, u8 * RESTRICT out, u8 * out_end,
                             s32 * RESTRICT lut) {
@@ -101,11 +108,11 @@ static s32 lzp_encode_block(const u8 * RESTRICT in, const u8 * in_end, u8 * REST
             const u8 * RESTRICT ref = ins + val;
             if (memcmp(in + LZP_MIN_MATCH - 4, ref + LZP_MIN_MATCH - 4, sizeof(u32)) == 0 &&
                 memcmp(in, ref, sizeof(u32)) == 0) {
-                if (heur > in && *(u32 *)heur != *(u32 *)(ref + (heur - in))) goto not_found;
+                if (heur > in && lzp_upcast(heur) != lzp_upcast(ref + (heur - in))) goto not_found;
 
                 s32 len = 4;
                 for (; in + len < in_end - LZP_MIN_MATCH - 32; len += sizeof(u32)) {
-                    if (*(u32 *)(in + len) != *(u32 *)(ref + len)) break;
+                    if (lzp_upcast(in + len) != lzp_upcast(ref + len)) break;
                 }
 
                 if (len < LZP_MIN_MATCH) {
@@ -179,7 +186,7 @@ static s32 lzp_decode_block(const u8 * RESTRICT in, const u8 * in_end, s32 * RES
                 }
 
                 const u8 * ref = outs + val;
-                u8 * oe = out + len;
+                const u8 * oe = out + len;
                 if (oe > out_end) oe = out_end;
 
                 while (out < oe) *out++ = *ref++;
@@ -257,28 +264,33 @@ static s32 mrlec(u8 * in, s32 inlen, u8 * out) {
     return op;
 }
 
-static void mrled(u8 * RESTRICT in, u8 * RESTRICT out, s32 outlen) {
+static int mrled(u8 * RESTRICT in, u8 * RESTRICT out, s32 outlen, s32 maxin) {
     s32 op = 0, ip = 0;
 
     s32 c, pc = -1;
     s32 t[256] = { 0 };
     s32 run = 0;
 
+    if(maxin < 32)
+        return 1;
+
     for (s32 i = 0; i < 32; ++i) {
         c = in[ip++];
         for (s32 j = 0; j < 8; ++j) t[i * 8 + j] = (c >> j) & 1;
     }
 
-    while (op < outlen) {
+    while (op < outlen && ip < maxin) {
         c = in[ip++];
         if (t[c]) {
-            for (run = 0; (pc = in[ip++]) == 255; run += 255)
+            for (run = 0; ip < maxin && (pc = in[ip++]) == 255; run += 255)
                 ;
             run += pc + 1;
             for (; run > 0 && op < outlen; --run) out[op++] = c;
         } else
             out[op++] = c;
     }
+
+    return op != outlen;
 }
 
 /* The entropy coder. Uses an arithmetic coder implementation outlined in Matt Mahoney's DCE. */
@@ -499,8 +511,8 @@ BZIP3_API struct bz3_state * bz3_new(s32 block_size) {
     bz3_state->cm_state = malloc(sizeof(state));
 
     bz3_state->swap_buffer = malloc(bz3_bound(block_size));
-    bz3_state->sais_array = malloc((block_size + 2) * sizeof(s32));
-    memset(bz3_state->sais_array, 0, sizeof(s32) * (block_size + 2));
+    bz3_state->sais_array = malloc(BWT_BOUND(block_size) * sizeof(s32));
+    memset(bz3_state->sais_array, 0, sizeof(s32) * BWT_BOUND(block_size));
 
     bz3_state->lzp_lut = calloc(1 << LZP_DICTIONARY, sizeof(s32));
 
@@ -617,7 +629,7 @@ BZIP3_API s32 bz3_decode_block(struct bz3_state * state, u8 * buffer, s32 data_s
     }
 
     if (bwt_idx == -1) {
-        if (data_size - 8 > 64) {
+        if (data_size - 8 > 64 || data_size < 8) {
             state->last_error = BZ3_ERR_MALFORMED_HEADER;
             return -1;
         }
@@ -679,6 +691,8 @@ BZIP3_API s32 bz3_decode_block(struct bz3_state * state, u8 * buffer, s32 data_s
     }
 
     // Undo BWT
+    memset(state->sais_array, 0, sizeof(s32) * BWT_BOUND(state->block_size));
+    memset(b2, 0, size_src);
     if (libsais_unbwt(b1, b2, state->sais_array, size_src, NULL, bwt_idx) < 0) {
         state->last_error = BZ3_ERR_BWT;
         return -1;
@@ -696,14 +710,18 @@ BZIP3_API s32 bz3_decode_block(struct bz3_state * state, u8 * buffer, s32 data_s
     }
 
     if (model & 4) {
-        mrled(b1, b2, orig_size);
+        int err = mrled(b1, b2, orig_size, size_src);
+        if(err) {
+            state->last_error = BZ3_ERR_CRC;
+            return -1;
+        }
         size_src = orig_size;
         swap(b1, b2);
     }
 
     state->last_error = BZ3_OK;
 
-    if (size_src > bz3_bound(state->block_size) || size_src < 0) {
+    if (size_src > state->block_size || size_src < 0) {
         state->last_error = BZ3_ERR_MALFORMED_HEADER;
         return -1;
     }
@@ -851,7 +869,7 @@ BZIP3_API int bz3_decompress(const uint8_t * in, uint8_t * out, size_t in_size, 
     struct bz3_state * state = bz3_new(block_size);
     if (!state) return BZ3_ERR_INIT;
 
-    u8 * compression_buf = malloc(block_size);
+    u8 * compression_buf = malloc(bz3_bound(block_size));
     if (!compression_buf) {
         bz3_free(state);
         return BZ3_ERR_INIT;
