@@ -1350,7 +1350,7 @@ done:
 
 		/* only print stored compression level for versions that have it! */
 		if (control->compression_level)
-			print_output("Rzip Compression Level: %d, Lrzip-next Compressinn Level: %d\n",
+			print_output("Rzip Compression Level: %d, Lrzip-next Compression Level: %d\n",
 				control->rzip_compression_level, control->compression_level);
 		/* show filter used */
 		if (FILTER_USED) {
