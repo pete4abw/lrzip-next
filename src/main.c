@@ -384,6 +384,7 @@ int main(int argc, char *argv[])
 	char *eptr, *av; /* for environment */
 	char *endptr = NULL;
 	char *pwd = NULL;
+	char *infile = NULL;
 
         control = &base_control;
 
@@ -809,8 +810,11 @@ int main(int argc, char *argv[])
 		control->window = 0;
 	}
 
-	if (argc < 1)
+	/* set infile if not already set */
+	if (argc < 1) {
 		control->flags |= FLAG_STDIN;
+		infile = "-";
+	}
 
 	if (UNLIMITED && STDIN) {
 		print_err("Cannot have -U and stdin, unlimited mode disabled.\n");
@@ -847,8 +851,6 @@ int main(int argc, char *argv[])
 
 	/* One extra iteration for the case of no parameters means we will default to stdin/out */
 	for (i = 0; i <= argc; i++) {
-		char *infile = NULL;
-
 		if (i < argc)
 			infile = argv[i];
 		else if (!(i == 0 && STDIN))
