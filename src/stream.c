@@ -207,7 +207,7 @@ static int zstd_compress_buf(rzip_control *control, struct compress_thread *cthr
 	 * CTYPE_NONE */
 
 	if (zstd_ret == ZSTD_error_dstSize_tooSmall) {
-		print_maxverbose("Incompressible block\n");
+		print_maxverbose("Thread %d: Incompressible block\n", current_thread);
 		/* Incompressible, leave as CTYPE_NONE */
 		dealloc(c_buf);
 		return 0;
@@ -215,14 +215,14 @@ static int zstd_compress_buf(rzip_control *control, struct compress_thread *cthr
 
 	if (unlikely(ZSTD_isError(zstd_ret))) {
 		dealloc(c_buf);
-		print_maxverbose("zstd compress failed\n");
+		print_maxverbose("Thread %d: zstd compress failed\n", current_thread);
 		return -1;
 	}
 
 	/* zstd_ret is return size, not dlen */
 	dlen = zstd_ret;
 	if (unlikely(dlen >= cthread->c_len)) {
-		print_maxverbose("Incompressible block\n");
+		print_maxverbose("Thread %d: Incompressible block\n", current_thread);
 		/* Incompressible, leave as CTYPE_NONE */
 		dealloc(c_buf);
 		return 0;
@@ -266,7 +266,7 @@ static int bzip3_compress_buf(rzip_control *control, struct compress_thread *cth
         c_len = bz3_encode_block(state, c_buf, cthread->s_len);
 
 	if (unlikely(c_len >= cthread->c_len)) {
-		print_maxverbose("Incompressible block\n");
+		print_maxverbose("Thread %d: Incompressible block\n", current_thread);
 		/* Incompressible, leave as CTYPE_NONE */
 		dealloc(c_buf);
 		return 0;
@@ -296,7 +296,7 @@ static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthr
 		compressibility = 50;	/* midpoint */
 
 
-	c_size = round_up_page(control, cthread->s_len + 10000);
+	c_size = round_up_page(control, cthread->s_len * 1.02);	/* increae buffer by 2% to prevent memory overrun */
 	c_buf = malloc(c_size);
 	if (!c_buf) {
 		print_err("Unable to allocate c_buf in zpaq_compress_buf\n");
@@ -322,7 +322,7 @@ static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthr
 			control->msgout, (SHOW_PROGRESS && !MAX_VERBOSE) ? true: false, current_thread);
 
 	if (unlikely(c_len >= cthread->c_len)) {
-		print_maxverbose("Incompressible block\n");
+		print_maxverbose("Thread %d: Incompressible block\n", current_thread);
 		/* Incompressible, leave as CTYPE_NONE */
 		dealloc(c_buf);
 		return 0;
@@ -336,7 +336,7 @@ static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthr
 	return 0;
 }
 
-static int bzip2_compress_buf(rzip_control *control, struct compress_thread *cthread)
+static int bzip2_compress_buf(rzip_control *control, struct compress_thread *cthread, int current_thread)
 {
 	u32 dlen = round_up_page(control, cthread->s_len);
 	int bzip2_ret;
@@ -361,7 +361,7 @@ static int bzip2_compress_buf(rzip_control *control, struct compress_thread *cth
 	 * CTYPE_NONE */
 
 	if (bzip2_ret == BZ_OUTBUFF_FULL) {
-		print_maxverbose("Incompressible block\n");
+		print_maxverbose("Thread %d: Incompressible block\n", current_thread);
 		/* Incompressible, leave as CTYPE_NONE */
 		dealloc(c_buf);
 		return 0;
@@ -369,12 +369,12 @@ static int bzip2_compress_buf(rzip_control *control, struct compress_thread *cth
 
 	if (unlikely(bzip2_ret != BZ_OK)) {
 		dealloc(c_buf);
-		print_maxverbose("BZ2 compress failed\n");
+		print_maxverbose("Thread %d: BZ2 compress failed\n", current_thread);
 		return -1;
 	}
 
 	if (unlikely(dlen >= cthread->c_len)) {
-		print_maxverbose("Incompressible block\n");
+		print_maxverbose("Thread %d: Incompressible block\n", current_thread);
 		/* Incompressible, leave as CTYPE_NONE */
 		dealloc(c_buf);
 		return 0;
@@ -387,7 +387,7 @@ static int bzip2_compress_buf(rzip_control *control, struct compress_thread *cth
 	return 0;
 }
 
-static int gzip_compress_buf(rzip_control *control, struct compress_thread *cthread)
+static int gzip_compress_buf(rzip_control *control, struct compress_thread *cthread, int current_thread)
 {
 	unsigned long dlen = round_up_page(control, cthread->s_len);
 	uchar *c_buf;
@@ -406,7 +406,7 @@ static int gzip_compress_buf(rzip_control *control, struct compress_thread *cthr
 	 * CTYPE_NONE */
 
 	if (gzip_ret == Z_BUF_ERROR) {
-		print_maxverbose("Incompressible block\n");
+		print_maxverbose("Thread %d: Incompressible block\n", current_thread);
 		/* Incompressible, leave as CTYPE_NONE */
 		dealloc(c_buf);
 		return 0;
@@ -414,12 +414,12 @@ static int gzip_compress_buf(rzip_control *control, struct compress_thread *cthr
 
 	if (unlikely(gzip_ret != Z_OK)) {
 		dealloc(c_buf);
-		print_maxverbose("compress2 failed\n");
+		print_maxverbose("Thread %d: compress2 failed\n", current_thread);
 		return -1;
 	}
 
 	if (unlikely((i64)dlen >= cthread->c_len)) {
-		print_maxverbose("Incompressible block\n");
+		print_maxverbose("Thread %d: Incompressible block\n", current_thread);
 		/* Incompressible, leave as CTYPE_NONE */
 		dealloc(c_buf);
 		return 0;
@@ -467,16 +467,16 @@ retry:
 			case SZ_ERROR_MEM:
 				break;
 			case SZ_ERROR_PARAM:
-				print_err("LZMA Parameter ERROR: %'d. This should not happen.\n", SZ_ERROR_PARAM);
+				print_err("LZMA Parameter ERROR: %d. This should not happen.\n", SZ_ERROR_PARAM);
 				break;
 			case SZ_ERROR_OUTPUT_EOF:
-				print_maxverbose("Harmless LZMA Output Buffer Overflow error: %'d. Incompressible block.\n", SZ_ERROR_OUTPUT_EOF);
+				print_maxverbose("Harmless LZMA Output Buffer Overflow error: %d. Incompressible block.\n", SZ_ERROR_OUTPUT_EOF);
 				break;
 			case SZ_ERROR_THREAD:
-				print_err("LZMA Multi Thread ERROR: %'d. This should not happen.\n", SZ_ERROR_THREAD);
+				print_err("LZMA Multi Thread ERROR: %d. This should not happen.\n", SZ_ERROR_THREAD);
 				break;
 			default:
-				print_err("Unidentified LZMA ERROR: %'d. This should not happen.\n", lzma_ret);
+				print_err("Unidentified LZMA ERROR: %d. This should not happen.\n", lzma_ret);
 				break;
 		}
 		/* can pass -1 if not compressible! Thanks Lasse Collin */
@@ -484,14 +484,14 @@ retry:
 		if (lzma_ret == SZ_ERROR_MEM) {
 			if (lzma_level > 1) {
 				lzma_level--;
-				print_verbose("LZMA Warning: %'d. Can't allocate enough RAM for compression window, trying smaller.\n", SZ_ERROR_MEM);
+				print_verbose("LZMA Warning: %d. Can't allocate enough RAM for compression window, trying smaller.\n", SZ_ERROR_MEM);
 				goto retry;
 			}
 			/* lzma compress can be fragile on 32 bit. If it fails,
 			 * fall back to bzip2 compression so the block doesn't
 			 * remain uncompressed */
 			print_verbose("Unable to allocate enough RAM for any sized compression window, falling back to bzip2 compression.\n");
-			return bzip2_compress_buf(control, cthread);
+			return bzip2_compress_buf(control, cthread, current_thread);
 		} else if (lzma_ret == SZ_ERROR_OUTPUT_EOF)
 			return 0;
 		return -1;
@@ -499,7 +499,7 @@ retry:
 
 	if (unlikely((i64)dlen >= cthread->c_len)) {
 		/* Incompressible, leave as CTYPE_NONE */
-		print_maxverbose("Incompressible block\n");
+		print_maxverbose("Thread %d: Incompressible block\n", current_thread);
 		dealloc(c_buf);
 		return 0;
 	}
@@ -523,7 +523,7 @@ retry:
 	return 0;
 }
 
-static int lzo_compress_buf(rzip_control *control, struct compress_thread *cthread)
+static int lzo_compress_buf(rzip_control *control, struct compress_thread *cthread, int current_thread)
 {
 	lzo_uint in_len = cthread->s_len;
 	lzo_uint dlen = round_up_page(control, in_len + in_len / 16 + 64 + 3);
@@ -550,7 +550,7 @@ static int lzo_compress_buf(rzip_control *control, struct compress_thread *cthre
 
 	if (dlen >= in_len){
 		/* Incompressible, leave as CTYPE_NONE */
-		print_maxverbose("Incompressible block\n");
+		print_maxverbose("Thread %d: Incompressible block\n", current_thread);
 		dealloc(c_buf);
 		goto out_free;
 	}
@@ -1633,11 +1633,11 @@ retry:
 		if (LZMA_COMPRESS)
 			ret = lzma_compress_buf(control, cti, current_thread);
 		else if (LZO_COMPRESS)
-			ret = lzo_compress_buf(control, cti);
+			ret = lzo_compress_buf(control, cti, current_thread);
 		else if (BZIP2_COMPRESS)
-			ret = bzip2_compress_buf(control, cti);
+			ret = bzip2_compress_buf(control, cti, current_thread);
 		else if (ZLIB_COMPRESS)
-			ret = gzip_compress_buf(control, cti);
+			ret = gzip_compress_buf(control, cti, current_thread);
 		else if (ZPAQ_COMPRESS)
 			ret = zpaq_compress_buf(control, cti, current_thread);
 		else if (BZIP3_COMPRESS)
