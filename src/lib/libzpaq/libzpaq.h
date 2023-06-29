@@ -1598,13 +1598,15 @@ extern "C" void zpaq_compress(uchar *c_buf, i64 *c_len, uchar *s_buf, i64 s_len,
 {
 	i64 total_len = s_len;
 	int last_pct = 100;
-	int n; // for StringBuffer
 
 	bufRead bufR(s_buf, &s_len, total_len, &last_pct, progress, thread, msgout);
 	bufWrite bufW(c_buf, c_len);
 
-	/* use StringBuffer now and call compressBlock directly with full buffer */
-	// compress (&bufR, &bufW, (const char *) method, 0, 0, true);
+	/* REVERSION:
+	 * int n; // for StringBuffer
+	 * use StringBuffer now and call compressBlock directly with full buffer
+	 * THIS DID NOT WORK
+	 * It failed when zpaq was sent an incompressible block.
 	libzpaq::StringBuffer sb(s_len);	// init sb to length of buffer
 	sb.write(0, s_len);			// set out ptr to 0
 	n=bufR.read((char*)sb.data(), s_len);	// read all data to sb
@@ -1613,6 +1615,9 @@ extern "C" void zpaq_compress(uchar *c_buf, i64 *c_len, uchar *s_buf, i64 s_len,
 		compressBlock(&sb, &bufW, (const char *) method, NULL, NULL, true);	// call compressBlock directly
 	else
 		libzpaq::error("Serious error: no data to compress!");		// something wrong
+	*/
+
+	compress (&bufR, &bufW, (const char *) method, 0, 0, true);
 }
 
 extern "C" void zpaq_decompress(uchar *s_buf, i64 *d_len, uchar *c_buf, i64 c_len,
