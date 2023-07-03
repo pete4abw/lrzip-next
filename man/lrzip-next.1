@@ -46,10 +46,11 @@ Filtering Options (for all compression modes):
  \-\-x86                   Use x86 filter
  \-\-arm                   Use ARM filter
  \-\-armt                  Use ARMT filter
+ \-\-arm64                 Use ARM64 filter
  \-\-ppc                   Use PPC filter
  \-\-sparc                 Use SPARC filter
  \-\-ia64                  Use IA64 filter
- \-\-delta [=offset]       Use DELTA filter (offset 1..32. 1 default)
+ \-\-delta [=offset]       Use DELTA filter (offset 1 (default) - 15, then multiples of 16 to 256)
 Additional Compression Options:
  \-C, \-\-comment [comment] Add a comment up to 64 chars
  \-e, \-\-encrypt[=password] Password protected SHAKE128/AES128 SHAKE256/AES256 encryption on compression
@@ -227,6 +228,9 @@ compression modes.
 .IP "\fB--armt\fP"
 Unconditionally use ARMT filter prior to compression. Works for all
 compression modes.
+.IP "\fB--arm64\fP"
+Unconditionally use ARM64 filter prior to compression. Works for all
+compression modes.
 .IP "\fB--ppc\fP"
 Unconditionally use PPC filter prior to compression. Works for all
 compression modes.
@@ -236,11 +240,11 @@ compression modes.
 .IP "\fB--ia64\fP"
 Unconditionally use IA64 filter prior to compression. Works for all
 compression modes.
-.IP "\fB--delta\fR [1\&.\&.32]\fP"
+.IP "\fB--delta\fR [1\&.\&.31]\fP"
 Unconditionally use DELTA filter prior to compression. Works for all
 compression modes. Delta offset 1 default. Delta offset is set as
-1-17, then 32..256 in multiples of 16. e.g. An offset of 18 would be
-32, 19:48, 20:64...32:256.
+1-16, then 32..256 in multiples of 16. e.g. An offset of 17 would be
+32, 18:48, 19:64...31:256.
 .\"
 .SH "Additional Compression Options:"
 .IP "\fB-C | --comment \fR[\fIcomment\fP]"
