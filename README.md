@@ -1,7 +1,7 @@
 lrzip-next - Long Range ZIP
 ======================
 
-## LZMA SDK 22.01 (March 2023)
+## LZMA SDK 23.01 (July 2023)
 
 See **FEATURES** and **WHATS-NEW** files for list of lrzip-next enhancements.
 
