@@ -174,12 +174,15 @@ bool write_magic(rzip_control *control)
 
 	magic[16] = 0;
 	if (FILTER_USED) {
-		// high order 5 bits for delta offset - 1, 0-255. Low order 3 bits for filter type 1-7
+		// high order 5 bits for delta offset 1-16,32..256. Low order 3 bits for filter type 1-7
 		// offset bytes will be incremented on decompression
+		// Delta filter value inferred and stored only in high order 5 bits
+		// Low order bits will be 0
 		if (control->delta > 1)					// only need to do if offset > 1
-			magic[16] = ((control->delta <= 17 ? ((control->delta-1) << 3) :
-				((control->delta / 16) + 16 -1) << 3));	// delta offset-1, if applicable
-		magic[16] += control->filter_flag;			// filter flag
+			magic[16] = ((control->delta <= 16 ? ((control->delta) << 3) :
+				((control->delta >> 4) + 15) << 3));	// delta offset-1, if applicable
+		else							// Any other filter but Delta
+			magic[16] = control->filter_flag;		// filter flag
 	}
 	/* new CTYPE byte v0.11x */
 	/* save LZMA dictionary size */
@@ -340,11 +343,17 @@ static void get_filter(rzip_control *control, unsigned char *magic)
 	int i;
 	// any value means filter used
 	if (*magic) {
-		control->filter_flag = *magic & FILTER_MASK;			// Filter flag
-		if (control->filter_flag == FILTER_FLAG_DELTA) {		// Get Delta Offset if needed
-			i = (*magic & DELTA_OFFSET_MASK) >> 3;		// delta offset stored as value-1
-			control->delta = (i <= 16 ? i + 1 : (i-16 + 1) * 16);	// need to restore actual value+1
-		}
+		// First check for Delta
+		// Delta value not stored directly
+		// Only delta offset value is stored in filter byte
+		// 0b11111000 would indicate Delta
+		if (*magic > FILTER_MASK) {
+			control->filter_flag = FILTER_FLAG_DELTA;
+			i = *magic >> 3;				// delta offset stored as value
+			control->delta = (i <= 16 ? i : (i-15) * 16);	// need to restore actual value
+									// 1-16, 32, 48, 64, 80, 96...256
+		} else
+			control->filter_flag = *magic;			// Filter flag
 	}
 
 	return;
@@ -528,6 +537,7 @@ static bool get_magic(rzip_control *control, int fd_in, unsigned char *magic)
 			get_magic_v9(control, fd_in, magic);
 			break;
 		case 11:
+		case 12:
 			get_magic_v11(control, fd_in, magic);
 			break;
 		default:
@@ -568,6 +578,7 @@ static bool read_magic(rzip_control *control, int fd_in, i64 *expected_size)
 				bytes_to_read = MAGIC_V9_LEN;
 				break;
 			case 11:
+			case 12:
 				bytes_to_read = MAGIC_LEN;
 				break;
 			default:
@@ -805,6 +816,7 @@ static bool read_tmpinmagic(rzip_control *control, int fd_in)
 				bytes_to_read = MAGIC_V9_LEN;
 				break;
 			case 11:
+			case 12:
 				bytes_to_read = MAGIC_LEN;
 				break;
 			default:
@@ -1138,6 +1150,7 @@ bool get_fileinfo(rzip_control *control)
 					ofs = MAGIC_V9_LEN + 2 + control->comment_length;	/* comment? Add length */
 					break;
 				case 11:
+				case 12:
 					ofs = MAGIC_LEN + 2 + control->comment_length;
 					break;
 			}
@@ -1158,6 +1171,7 @@ bool get_fileinfo(rzip_control *control)
 						ofs = MAGIC_V9_LEN + 2 + control->comment_length;
 						break;
 					case 11:
+					case 12:
 						ofs = MAGIC_LEN + 2 + control->comment_length;
 						break;
 					default: fatal("Cannot decrypt earlier versions of lrzip-next\n");
@@ -1358,10 +1372,11 @@ done:
 					((control->filter_flag == FILTER_FLAG_X86) ? "x86" :
 					((control->filter_flag == FILTER_FLAG_ARM) ? "ARM" :
 					((control->filter_flag == FILTER_FLAG_ARMT) ? "ARMT" :
+					((control->filter_flag == FILTER_FLAG_ARM64) ? "ARM64" :
 					((control->filter_flag == FILTER_FLAG_PPC) ? "PPC" :
 					((control->filter_flag == FILTER_FLAG_SPARC) ? "SPARC" :
 					((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
-					((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf?"))))))));
+					((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf?")))))))));
 			if (control->filter_flag == FILTER_FLAG_DELTA)
 				print_output(", offset - %'d", control->delta);
 			print_output("\n");

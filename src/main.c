@@ -146,10 +146,11 @@ static void usage(void)
 	print_output("	--x86			Use x86 filter (for all compression modes)\n");
 	print_output("	--arm			Use ARM filter (for all compression modes)\n");
 	print_output("	--armt			Use ARMT filter (for all compression modes)\n");
+	print_output("	--arm64			Use ARM64 filter (for all compression modes)\n");
 	print_output("	--ppc			Use PPC filter (for all compression modes)\n");
 	print_output("	--sparc			Use SPARC filter (for all compression modes)\n");
 	print_output("	--ia64			Use IA64 filter (for all compression modes)\n");
-	print_output("	--delta	[1..32]		Use Delta filter (for all compression modes) (1 (default) -17, then multiples of 16 to 256)\n");
+	print_output("	--delta	[1..31]		Use Delta filter (for all compression modes) (1 (default) - 15, then multiples of 16 to 256)\n");
 	print_output("    Additional Compression Options:\n");
 	print_output("	-C, --comment [comment]	Add a comment up to 64 chars\n");
 	print_output("	-e, --encrypt [=password] password protected sha512/aes128 encryption on compression\n");
@@ -272,10 +273,11 @@ static void show_summary(void)
 					((control->filter_flag == FILTER_FLAG_X86) ? "x86" :
 					((control->filter_flag == FILTER_FLAG_ARM) ? "ARM" :
 					((control->filter_flag == FILTER_FLAG_ARMT) ? "ARMT" :
+					((control->filter_flag == FILTER_FLAG_ARM64) ? "ARM64" :
 					((control->filter_flag == FILTER_FLAG_PPC) ? "PPC" :
 					((control->filter_flag == FILTER_FLAG_SPARC) ? "SPARC" :
 					((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
-					((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf?"))))))));
+					((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf?")))))))));
 				if (control->filter_flag == FILTER_FLAG_DELTA)
 					print_output(", offset - %'d", control->delta);
 				print_output("\n");
@@ -349,11 +351,12 @@ static struct option long_options[] = {
 	{"x86",		no_argument,	0,	0},		/* 42 - begin filter start*/
 	{"arm",		no_argument,	0,	0},
 	{"armt",	no_argument,	0,	0},
-	{"ppc",		no_argument,	0,	0},		/* 45 */
+	{"arm64",	no_argument,	0,	0},		/* 45 */
+	{"ppc",		no_argument,	0,	0},
 	{"sparc",	no_argument,	0,	0},
 	{"ia64",	no_argument,	0,	0},
 	{"delta",	optional_argument,	0,	0},
-	{0,	0,	0,	0},				/* 49 */
+	{0,	0,	0,	0},				/* 50 */
 };
 
 /* constants for ease of maintenance in getopt loop */
@@ -718,24 +721,27 @@ int main(int argc, char *argv[])
 						control->filter_flag = FILTER_FLAG_ARMT;	// ARMT
 						break;
 					case FILTERSTART+3:
-						control->filter_flag = FILTER_FLAG_PPC;		// PPC
+						control->filter_flag = FILTER_FLAG_ARM64;	// ARMT
 						break;
 					case FILTERSTART+4:
-						control->filter_flag = FILTER_FLAG_SPARC;	// SPARC
+						control->filter_flag = FILTER_FLAG_PPC;		// PPC
 						break;
 					case FILTERSTART+5:
-						control->filter_flag = FILTER_FLAG_IA64;	// IA64
+						control->filter_flag = FILTER_FLAG_SPARC;	// SPARC
 						break;
 					case FILTERSTART+6:
+						control->filter_flag = FILTER_FLAG_IA64;	// IA64
+						break;
+					case FILTERSTART+7:
 						control->filter_flag = FILTER_FLAG_DELTA;	// DELTA
 						/* Delta Values are 1-16, then multiples of 16 to 256 */
 						if (optarg) {
 							i=strtol(optarg, &endptr, 10);
 							if (*endptr)
 								fatal("Extra characters after delta offset: \'%s\'\n", endptr);
-							if (i < 1 || i > 32)
-								fatal("Delta offset value must be between 1 and 32\n");
-							control->delta = ( i <= 17 ? i : (i-16) * 16 );
+							if (i < 1 || i > 31)
+								fatal("Delta offset value must be between 1 and 31\n");
+							control->delta = ( i <= 16 ? i : (i-15) * 16 );
 						} else
 							control->delta = DEFAULT_DELTA;		// 1 is default
 						break;

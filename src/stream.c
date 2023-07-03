@@ -1599,24 +1599,23 @@ retry:
 				((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
 				((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf"))))))), current_thread);
 		if (control->filter_flag == FILTER_FLAG_X86) {
-			UInt32 x86State;
-			x86_Convert_Init(x86State);
-			x86_Convert(cti->s_buf, cti->s_len, 0, &x86State, 1);
+			UInt32 x86State = Z7_BRANCH_CONV_ST_X86_STATE_INIT_VAL;
+			z7_BranchConvSt_X86_Enc(cti->s_buf, cti->s_len, 0, &x86State);
 		}
 		else if (control->filter_flag == FILTER_FLAG_ARM) {
-			ARM_Convert(cti->s_buf, cti->s_len, 0, 1);
+			z7_BranchConv_ARM_Enc(cti->s_buf, cti->s_len, 0);
 		}
 		else if (control->filter_flag == FILTER_FLAG_ARMT) {
-			ARMT_Convert(cti->s_buf, cti->s_len, 0, 1);
+			z7_BranchConv_ARMT_Enc(cti->s_buf, cti->s_len, 0);
 		}
 		else if (control->filter_flag == FILTER_FLAG_PPC) {
-			PPC_Convert(cti->s_buf, cti->s_len, 0, 1);
+			z7_BranchConv_PPC_Enc(cti->s_buf, cti->s_len, 0);
 		}
 		else if (control->filter_flag == FILTER_FLAG_SPARC) {
-			SPARC_Convert(cti->s_buf, cti->s_len, 0, 1);
+			z7_BranchConv_SPARC_Enc(cti->s_buf, cti->s_len, 0);
 		}
 		if (control->filter_flag == FILTER_FLAG_IA64) {
-			IA64_Convert(cti->s_buf, cti->s_len, 0, 1);
+			z7_BranchConv_IA64_Enc(cti->s_buf, cti->s_len, 0);
 		}
 		if (control->filter_flag == FILTER_FLAG_DELTA) {
 			uchar delta_state[DELTA_STATE_SIZE];
@@ -1680,24 +1679,23 @@ retry:
 		if (FILTER_USED && cti->streamno == 1 ) {	// As unlikely as this is, we have to undo filtering here
 			print_maxverbose("Reverting filtering...\n");
 			if (control->filter_flag == FILTER_FLAG_X86) {
-				UInt32 x86State;
-				x86_Convert_Init(x86State);
-				x86_Convert(cti->s_buf, cti->s_len, 0, &x86State, 0);
+				UInt32 x86State = Z7_BRANCH_CONV_ST_X86_STATE_INIT_VAL;
+				z7_BranchConvSt_X86_Dec(cti->s_buf, cti->s_len, 0, &x86State);
 			}
 			else if (control->filter_flag == FILTER_FLAG_ARM) {
-				ARM_Convert(cti->s_buf, cti->s_len, 0, 0);
+				z7_BranchConv_ARM_Dec(cti->s_buf, cti->s_len, 0);
 			}
 			else if (control->filter_flag == FILTER_FLAG_ARMT) {
-				ARMT_Convert(cti->s_buf, cti->s_len, 0, 0);
+				z7_BranchConv_ARMT_Dec(cti->s_buf, cti->s_len, 0);
 			}
 			else if (control->filter_flag == FILTER_FLAG_PPC) {
-				PPC_Convert(cti->s_buf, cti->s_len, 0, 0);
+				z7_BranchConv_PPC_Dec(cti->s_buf, cti->s_len, 0);
 			}
 			else if (control->filter_flag == FILTER_FLAG_SPARC) {
-				SPARC_Convert(cti->s_buf, cti->s_len, 0, 0);
+				z7_BranchConv_SPARC_Dec(cti->s_buf, cti->s_len, 0);
 			}
 			else if (control->filter_flag == FILTER_FLAG_IA64) {
-				IA64_Convert(cti->s_buf, cti->s_len, 0, 0);
+				z7_BranchConv_IA64_Dec(cti->s_buf, cti->s_len, 0);
 			}
 			else if (control->filter_flag == FILTER_FLAG_DELTA) {
 				uchar delta_state[DELTA_STATE_SIZE];
@@ -1929,24 +1927,23 @@ retry:
 				((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
 				((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf"))))))), current_thread);
 		if (control->filter_flag == FILTER_FLAG_X86) {
-			UInt32 x86State;
-			x86_Convert_Init(x86State);
-			x86_Convert(uci->s_buf, uci->u_len, 0, &x86State, 0);
+			UInt32 x86State = Z7_BRANCH_CONV_ST_X86_STATE_INIT_VAL;
+			z7_BranchConvSt_X86_Dec(uci->s_buf, uci->u_len, 0, &x86State);
 		}
 		else if (control->filter_flag == FILTER_FLAG_ARM) {
-			ARM_Convert(uci->s_buf, uci->u_len, 0, 0);
+			z7_BranchConv_ARM_Dec(uci->s_buf, uci->u_len, 0);
 		}
 		else if (control->filter_flag == FILTER_FLAG_ARMT) {
-			ARMT_Convert(uci->s_buf, uci->u_len, 0, 0);
+			z7_BranchConv_ARMT_Dec(uci->s_buf, uci->u_len, 0);
 		}
 		else if (control->filter_flag == FILTER_FLAG_PPC) {
-			PPC_Convert(uci->s_buf, uci->u_len, 0, 0);
+			z7_BranchConv_PPC_Dec(uci->s_buf, uci->u_len, 0);
 		}
 		else if (control->filter_flag == FILTER_FLAG_SPARC) {
-			SPARC_Convert(uci->s_buf, uci->u_len, 0, 0);
+			z7_BranchConv_SPARC_Dec(uci->s_buf, uci->u_len, 0);
 		}
 		if (control->filter_flag == FILTER_FLAG_IA64) {
-			IA64_Convert(uci->s_buf, uci->u_len, 0, 0);
+			z7_BranchConv_IA64_Dec(uci->s_buf, uci->u_len, 0);
 		}
 		if (control->filter_flag == FILTER_FLAG_DELTA) {
 			uchar delta_state[DELTA_STATE_SIZE];
