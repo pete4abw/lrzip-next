@@ -1594,10 +1594,11 @@ retry:
 				((control->filter_flag == FILTER_FLAG_X86) ? "x86" :
 				((control->filter_flag == FILTER_FLAG_ARM) ? "ARM" :
 				((control->filter_flag == FILTER_FLAG_ARMT) ? "ARMT" :
+				((control->filter_flag == FILTER_FLAG_ARM64) ? "ARM64" :
 				((control->filter_flag == FILTER_FLAG_PPC) ? "PPC" :
 				((control->filter_flag == FILTER_FLAG_SPARC) ? "SPARC" :
 				((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
-				((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf"))))))), current_thread);
+				((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf")))))))), current_thread);
 		if (control->filter_flag == FILTER_FLAG_X86) {
 			UInt32 x86State = Z7_BRANCH_CONV_ST_X86_STATE_INIT_VAL;
 			z7_BranchConvSt_X86_Enc(cti->s_buf, cti->s_len, 0, &x86State);
@@ -1608,6 +1609,9 @@ retry:
 		else if (control->filter_flag == FILTER_FLAG_ARMT) {
 			z7_BranchConv_ARMT_Enc(cti->s_buf, cti->s_len, 0);
 		}
+		else if (control->filter_flag == FILTER_FLAG_ARM64) {
+			z7_BranchConv_ARM64_Enc(cti->s_buf, cti->s_len, 0);
+		}
 		else if (control->filter_flag == FILTER_FLAG_PPC) {
 			z7_BranchConv_PPC_Enc(cti->s_buf, cti->s_len, 0);
 		}
@@ -1617,7 +1621,7 @@ retry:
 		if (control->filter_flag == FILTER_FLAG_IA64) {
 			z7_BranchConv_IA64_Enc(cti->s_buf, cti->s_len, 0);
 		}
-		if (control->filter_flag == FILTER_FLAG_DELTA) {
+		if (control->delta) {
 			uchar delta_state[DELTA_STATE_SIZE];
 			Delta_Init(delta_state);
 			Delta_Encode(delta_state, control->delta, cti->s_buf,  cti->s_len);
@@ -1688,6 +1692,9 @@ retry:
 			else if (control->filter_flag == FILTER_FLAG_ARMT) {
 				z7_BranchConv_ARMT_Dec(cti->s_buf, cti->s_len, 0);
 			}
+			else if (control->filter_flag == FILTER_FLAG_ARM64) {
+				z7_BranchConv_ARM64_Dec(cti->s_buf, cti->s_len, 0);
+			}
 			else if (control->filter_flag == FILTER_FLAG_PPC) {
 				z7_BranchConv_PPC_Dec(cti->s_buf, cti->s_len, 0);
 			}
@@ -1697,7 +1704,7 @@ retry:
 			else if (control->filter_flag == FILTER_FLAG_IA64) {
 				z7_BranchConv_IA64_Dec(cti->s_buf, cti->s_len, 0);
 			}
-			else if (control->filter_flag == FILTER_FLAG_DELTA) {
+			else if (control->delta) {
 				uchar delta_state[DELTA_STATE_SIZE];
 				print_maxverbose("Reverting Delta filter data prior to trying again...\n");
 				Delta_Init(delta_state);
@@ -1918,34 +1925,68 @@ retry:
 		}
 	}
 	if (FILTER_USED && uci->streamno == 1) { // restore unfiltered data, literals only
-		print_maxverbose("Restoring %s filter data post decompression for thread %'d...\n",
-				((control->filter_flag == FILTER_FLAG_X86) ? "x86" :
-				((control->filter_flag == FILTER_FLAG_ARM) ? "ARM" :
-				((control->filter_flag == FILTER_FLAG_ARMT) ? "ARMT" :
-				((control->filter_flag == FILTER_FLAG_PPC) ? "PPC" :
-				((control->filter_flag == FILTER_FLAG_SPARC) ? "SPARC" :
-				((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
-				((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf"))))))), current_thread);
-		if (control->filter_flag == FILTER_FLAG_X86) {
-			UInt32 x86State = Z7_BRANCH_CONV_ST_X86_STATE_INIT_VAL;
-			z7_BranchConvSt_X86_Dec(uci->s_buf, uci->u_len, 0, &x86State);
+		if (control->minor_version < 12) {
+			print_maxverbose("Restoring %s filter data post decompression for thread %'d...\n",
+					((control->filter_flag == FILTER_FLAG_X86) ? "x86" :
+					((control->filter_flag == FILTER_FLAG_ARM) ? "ARM" :
+					((control->filter_flag == FILTER_FLAG_ARMT) ? "ARMT" :
+					((control->filter_flag == FILTER_FLAG_PPC) ? "PPC" :
+					((control->filter_flag == FILTER_FLAG_SPARC) ? "SPARC" :
+					((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
+					((control->filter_flag == OLD_FILTER_FLAG_DELTA) ? "Delta" : "wtf"))))))), current_thread);
+			if (control->filter_flag == FILTER_FLAG_X86) {
+				UInt32 x86State = Z7_BRANCH_CONV_ST_X86_STATE_INIT_VAL;
+				z7_BranchConvSt_X86_Dec(uci->s_buf, uci->u_len, 0, &x86State);
+			}
+			else if (control->filter_flag == FILTER_FLAG_ARM) {
+				z7_BranchConv_ARM_Dec(uci->s_buf, uci->u_len, 0);
+			}
+			else if (control->filter_flag == FILTER_FLAG_ARMT) {
+				z7_BranchConv_ARMT_Dec(uci->s_buf, uci->u_len, 0);
+			}
+			else if (control->filter_flag == FILTER_FLAG_PPC) {
+				z7_BranchConv_PPC_Dec(uci->s_buf, uci->u_len, 0);
+			}
+			else if (control->filter_flag == FILTER_FLAG_SPARC) {
+				z7_BranchConv_SPARC_Dec(uci->s_buf, uci->u_len, 0);
+			}
+			if (control->filter_flag == FILTER_FLAG_IA64) {
+				z7_BranchConv_IA64_Dec(uci->s_buf, uci->u_len, 0);
+			}
+		} else {	// new version
+			print_maxverbose("Restoring %s filter data post decompression for thread %'d...\n",
+					((control->filter_flag == FILTER_FLAG_X86) ? "x86" :
+					((control->filter_flag == FILTER_FLAG_ARM) ? "ARM" :
+					((control->filter_flag == FILTER_FLAG_ARMT) ? "ARMT" :
+					((control->filter_flag == FILTER_FLAG_ARM64) ? "ARM64" :
+					((control->filter_flag == FILTER_FLAG_PPC) ? "PPC" :
+					((control->filter_flag == FILTER_FLAG_SPARC) ? "SPARC" :
+					((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
+					((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf")))))))), current_thread);
+			if (control->filter_flag == FILTER_FLAG_X86) {
+				UInt32 x86State = Z7_BRANCH_CONV_ST_X86_STATE_INIT_VAL;
+				z7_BranchConvSt_X86_Dec(uci->s_buf, uci->u_len, 0, &x86State);
+			}
+			else if (control->filter_flag == FILTER_FLAG_ARM) {
+				z7_BranchConv_ARM_Dec(uci->s_buf, uci->u_len, 0);
+			}
+			else if (control->filter_flag == FILTER_FLAG_ARMT) {
+				z7_BranchConv_ARMT_Dec(uci->s_buf, uci->u_len, 0);
+			}
+			else if (control->filter_flag == FILTER_FLAG_ARM64) {
+				z7_BranchConv_ARM64_Dec(uci->s_buf, uci->u_len, 0);
+			}
+			else if (control->filter_flag == FILTER_FLAG_PPC) {
+				z7_BranchConv_PPC_Dec(uci->s_buf, uci->u_len, 0);
+			}
+			else if (control->filter_flag == FILTER_FLAG_SPARC) {
+				z7_BranchConv_SPARC_Dec(uci->s_buf, uci->u_len, 0);
+			}
+			if (control->filter_flag == FILTER_FLAG_IA64) {
+				z7_BranchConv_IA64_Dec(uci->s_buf, uci->u_len, 0);
+			}
 		}
-		else if (control->filter_flag == FILTER_FLAG_ARM) {
-			z7_BranchConv_ARM_Dec(uci->s_buf, uci->u_len, 0);
-		}
-		else if (control->filter_flag == FILTER_FLAG_ARMT) {
-			z7_BranchConv_ARMT_Dec(uci->s_buf, uci->u_len, 0);
-		}
-		else if (control->filter_flag == FILTER_FLAG_PPC) {
-			z7_BranchConv_PPC_Dec(uci->s_buf, uci->u_len, 0);
-		}
-		else if (control->filter_flag == FILTER_FLAG_SPARC) {
-			z7_BranchConv_SPARC_Dec(uci->s_buf, uci->u_len, 0);
-		}
-		if (control->filter_flag == FILTER_FLAG_IA64) {
-			z7_BranchConv_IA64_Dec(uci->s_buf, uci->u_len, 0);
-		}
-		if (control->filter_flag == FILTER_FLAG_DELTA) {
+		if (control->delta) {
 			uchar delta_state[DELTA_STATE_SIZE];
 			Delta_Init(delta_state);
 			Delta_Decode(delta_state, control->delta, uci->s_buf,  uci->u_len);
