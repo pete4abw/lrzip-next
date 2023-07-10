@@ -2,7 +2,6 @@ lrzip-next: July 3, 2023 v 0.12.0
 LZMA SDK 23.01.
 Add ARM64 BCJ Filter.
 Update Delta filter algorithm.
-Breaks filter compatibility with all prior versions.
 
 lrzip-next: June 29, 2023 v 0.11.3
 REVERT ZPAQ block size. Commit 2f84b91 caused error when
