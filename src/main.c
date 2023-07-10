@@ -269,7 +269,7 @@ static void show_summary(void)
 				print_verbose("ZSTD Compression Level: %d, ZSTD Compression Strategy: %s\n",
 						control->zstd_level, zstd_strategies[control->zstd_strategy]);
 			if (FILTER_USED) {
-				print_output("Filter Used: %s",
+				print_verbose("Filter Used: %s",
 					((control->filter_flag == FILTER_FLAG_X86) ? "x86" :
 					((control->filter_flag == FILTER_FLAG_ARM) ? "ARM" :
 					((control->filter_flag == FILTER_FLAG_ARMT) ? "ARMT" :
@@ -278,10 +278,11 @@ static void show_summary(void)
 					((control->filter_flag == FILTER_FLAG_SPARC) ? "SPARC" :
 					((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
 					((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf?")))))))));
-				if (control->filter_flag == FILTER_FLAG_DELTA)
-					print_output(", offset - %'d", control->delta);
-				print_output("\n");
 			}
+			if (control->delta)
+				print_output(", offset - %'d", control->delta);
+			print_output("\n");
+
 			print_verbose("%s Hashing Used\n", control->hash_label);
 			if (ENCRYPT)
 				print_verbose("%s Encryption Used\n", control->enc_label);
@@ -721,7 +722,7 @@ int main(int argc, char *argv[])
 						control->filter_flag = FILTER_FLAG_ARMT;	// ARMT
 						break;
 					case FILTERSTART+3:
-						control->filter_flag = FILTER_FLAG_ARM64;	// ARMT
+						control->filter_flag = FILTER_FLAG_ARM64;	// ARM64
 						break;
 					case FILTERSTART+4:
 						control->filter_flag = FILTER_FLAG_PPC;		// PPC
