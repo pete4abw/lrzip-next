@@ -124,8 +124,24 @@ AC_CHECK_HEADERS(fcntl.h sys/time.h unistd.h sys/mman.h)
 AC_CHECK_HEADERS(ctype.h errno.h sys/resource.h)
 AC_CHECK_HEADERS(endian.h sys/endian.h arpa/inet.h)
 AC_CHECK_HEADERS(alloca.h pthread.h)
-AC_CHECK_HEADERS(gcrypt.h gpg-error.h)
-AC_CHECK_HEADERS(libbz3.h zstd.h zstd_errors.h)
+AC_CHECK_HEADERS(gcrypt.h,[],
+		 AC_MSG_ERROR([gcrypt.h not found. Install libgcrypt-dev]),[])
+AC_CHECK_HEADERS(gpg-error.h,[],
+		 AC_MSG_ERROR([gpg-error.h not found. Install libgpg-error-dev]),[])
+AC_CHECK_HEADERS(bzlib.h,[],
+		 AC_MSG_ERROR([bzlib.h not found. Install libbz2-dev]),[])
+AC_CHECK_HEADERS(libbz3.h,[],
+		 AC_MSG_ERROR([libbz3.h not found. Install libbz3-dev]),[])
+AC_CHECK_HEADERS(lzo/lzoconf.h,[],
+		 AC_MSG_ERROR([lzoconf.h not found. Install liblzo2-dev]),[])
+AC_CHECK_HEADERS(lzo/lzo1x.h,[],
+		 AC_MSG_ERROR([lzo1x.h not found. Install liblzo2-dev]),[])
+AC_CHECK_HEADERS(lz4.h,[],
+		 AC_MSG_ERROR([lz4.h not found. Install liblz4-dev]),[])
+AC_CHECK_HEADERS(zstd.h,[],
+		 AC_MSG_ERROR([zstd.h not found. Install libzstd-dev]),[])
+AC_CHECK_HEADERS(zstd_errors.h,[],
+		 AC_MSG_ERROR([zstd_errors.h not found. Install libzstd-dev]),[])
 
 # remove rzip large file check. From version 0.24!
 
