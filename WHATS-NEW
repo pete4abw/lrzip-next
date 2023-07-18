@@ -1,3 +1,8 @@
+lrzip-next: July 18, 2023 v 0.12.0
+Remove bzip3 code and depend on library.
+Update configure.ac to include error checks for include
+files.
+
 lrzip-next: July 3, 2023 v 0.12.0
 LZMA SDK 23.01.
 Add ARM64 BCJ Filter.
