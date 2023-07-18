@@ -278,10 +278,10 @@ static void show_summary(void)
 					((control->filter_flag == FILTER_FLAG_SPARC) ? "SPARC" :
 					((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
 					((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf?")))))))));
+				if (control->delta)
+					print_output(", offset - %'d", control->delta);
+				print_output("\n");
 			}
-			if (control->delta)
-				print_output(", offset - %'d", control->delta);
-			print_output("\n");
 
 			print_verbose("%s Hashing Used\n", control->hash_label);
 			if (ENCRYPT)
