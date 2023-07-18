@@ -1518,8 +1518,7 @@ bool compress_file(rzip_control *control)
 			} else
 				strcpy(control->outfile, tmpinfile);
 			strcat(control->outfile, control->suffix);
-			// print_progress("Output filename is: %s\n", control->outfile);
-			// Not needed since printed at end of decompression
+			print_output("Output filename is: %s\n", control->outfile);
 		}
 
 		if (!strcmp(control->infile, control->outfile))
@@ -1644,8 +1643,7 @@ bool decompress_file(rzip_control *control)
 				strcpy(control->outfile, tmpoutfile);
 		}
 
-		if (!STDOUT)
-			print_progress("Output filename is: %s\n", control->outfile);
+		print_progress("Output filename is: %s\n", control->outfile);
 
 		if (unlikely(!strcmp(control->outfile, infilecopy))) {
 			control->flags |= FLAG_TEST_ONLY;	// stop and no more decompres or deleting files.
