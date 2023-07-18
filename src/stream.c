@@ -66,7 +66,7 @@
 #include "Delta.h"	//Delta Filter
 
 /* bzip3 */
-#include "lib/libbz3/libbz3.h"
+#include <libbz3.h>
 
 /* zstd */
 #include <zstd.h>

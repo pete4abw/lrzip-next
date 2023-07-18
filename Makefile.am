@@ -22,7 +22,6 @@ MAINTAINERCLEANFILES = \
 
 SUBDIRS = src/lzma \
 	  src/lib/libzpaq \
-	  src/lib/libbz3 \
 	  src \
 	  man \
 	  doc

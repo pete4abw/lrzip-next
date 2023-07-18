@@ -125,7 +125,7 @@ AC_CHECK_HEADERS(ctype.h errno.h sys/resource.h)
 AC_CHECK_HEADERS(endian.h sys/endian.h arpa/inet.h)
 AC_CHECK_HEADERS(alloca.h pthread.h)
 AC_CHECK_HEADERS(gcrypt.h gpg-error.h)
-AC_CHECK_HEADERS(zstd.h zstd_errors.h)
+AC_CHECK_HEADERS(libbz3.h zstd.h zstd_errors.h)
 
 # remove rzip large file check. From version 0.24!
 
@@ -143,6 +143,8 @@ AC_CHECK_LIB(lz4, LZ4_compress_default, ,
 	AC_MSG_ERROR([Could not find lz4 library - please install liblz4-dev]))
 AC_CHECK_LIB(zstd, ZSTD_compress, ,
 	AC_MSG_ERROR([Could not find zstd library - please install libzstd-dev]))
+AC_CHECK_LIB(bzip3, bz3_compress, ,
+	AC_MSG_ERROR([Could not find bzip3 library - please install libbzip3-dev]))
 AC_CHECK_LIB(gpg-error, gpg_err_code_to_errno, ,
 	AC_MSG_ERROR([Could not find gpg-error library - please install libgpg-error-dev]))
 AC_CHECK_LIB(gcrypt, gcry_md_open, ,
@@ -177,7 +179,6 @@ src/Makefile
 src/lzma/Makefile
 src/lzma/C/Makefile
 src/lib/libzpaq/Makefile
-src/lib/libbz3/Makefile
 doc/Makefile
 man/Makefile
 ])
