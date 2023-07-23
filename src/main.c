@@ -269,7 +269,7 @@ static void show_summary(void)
 				print_verbose("ZSTD Compression Level: %d, ZSTD Compression Strategy: %s\n",
 						control->zstd_level, zstd_strategies[control->zstd_strategy]);
 			if (FILTER_USED) {
-				print_verbose("Filter Used: %s",
+				print_output("Filter Used: %s",
 					((control->filter_flag == FILTER_FLAG_X86) ? "x86" :
 					((control->filter_flag == FILTER_FLAG_ARM) ? "ARM" :
 					((control->filter_flag == FILTER_FLAG_ARMT) ? "ARMT" :
