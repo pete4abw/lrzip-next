@@ -282,10 +282,11 @@ static int bzip3_compress_buf(rzip_control *control, struct compress_thread *cth
 
 static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthread, int current_thread)
 {
+#define METHOD_MAX_LEN 10
 	i64 c_len, c_size;
 	uchar *c_buf;
 	int zpaq_redundancy, zpaq_type=0, compressibility;
-	char method[10]; /* level, block size, redundancy of compression, type */
+	char method[METHOD_MAX_LEN]; /* level, block size, redundancy of compression, type */
 
 	/* if we're testing compressibility */
 	if (LZ4_TEST) {
@@ -312,10 +313,10 @@ static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthr
 	if (zpaq_redundancy > 192)
 		zpaq_type = 1;					/* text data */
 
-	sprintf(method,"%d%d,%d,%d",control->zpaq_level,control->zpaq_bs,zpaq_redundancy,zpaq_type);
+	snprintf(method,METHOD_MAX_LEN,"%d%d,%d,%d",control->zpaq_level,control->zpaq_bs,zpaq_redundancy,zpaq_type);
 
 	print_maxverbose("Starting zpaq backend compression thread %d...\nZPAQ: Method selected: %s: level=%d, bs=%d, redundancy=%d, type=%s\n",
-		       current_thread, method, control->zpaq_level, control->zpaq_bs, zpaq_redundancy, (zpaq_type == 0 ? "binary/random" : "text"));
+		       current_thread, method, control->zpaq_level, control->zpaq_bs, zpaq_redundancy, zpaq_type == 0 ? "binary/random" : "text");
 
 	/* Suppress Progress if Max Verbose */
         zpaq_compress(c_buf, &c_len, cthread->s_buf, cthread->s_len, &method[0],
