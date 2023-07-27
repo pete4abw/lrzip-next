@@ -1,6 +1,17 @@
 lrzip-next - Long Range ZIP
 ======================
 
+## Announcement
+
+LZMA SDK updated to 23.01. 
+
+[lzma-23.01 Version 0.12.0 is now the default branch](https://github.com/pete4abw/lrzip-next/tree/lzma-23.01).
+
+* **This branch has been sunset at v0.11.3.**
+* **Only major bugs will be addressed here.**
+* **New features will not be ported to the master branch.**
+* **See the [23.01 WHATS-NEW file](https://github.com/pete4abw/lrzip-next/blob/lzma-23.01/WHATS-NEW) for new `lrzip-next` features!**
+
 ## LZMA SDK 22.01 (March 2023)
 
 See **FEATURES** and **WHATS-NEW** files for list of lrzip-next enhancements.
