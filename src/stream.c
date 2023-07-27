@@ -436,7 +436,7 @@ static int gzip_compress_buf(rzip_control *control, struct compress_thread *cthr
 static int lzma_compress_buf(rzip_control *control, struct compress_thread *cthread, int current_thread)
 {
 	unsigned char lzma_properties[5]; /* lzma properties, encoded */
-	int lzma_level, lzma_ret;
+	int lzma_ret;
 	size_t prop_size = 5; /* return value for lzma_properties */
 	uchar *c_buf;
 	size_t dlen;
@@ -483,8 +483,8 @@ retry:
 		/* can pass -1 if not compressible! Thanks Lasse Collin */
 		dealloc(c_buf);
 		if (lzma_ret == SZ_ERROR_MEM) {
-			if (lzma_level > 1) {
-				lzma_level--;
+			if (control->compression_level > 1) {
+				control->compression_level--;
 				print_verbose("LZMA Warning: %d. Can't allocate enough RAM for compression window, trying smaller.\n", SZ_ERROR_MEM);
 				goto retry;
 			}
