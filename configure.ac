@@ -131,7 +131,7 @@ AC_CHECK_HEADERS(gpg-error.h,[],
 AC_CHECK_HEADERS(bzlib.h,[],
 		 AC_MSG_ERROR([bzlib.h not found. Install libbz2-dev]),[])
 AC_CHECK_HEADERS(libbz3.h,[],
-		 AC_MSG_ERROR([libbz3.h not found. Install libbz3-dev]),[])
+		 AC_MSG_ERROR([libbz3.h not found. Install libbzip3-dev]),[])
 AC_CHECK_HEADERS(lzo/lzoconf.h,[],
 		 AC_MSG_ERROR([lzoconf.h not found. Install liblzo2-dev]),[])
 AC_CHECK_HEADERS(lzo/lzo1x.h,[],
