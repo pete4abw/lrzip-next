@@ -1491,11 +1491,12 @@ again:
 				print_err("Wrong password?\n");
 			goto failed;
 		}
-		if (unlikely(v1)) {
+		/* protect again 0 length c_ and u_ len */
+		if (v1 < 1) {
 			print_err("Unexpected initial c_len %'"PRId64" in streams %'"PRId64"\n", v1, v2);
 			goto failed;
 		}
-		if (unlikely(v2)) {
+		if (v2 < 1) {
 			print_err("Unexpected initial u_len %'"PRId64" in streams\n", v2);
 			goto failed;
 		}
