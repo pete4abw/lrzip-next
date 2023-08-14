@@ -1,15 +1,15 @@
 /* Threads.h -- multithreading library
-2021-12-21 : Igor Pavlov : Public domain 
-2022-06-21 : Peter Hyman (lrzip-next, remove WIN32 #ifdefs */
+2023-04-02 : Igor Pavlov : Public domain
+2023-07-02 : Peter Hyman (lrzip-next) - remove _WIN32 cruft */
 
-#ifndef __7Z_THREADS_H
-#define __7Z_THREADS_H
+#ifndef ZIP7_INC_THREADS_H
+#define ZIP7_INC_THREADS_H
 
 #if defined(__linux__)
 #if !defined(__APPLE__) && !defined(_AIX) && !defined(__ANDROID__)
-#ifndef _7ZIP_AFFINITY_DISABLE
-#define _7ZIP_AFFINITY_SUPPORTED
-// #pragma message(" ==== _7ZIP_AFFINITY_SUPPORTED")
+#ifndef Z7_AFFINITY_DISABLE
+#define Z7_AFFINITY_SUPPORTED
+// #pragma message(" ==== Z7_AFFINITY_SUPPORTED")
 // #define _GNU_SOURCE
 #endif
 #endif
@@ -21,38 +21,40 @@
 
 EXTERN_C_BEGIN
 
-typedef struct _CThread
+typedef struct
 {
   pthread_t _tid;
   int _created;
 } CThread;
 
-#define Thread_Construct(p) { (p)->_tid = 0; (p)->_created = 0; }
-#define Thread_WasCreated(p) ((p)->_created != 0)
+#define Thread_CONSTRUCT(p)   { (p)->_tid = 0;  (p)->_created = 0; }
+#define Thread_WasCreated(p)  ((p)->_created != 0)
 WRes Thread_Close(CThread *p);
 // #define Thread_Wait Thread_Wait_Close
 
 typedef void * THREAD_FUNC_RET_TYPE;
+#define THREAD_FUNC_RET_ZERO  NULL
+
 
 typedef UInt64 CAffinityMask;
 
-#ifdef _7ZIP_AFFINITY_SUPPORTED
+#ifdef Z7_AFFINITY_SUPPORTED
 
 typedef cpu_set_t CCpuSet;
-#define CpuSet_Zero(p) CPU_ZERO(p)
-#define CpuSet_Set(p, cpu) CPU_SET(cpu, p)
-#define CpuSet_IsSet(p, cpu) CPU_ISSET(cpu, p)
+#define CpuSet_Zero(p)        CPU_ZERO(p)
+#define CpuSet_Set(p, cpu)    CPU_SET(cpu, p)
+#define CpuSet_IsSet(p, cpu)  CPU_ISSET(cpu, p)
 
 #else
 
 typedef UInt64 CCpuSet;
-#define CpuSet_Zero(p) { *(p) = 0; }
-#define CpuSet_Set(p, cpu) { *(p) |= ((UInt64)1 << (cpu)); }
-#define CpuSet_IsSet(p, cpu) ((*(p) & ((UInt64)1 << (cpu))) != 0)
+#define CpuSet_Zero(p)        *(p) = (0)
+#define CpuSet_Set(p, cpu)    *(p) |= ((UInt64)1 << (cpu))
+#define CpuSet_IsSet(p, cpu)  ((*(p) & ((UInt64)1 << (cpu))) != 0)
 
 #endif
 
-#define THREAD_FUNC_CALL_TYPE MY_STD_CALL
+#define THREAD_FUNC_CALL_TYPE Z7_STDCALL
 
 #define THREAD_FUNC_ATTRIB_ALIGN_ARG
 
@@ -84,6 +86,7 @@ WRes ManualResetEvent_Create(CManualResetEvent *p, int signaled);
 WRes ManualResetEvent_CreateNotSignaled(CManualResetEvent *p);
 WRes AutoResetEvent_Create(CAutoResetEvent *p, int signaled);
 WRes AutoResetEvent_CreateNotSignaled(CAutoResetEvent *p);
+
 WRes Event_Set(CEvent *p);
 WRes Event_Reset(CEvent *p);
 WRes Event_Wait(CEvent *p);
@@ -121,6 +124,8 @@ void CriticalSection_Enter(CCriticalSection *cs);
 void CriticalSection_Leave(CCriticalSection *cs);
 
 LONG InterlockedIncrement(LONG volatile *addend);
+
+WRes AutoResetEvent_OptCreate_And_Reset(CAutoResetEvent *p);
 
 EXTERN_C_END
 

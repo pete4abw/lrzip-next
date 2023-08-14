@@ -66,7 +66,7 @@
 #include "Delta.h"	//Delta Filter
 
 /* bzip3 */
-#include "lib/libbz3/libbz3.h"
+#include <libbz3.h>
 
 /* zstd */
 #include <zstd.h>
@@ -207,7 +207,7 @@ static int zstd_compress_buf(rzip_control *control, struct compress_thread *cthr
 	 * CTYPE_NONE */
 
 	if (zstd_ret == ZSTD_error_dstSize_tooSmall) {
-		print_maxverbose("Incompressible block\n");
+		print_maxverbose("Thread %d: Incompressible block\n", current_thread);
 		/* Incompressible, leave as CTYPE_NONE */
 		dealloc(c_buf);
 		return 0;
@@ -215,14 +215,14 @@ static int zstd_compress_buf(rzip_control *control, struct compress_thread *cthr
 
 	if (unlikely(ZSTD_isError(zstd_ret))) {
 		dealloc(c_buf);
-		print_maxverbose("zstd compress failed\n");
+		print_maxverbose("Thread %d: zstd compress failed\n", current_thread);
 		return -1;
 	}
 
 	/* zstd_ret is return size, not dlen */
 	dlen = zstd_ret;
 	if (unlikely(dlen >= cthread->c_len)) {
-		print_maxverbose("Incompressible block\n");
+		print_maxverbose("Thread %d: Incompressible block\n", current_thread);
 		/* Incompressible, leave as CTYPE_NONE */
 		dealloc(c_buf);
 		return 0;
@@ -266,7 +266,7 @@ static int bzip3_compress_buf(rzip_control *control, struct compress_thread *cth
         c_len = bz3_encode_block(state, c_buf, cthread->s_len);
 
 	if (unlikely(c_len >= cthread->c_len)) {
-		print_maxverbose("Incompressible block\n");
+		print_maxverbose("Thread %d: Incompressible block\n", current_thread);
 		/* Incompressible, leave as CTYPE_NONE */
 		dealloc(c_buf);
 		return 0;
@@ -282,10 +282,11 @@ static int bzip3_compress_buf(rzip_control *control, struct compress_thread *cth
 
 static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthread, int current_thread)
 {
+#define METHOD_MAX_LEN 10
 	i64 c_len, c_size;
 	uchar *c_buf;
 	int zpaq_redundancy, zpaq_type=0, compressibility;
-	char method[10]; /* level, block size, redundancy of compression, type */
+	char method[METHOD_MAX_LEN]; /* level, block size, redundancy of compression, type */
 
 	/* if we're testing compressibility */
 	if (LZ4_TEST) {
@@ -296,7 +297,7 @@ static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthr
 		compressibility = 50;	/* midpoint */
 
 
-	c_size = round_up_page(control, cthread->s_len + 10000);
+	c_size = round_up_page(control, cthread->s_len * 1.02);	/* increae buffer by 2% to prevent memory overrun */
 	c_buf = malloc(c_size);
 	if (!c_buf) {
 		print_err("Unable to allocate c_buf in zpaq_compress_buf\n");
@@ -312,17 +313,17 @@ static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthr
 	if (zpaq_redundancy > 192)
 		zpaq_type = 1;					/* text data */
 
-	sprintf(method,"%d%d,%d,%d",control->zpaq_level,control->zpaq_bs,zpaq_redundancy,zpaq_type);
+	snprintf(method,METHOD_MAX_LEN,"%d%d,%d,%d",control->zpaq_level,control->zpaq_bs,zpaq_redundancy,zpaq_type);
 
 	print_maxverbose("Starting zpaq backend compression thread %d...\nZPAQ: Method selected: %s: level=%d, bs=%d, redundancy=%d, type=%s\n",
-		       current_thread, method, control->zpaq_level, control->zpaq_bs, zpaq_redundancy, (zpaq_type == 0 ? "binary/random" : "text"));
+		       current_thread, method, control->zpaq_level, control->zpaq_bs, zpaq_redundancy, zpaq_type == 0 ? "binary/random" : "text");
 
 	/* Suppress Progress if Max Verbose */
         zpaq_compress(c_buf, &c_len, cthread->s_buf, cthread->s_len, &method[0],
 			control->msgout, (SHOW_PROGRESS && !MAX_VERBOSE) ? true: false, current_thread);
 
 	if (unlikely(c_len >= cthread->c_len)) {
-		print_maxverbose("Incompressible block\n");
+		print_maxverbose("Thread %d: Incompressible block\n", current_thread);
 		/* Incompressible, leave as CTYPE_NONE */
 		dealloc(c_buf);
 		return 0;
@@ -336,7 +337,7 @@ static int zpaq_compress_buf(rzip_control *control, struct compress_thread *cthr
 	return 0;
 }
 
-static int bzip2_compress_buf(rzip_control *control, struct compress_thread *cthread)
+static int bzip2_compress_buf(rzip_control *control, struct compress_thread *cthread, int current_thread)
 {
 	u32 dlen = round_up_page(control, cthread->s_len);
 	int bzip2_ret;
@@ -361,7 +362,7 @@ static int bzip2_compress_buf(rzip_control *control, struct compress_thread *cth
 	 * CTYPE_NONE */
 
 	if (bzip2_ret == BZ_OUTBUFF_FULL) {
-		print_maxverbose("Incompressible block\n");
+		print_maxverbose("Thread %d: Incompressible block\n", current_thread);
 		/* Incompressible, leave as CTYPE_NONE */
 		dealloc(c_buf);
 		return 0;
@@ -369,12 +370,12 @@ static int bzip2_compress_buf(rzip_control *control, struct compress_thread *cth
 
 	if (unlikely(bzip2_ret != BZ_OK)) {
 		dealloc(c_buf);
-		print_maxverbose("BZ2 compress failed\n");
+		print_maxverbose("Thread %d: BZ2 compress failed\n", current_thread);
 		return -1;
 	}
 
 	if (unlikely(dlen >= cthread->c_len)) {
-		print_maxverbose("Incompressible block\n");
+		print_maxverbose("Thread %d: Incompressible block\n", current_thread);
 		/* Incompressible, leave as CTYPE_NONE */
 		dealloc(c_buf);
 		return 0;
@@ -387,7 +388,7 @@ static int bzip2_compress_buf(rzip_control *control, struct compress_thread *cth
 	return 0;
 }
 
-static int gzip_compress_buf(rzip_control *control, struct compress_thread *cthread)
+static int gzip_compress_buf(rzip_control *control, struct compress_thread *cthread, int current_thread)
 {
 	unsigned long dlen = round_up_page(control, cthread->s_len);
 	uchar *c_buf;
@@ -406,7 +407,7 @@ static int gzip_compress_buf(rzip_control *control, struct compress_thread *cthr
 	 * CTYPE_NONE */
 
 	if (gzip_ret == Z_BUF_ERROR) {
-		print_maxverbose("Incompressible block\n");
+		print_maxverbose("Thread %d: Incompressible block\n", current_thread);
 		/* Incompressible, leave as CTYPE_NONE */
 		dealloc(c_buf);
 		return 0;
@@ -414,12 +415,12 @@ static int gzip_compress_buf(rzip_control *control, struct compress_thread *cthr
 
 	if (unlikely(gzip_ret != Z_OK)) {
 		dealloc(c_buf);
-		print_maxverbose("compress2 failed\n");
+		print_maxverbose("Thread %d: compress2 failed\n", current_thread);
 		return -1;
 	}
 
 	if (unlikely((i64)dlen >= cthread->c_len)) {
-		print_maxverbose("Incompressible block\n");
+		print_maxverbose("Thread %d: Incompressible block\n", current_thread);
 		/* Incompressible, leave as CTYPE_NONE */
 		dealloc(c_buf);
 		return 0;
@@ -435,7 +436,7 @@ static int gzip_compress_buf(rzip_control *control, struct compress_thread *cthr
 static int lzma_compress_buf(rzip_control *control, struct compress_thread *cthread, int current_thread)
 {
 	unsigned char lzma_properties[5]; /* lzma properties, encoded */
-	int lzma_level, lzma_ret;
+	int lzma_ret;
 	size_t prop_size = 5; /* return value for lzma_properties */
 	uchar *c_buf;
 	size_t dlen;
@@ -467,31 +468,31 @@ retry:
 			case SZ_ERROR_MEM:
 				break;
 			case SZ_ERROR_PARAM:
-				print_err("LZMA Parameter ERROR: %'d. This should not happen.\n", SZ_ERROR_PARAM);
+				print_err("LZMA Parameter ERROR: %d. This should not happen.\n", SZ_ERROR_PARAM);
 				break;
 			case SZ_ERROR_OUTPUT_EOF:
-				print_maxverbose("Harmless LZMA Output Buffer Overflow error: %'d. Incompressible block.\n", SZ_ERROR_OUTPUT_EOF);
+				print_maxverbose("Harmless LZMA Output Buffer Overflow error: %d. Incompressible block.\n", SZ_ERROR_OUTPUT_EOF);
 				break;
 			case SZ_ERROR_THREAD:
-				print_err("LZMA Multi Thread ERROR: %'d. This should not happen.\n", SZ_ERROR_THREAD);
+				print_err("LZMA Multi Thread ERROR: %d. This should not happen.\n", SZ_ERROR_THREAD);
 				break;
 			default:
-				print_err("Unidentified LZMA ERROR: %'d. This should not happen.\n", lzma_ret);
+				print_err("Unidentified LZMA ERROR: %d. This should not happen.\n", lzma_ret);
 				break;
 		}
 		/* can pass -1 if not compressible! Thanks Lasse Collin */
 		dealloc(c_buf);
 		if (lzma_ret == SZ_ERROR_MEM) {
-			if (lzma_level > 1) {
-				lzma_level--;
-				print_verbose("LZMA Warning: %'d. Can't allocate enough RAM for compression window, trying smaller.\n", SZ_ERROR_MEM);
+			if (control->compression_level > 1) {
+				control->compression_level--;
+				print_verbose("LZMA Warning: %d. Can't allocate enough RAM for compression window, trying smaller.\n", SZ_ERROR_MEM);
 				goto retry;
 			}
 			/* lzma compress can be fragile on 32 bit. If it fails,
 			 * fall back to bzip2 compression so the block doesn't
 			 * remain uncompressed */
 			print_verbose("Unable to allocate enough RAM for any sized compression window, falling back to bzip2 compression.\n");
-			return bzip2_compress_buf(control, cthread);
+			return bzip2_compress_buf(control, cthread, current_thread);
 		} else if (lzma_ret == SZ_ERROR_OUTPUT_EOF)
 			return 0;
 		return -1;
@@ -499,7 +500,7 @@ retry:
 
 	if (unlikely((i64)dlen >= cthread->c_len)) {
 		/* Incompressible, leave as CTYPE_NONE */
-		print_maxverbose("Incompressible block\n");
+		print_maxverbose("Thread %d: Incompressible block\n", current_thread);
 		dealloc(c_buf);
 		return 0;
 	}
@@ -523,7 +524,7 @@ retry:
 	return 0;
 }
 
-static int lzo_compress_buf(rzip_control *control, struct compress_thread *cthread)
+static int lzo_compress_buf(rzip_control *control, struct compress_thread *cthread, int current_thread)
 {
 	lzo_uint in_len = cthread->s_len;
 	lzo_uint dlen = round_up_page(control, in_len + in_len / 16 + 64 + 3);
@@ -550,7 +551,7 @@ static int lzo_compress_buf(rzip_control *control, struct compress_thread *cthre
 
 	if (dlen >= in_len){
 		/* Incompressible, leave as CTYPE_NONE */
-		print_maxverbose("Incompressible block\n");
+		print_maxverbose("Thread %d: Incompressible block\n", current_thread);
 		dealloc(c_buf);
 		goto out_free;
 	}
@@ -1490,11 +1491,12 @@ again:
 				print_err("Wrong password?\n");
 			goto failed;
 		}
-		if (unlikely(v1)) {
+		/* protect again 0 length c_ and u_ len */
+		if (v1 < 1) {
 			print_err("Unexpected initial c_len %'"PRId64" in streams %'"PRId64"\n", v1, v2);
 			goto failed;
 		}
-		if (unlikely(v2)) {
+		if (v2 < 1) {
 			print_err("Unexpected initial u_len %'"PRId64" in streams\n", v2);
 			goto failed;
 		}
@@ -1594,31 +1596,34 @@ retry:
 				((control->filter_flag == FILTER_FLAG_X86) ? "x86" :
 				((control->filter_flag == FILTER_FLAG_ARM) ? "ARM" :
 				((control->filter_flag == FILTER_FLAG_ARMT) ? "ARMT" :
+				((control->filter_flag == FILTER_FLAG_ARM64) ? "ARM64" :
 				((control->filter_flag == FILTER_FLAG_PPC) ? "PPC" :
 				((control->filter_flag == FILTER_FLAG_SPARC) ? "SPARC" :
 				((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
-				((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf"))))))), current_thread);
+				((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf")))))))), current_thread);
 		if (control->filter_flag == FILTER_FLAG_X86) {
-			UInt32 x86State;
-			x86_Convert_Init(x86State);
-			x86_Convert(cti->s_buf, cti->s_len, 0, &x86State, 1);
+			UInt32 x86State = Z7_BRANCH_CONV_ST_X86_STATE_INIT_VAL;
+			z7_BranchConvSt_X86_Enc(cti->s_buf, cti->s_len, 0, &x86State);
 		}
 		else if (control->filter_flag == FILTER_FLAG_ARM) {
-			ARM_Convert(cti->s_buf, cti->s_len, 0, 1);
+			z7_BranchConv_ARM_Enc(cti->s_buf, cti->s_len, 0);
 		}
 		else if (control->filter_flag == FILTER_FLAG_ARMT) {
-			ARMT_Convert(cti->s_buf, cti->s_len, 0, 1);
+			z7_BranchConv_ARMT_Enc(cti->s_buf, cti->s_len, 0);
+		}
+		else if (control->filter_flag == FILTER_FLAG_ARM64) {
+			z7_BranchConv_ARM64_Enc(cti->s_buf, cti->s_len, 0);
 		}
 		else if (control->filter_flag == FILTER_FLAG_PPC) {
-			PPC_Convert(cti->s_buf, cti->s_len, 0, 1);
+			z7_BranchConv_PPC_Enc(cti->s_buf, cti->s_len, 0);
 		}
 		else if (control->filter_flag == FILTER_FLAG_SPARC) {
-			SPARC_Convert(cti->s_buf, cti->s_len, 0, 1);
+			z7_BranchConv_SPARC_Enc(cti->s_buf, cti->s_len, 0);
 		}
 		if (control->filter_flag == FILTER_FLAG_IA64) {
-			IA64_Convert(cti->s_buf, cti->s_len, 0, 1);
+			z7_BranchConv_IA64_Enc(cti->s_buf, cti->s_len, 0);
 		}
-		if (control->filter_flag == FILTER_FLAG_DELTA) {
+		if (control->delta) {
 			uchar delta_state[DELTA_STATE_SIZE];
 			Delta_Init(delta_state);
 			Delta_Encode(delta_state, control->delta, cti->s_buf,  cti->s_len);
@@ -1633,11 +1638,11 @@ retry:
 		if (LZMA_COMPRESS)
 			ret = lzma_compress_buf(control, cti, current_thread);
 		else if (LZO_COMPRESS)
-			ret = lzo_compress_buf(control, cti);
+			ret = lzo_compress_buf(control, cti, current_thread);
 		else if (BZIP2_COMPRESS)
-			ret = bzip2_compress_buf(control, cti);
+			ret = bzip2_compress_buf(control, cti, current_thread);
 		else if (ZLIB_COMPRESS)
-			ret = gzip_compress_buf(control, cti);
+			ret = gzip_compress_buf(control, cti, current_thread);
 		else if (ZPAQ_COMPRESS)
 			ret = zpaq_compress_buf(control, cti, current_thread);
 		else if (BZIP3_COMPRESS)
@@ -1680,26 +1685,28 @@ retry:
 		if (FILTER_USED && cti->streamno == 1 ) {	// As unlikely as this is, we have to undo filtering here
 			print_maxverbose("Reverting filtering...\n");
 			if (control->filter_flag == FILTER_FLAG_X86) {
-				UInt32 x86State;
-				x86_Convert_Init(x86State);
-				x86_Convert(cti->s_buf, cti->s_len, 0, &x86State, 0);
+				UInt32 x86State = Z7_BRANCH_CONV_ST_X86_STATE_INIT_VAL;
+				z7_BranchConvSt_X86_Dec(cti->s_buf, cti->s_len, 0, &x86State);
 			}
 			else if (control->filter_flag == FILTER_FLAG_ARM) {
-				ARM_Convert(cti->s_buf, cti->s_len, 0, 0);
+				z7_BranchConv_ARM_Dec(cti->s_buf, cti->s_len, 0);
 			}
 			else if (control->filter_flag == FILTER_FLAG_ARMT) {
-				ARMT_Convert(cti->s_buf, cti->s_len, 0, 0);
+				z7_BranchConv_ARMT_Dec(cti->s_buf, cti->s_len, 0);
+			}
+			else if (control->filter_flag == FILTER_FLAG_ARM64) {
+				z7_BranchConv_ARM64_Dec(cti->s_buf, cti->s_len, 0);
 			}
 			else if (control->filter_flag == FILTER_FLAG_PPC) {
-				PPC_Convert(cti->s_buf, cti->s_len, 0, 0);
+				z7_BranchConv_PPC_Dec(cti->s_buf, cti->s_len, 0);
 			}
 			else if (control->filter_flag == FILTER_FLAG_SPARC) {
-				SPARC_Convert(cti->s_buf, cti->s_len, 0, 0);
+				z7_BranchConv_SPARC_Dec(cti->s_buf, cti->s_len, 0);
 			}
 			else if (control->filter_flag == FILTER_FLAG_IA64) {
-				IA64_Convert(cti->s_buf, cti->s_len, 0, 0);
+				z7_BranchConv_IA64_Dec(cti->s_buf, cti->s_len, 0);
 			}
-			else if (control->filter_flag == FILTER_FLAG_DELTA) {
+			else if (control->delta) {
 				uchar delta_state[DELTA_STATE_SIZE];
 				print_maxverbose("Reverting Delta filter data prior to trying again...\n");
 				Delta_Init(delta_state);
@@ -1920,35 +1927,68 @@ retry:
 		}
 	}
 	if (FILTER_USED && uci->streamno == 1) { // restore unfiltered data, literals only
-		print_maxverbose("Restoring %s filter data post decompression for thread %'d...\n",
-				((control->filter_flag == FILTER_FLAG_X86) ? "x86" :
-				((control->filter_flag == FILTER_FLAG_ARM) ? "ARM" :
-				((control->filter_flag == FILTER_FLAG_ARMT) ? "ARMT" :
-				((control->filter_flag == FILTER_FLAG_PPC) ? "PPC" :
-				((control->filter_flag == FILTER_FLAG_SPARC) ? "SPARC" :
-				((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
-				((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf"))))))), current_thread);
-		if (control->filter_flag == FILTER_FLAG_X86) {
-			UInt32 x86State;
-			x86_Convert_Init(x86State);
-			x86_Convert(uci->s_buf, uci->u_len, 0, &x86State, 0);
+		if (control->minor_version < 12) {
+			print_maxverbose("Restoring %s filter data post decompression for thread %'d...\n",
+					((control->filter_flag == FILTER_FLAG_X86) ? "x86" :
+					((control->filter_flag == FILTER_FLAG_ARM) ? "ARM" :
+					((control->filter_flag == FILTER_FLAG_ARMT) ? "ARMT" :
+					((control->filter_flag == FILTER_FLAG_PPC) ? "PPC" :
+					((control->filter_flag == FILTER_FLAG_SPARC) ? "SPARC" :
+					((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
+					((control->filter_flag == OLD_FILTER_FLAG_DELTA) ? "Delta" : "wtf"))))))), current_thread);
+			if (control->filter_flag == FILTER_FLAG_X86) {
+				UInt32 x86State = Z7_BRANCH_CONV_ST_X86_STATE_INIT_VAL;
+				z7_BranchConvSt_X86_Dec(uci->s_buf, uci->u_len, 0, &x86State);
+			}
+			else if (control->filter_flag == FILTER_FLAG_ARM) {
+				z7_BranchConv_ARM_Dec(uci->s_buf, uci->u_len, 0);
+			}
+			else if (control->filter_flag == FILTER_FLAG_ARMT) {
+				z7_BranchConv_ARMT_Dec(uci->s_buf, uci->u_len, 0);
+			}
+			else if (control->filter_flag == FILTER_FLAG_PPC) {
+				z7_BranchConv_PPC_Dec(uci->s_buf, uci->u_len, 0);
+			}
+			else if (control->filter_flag == FILTER_FLAG_SPARC) {
+				z7_BranchConv_SPARC_Dec(uci->s_buf, uci->u_len, 0);
+			}
+			if (control->filter_flag == FILTER_FLAG_IA64) {
+				z7_BranchConv_IA64_Dec(uci->s_buf, uci->u_len, 0);
+			}
+		} else {	// new version
+			print_maxverbose("Restoring %s filter data post decompression for thread %'d...\n",
+					((control->filter_flag == FILTER_FLAG_X86) ? "x86" :
+					((control->filter_flag == FILTER_FLAG_ARM) ? "ARM" :
+					((control->filter_flag == FILTER_FLAG_ARMT) ? "ARMT" :
+					((control->filter_flag == FILTER_FLAG_ARM64) ? "ARM64" :
+					((control->filter_flag == FILTER_FLAG_PPC) ? "PPC" :
+					((control->filter_flag == FILTER_FLAG_SPARC) ? "SPARC" :
+					((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
+					((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf")))))))), current_thread);
+			if (control->filter_flag == FILTER_FLAG_X86) {
+				UInt32 x86State = Z7_BRANCH_CONV_ST_X86_STATE_INIT_VAL;
+				z7_BranchConvSt_X86_Dec(uci->s_buf, uci->u_len, 0, &x86State);
+			}
+			else if (control->filter_flag == FILTER_FLAG_ARM) {
+				z7_BranchConv_ARM_Dec(uci->s_buf, uci->u_len, 0);
+			}
+			else if (control->filter_flag == FILTER_FLAG_ARMT) {
+				z7_BranchConv_ARMT_Dec(uci->s_buf, uci->u_len, 0);
+			}
+			else if (control->filter_flag == FILTER_FLAG_ARM64) {
+				z7_BranchConv_ARM64_Dec(uci->s_buf, uci->u_len, 0);
+			}
+			else if (control->filter_flag == FILTER_FLAG_PPC) {
+				z7_BranchConv_PPC_Dec(uci->s_buf, uci->u_len, 0);
+			}
+			else if (control->filter_flag == FILTER_FLAG_SPARC) {
+				z7_BranchConv_SPARC_Dec(uci->s_buf, uci->u_len, 0);
+			}
+			if (control->filter_flag == FILTER_FLAG_IA64) {
+				z7_BranchConv_IA64_Dec(uci->s_buf, uci->u_len, 0);
+			}
 		}
-		else if (control->filter_flag == FILTER_FLAG_ARM) {
-			ARM_Convert(uci->s_buf, uci->u_len, 0, 0);
-		}
-		else if (control->filter_flag == FILTER_FLAG_ARMT) {
-			ARMT_Convert(uci->s_buf, uci->u_len, 0, 0);
-		}
-		else if (control->filter_flag == FILTER_FLAG_PPC) {
-			PPC_Convert(uci->s_buf, uci->u_len, 0, 0);
-		}
-		else if (control->filter_flag == FILTER_FLAG_SPARC) {
-			SPARC_Convert(uci->s_buf, uci->u_len, 0, 0);
-		}
-		if (control->filter_flag == FILTER_FLAG_IA64) {
-			IA64_Convert(uci->s_buf, uci->u_len, 0, 0);
-		}
-		if (control->filter_flag == FILTER_FLAG_DELTA) {
+		if (control->delta) {
 			uchar delta_state[DELTA_STATE_SIZE];
 			Delta_Init(delta_state);
 			Delta_Decode(delta_state, control->delta, uci->s_buf,  uci->u_len);

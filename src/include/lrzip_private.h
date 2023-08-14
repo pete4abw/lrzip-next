@@ -379,12 +379,15 @@ static inline unsigned char bzip3_prop_from_block_size(u32 bs)
 /* Filter flags
  * 0 = none
  * 1 = x86 filter
- * 2 = ASM
- * 3 = ASMT
- * 4 = PPC
- * 5 = SPARC
- * 6 = IA64
- * 7 = Delta
+ * 2 = ARM
+ * 3 = ARMT
+ * 4 = ARM64
+ * 5 = PPC
+ * 6 = SPARC
+ * 7 = IA64
+ * 8 = Delta
+ * Updated 7/2023 to include ARM64
+ * This alters the way filter for Delta is stored.
 */
 #define FILTER_FLAG_X86		1
 #define FILTER_FLAG_ARM		2
@@ -392,12 +395,14 @@ static inline unsigned char bzip3_prop_from_block_size(u32 bs)
 #define FILTER_FLAG_PPC		4
 #define FILTER_FLAG_SPARC	5
 #define FILTER_FLAG_IA64	6
-#define FILTER_FLAG_DELTA	7
+#define FILTER_FLAG_ARM64	7				// new for version 0.12
+#define FILTER_FLAG_DELTA	8				// value won't be stored
+#define OLD_FILTER_FLAG_DELTA	7				// for earlier versions
 #define DEFAULT_DELTA		1				// delta diff is 1 by default
-#define FILTER_USED		(control->filter_flag & 7) 	// lazy for OR of the above 0111b
+#define FILTER_USED		(control->filter_flag > 0)
 #define FILTER_NOT_USED		(!FILTER_USED)
 #define FILTER_MASK		0b00000111			// decode magic
-#define DELTA_OFFSET_MASK	0b11111000
+#define DELTA_OFFSET_MASK	0b11111000			// delta high 5 bits
 
 struct sliding_buffer {
 	uchar *buf_low;	/* The low window buffer */
