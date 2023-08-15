@@ -1,3 +1,8 @@
+lrzip-next: August 15, 2023 v 0.12.1
+Add --nobemt option. No Backend Multi Threading.
+This option will inhibit lzma from using multiple
+threads above that selected by `-p` option or default.
+
 lrzip-next: July 18, 2023 v 0.12.0
 Remove bzip3 code and depend on library.
 Update configure.ac to include error checks for include
