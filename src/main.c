@@ -139,6 +139,7 @@ static void usage(void)
 	print_output("	--fast			alias for -L1\n");
 	print_output("	--best			alias for -L9\n");
 	print_output("	--dictsize		Set lzma Dictionary Size for LZMA ds=0 to 40 expressed as 2<<11, 3<<11, 2<<12, 3<<12...2<<31-1\n");
+	print_output("	--nobemt		Inhibit backend compressor using multiple threads\n");
 	print_output("	--zpaqbs		Set ZPAQ Block Size overriding defaults. 1-11, 2^zpaqbs * 1MB\n");
 	print_output("	--bzip3bs		Set bzip3 Block Size. 0-8, 32MB to 511MB.\n");
 	print_output("	--zstd-level		Set zstd level (1-22)\n");
@@ -268,6 +269,8 @@ static void show_summary(void)
 			if (ZSTD_COMPRESS)
 				print_verbose("ZSTD Compression Level: %d, ZSTD Compression Strategy: %s\n",
 						control->zstd_level, zstd_strategies[control->zstd_strategy]);
+			if (NOBEMT)
+				print_verbose("No Backend Multi Threading\n");
 			if (FILTER_USED) {
 				print_output("Filter Used: %s",
 					((control->filter_flag == FILTER_FLAG_X86) ? "x86" :
@@ -349,20 +352,21 @@ static struct option long_options[] = {
 	{"zpaqbs",	required_argument,	0,	0},
 	{"bzip3bs",	required_argument,	0,	0},	/* 40 */
 	{"zstd-level",	required_argument,	0,	0},
-	{"x86",		no_argument,	0,	0},		/* 42 - begin filter start*/
+	{"nobemt",	no_argument,	0,	0},
+	{"x86",		no_argument,	0,	0},		/* 43 - begin filter start*/
 	{"arm",		no_argument,	0,	0},
-	{"armt",	no_argument,	0,	0},
-	{"arm64",	no_argument,	0,	0},		/* 45 */
+	{"armt",	no_argument,	0,	0},		/* 45 */
+	{"arm64",	no_argument,	0,	0},
 	{"ppc",		no_argument,	0,	0},
 	{"sparc",	no_argument,	0,	0},
 	{"ia64",	no_argument,	0,	0},
-	{"delta",	optional_argument,	0,	0},
-	{0,	0,	0,	0},				/* 50 */
+	{"delta",	optional_argument,	0,	0},	/* 50 */
+	{0,	0,	0,	0},				/* 51 */
 };
 
 /* constants for ease of maintenance in getopt loop */
 #define LONGSTART	37
-#define FILTERSTART	42
+#define FILTERSTART	43
 
 static void set_stdout(struct rzip_control *control)
 {
@@ -710,6 +714,10 @@ int main(int argc, char *argv[])
 									break;
 								}
 						}
+						break;
+					case LONGSTART+5:
+						/* set flag to NOT use backend multi-threading */
+						control->flags |= FLAG_NOBEMT;
 						break;
 					/* Filtering */
 					case FILTERSTART:

@@ -291,7 +291,7 @@ static inline unsigned char bzip3_prop_from_block_size(u32 bs)
 #define FLAG_BZIP3_COMPRESS	(1 << 24)
 #define FLAG_OUTPUT		(1 << 25)
 #define FLAG_ZSTD_COMPRESS	(1 << 26)
-
+#define FLAG_NOBEMT		(1 << 27)
 #define NO_HASH		(!(HASH_CHECK) && !(HAS_HASH))
 
 #define CTYPE_NONE 3
@@ -375,16 +375,16 @@ static inline unsigned char bzip3_prop_from_block_size(u32 bs)
 #define TMP_INBUF	(control->flags & FLAG_TMP_INBUF)
 #define ENCRYPT		(control->flags & FLAG_ENCRYPT)
 #define SHOW_OUTPUT	(control->flags & FLAG_OUTPUT)
-
+#define NOBEMT		(control->flags & FLAG_NOBEMT)
 /* Filter flags
  * 0 = none
  * 1 = x86 filter
  * 2 = ARM
  * 3 = ARMT
- * 4 = ARM64
- * 5 = PPC
- * 6 = SPARC
- * 7 = IA64
+ * 7 = ARM64
+ * 4 = PPC
+ * 5 = SPARC
+ * 6 = IA64
  * 8 = Delta
  * Updated 7/2023 to include ARM64
  * This alters the way filter for Delta is stored.
