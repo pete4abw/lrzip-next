@@ -461,8 +461,9 @@ retry:
 				control->dictSize, /* dict size. 0 = set default, otherwise control->dictSize */
 				LZMA_LC, LZMA_LP, LZMA_PB, /* lc, lp, pb */
 				(control->compression_level < 7 ? 32 : 64), /* fb */
-				(control->threads > 1 ? 2 : 1));
-				/* LZMA spec has threads = 1 or 2 only. */
+				((control->threads > 1 && NOBEMT) ? 1 : 2));
+				/* LZMA spec has threads = 1 or 2 only.
+				 * If NOBEMT is set, do not use multi-threading */
 	if (lzma_ret != SZ_OK) {
 		switch (lzma_ret) {
 			case SZ_ERROR_MEM:
