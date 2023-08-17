@@ -559,7 +559,6 @@ struct rzip_control {
 	pthread_mutex_t control_lock;
 	unsigned char eof;
 	unsigned char magic_written;
-	bool lzma_prop_set;
 
 	struct checksum checksum;
 
