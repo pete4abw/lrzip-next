@@ -435,7 +435,6 @@ static int gzip_compress_buf(rzip_control *control, struct compress_thread *cthr
 
 static int lzma_compress_buf(rzip_control *control, struct compress_thread *cthread, int current_thread)
 {
-	unsigned char lzma_properties[5]; /* lzma properties, encoded */
 	int lzma_ret;
 	size_t prop_size = 5; /* return value for lzma_properties */
 	uchar *c_buf;
@@ -456,31 +455,15 @@ retry:
 	}
 	/* pass absolute dictionary size and compression level */
 	lzma_ret = LzmaCompress(c_buf, &dlen, cthread->s_buf,
-		(size_t)cthread->s_len, lzma_properties, &prop_size,
-				control->compression_level,
-				control->dictSize, /* dict size. 0 = set default, otherwise control->dictSize */
-				LZMA_LC, LZMA_LP, LZMA_PB, /* lc, lp, pb */
-				(control->compression_level < 7 ? 32 : 64), /* fb */
-				((control->threads > 1 && NOBEMT) ? 1 : 2));
-				/* LZMA spec has threads = 1 or 2 only.
-				 * If NOBEMT is set, do not use multi-threading */
+		(size_t)cthread->s_len, control->lzma_properties, &prop_size,
+		control->compression_level,
+		control->dictSize, /* dict size. 0 = set default, otherwise control->dictSize */
+		LZMA_LC, LZMA_LP, LZMA_PB, /* lc, lp, pb */
+		(control->compression_level < 7 ? 32 : 64), /* fb */
+		((control->threads > 1 && NOBEMT) ? 1 : 2));
+		/* LZMA spec has threads = 1 or 2 only.
+		 * If NOBEMT is set, do not use multi-threading */
 	if (lzma_ret != SZ_OK) {
-		switch (lzma_ret) {
-			case SZ_ERROR_MEM:
-				break;
-			case SZ_ERROR_PARAM:
-				print_err("LZMA Parameter ERROR: %d. This should not happen.\n", SZ_ERROR_PARAM);
-				break;
-			case SZ_ERROR_OUTPUT_EOF:
-				print_maxverbose("Harmless LZMA Output Buffer Overflow error: %d. Incompressible block.\n", SZ_ERROR_OUTPUT_EOF);
-				break;
-			case SZ_ERROR_THREAD:
-				print_err("LZMA Multi Thread ERROR: %d. This should not happen.\n", SZ_ERROR_THREAD);
-				break;
-			default:
-				print_err("Unidentified LZMA ERROR: %d. This should not happen.\n", lzma_ret);
-				break;
-		}
 		/* can pass -1 if not compressible! Thanks Lasse Collin */
 		dealloc(c_buf);
 		if (lzma_ret == SZ_ERROR_MEM) {
@@ -489,13 +472,17 @@ retry:
 				print_verbose("LZMA Warning: %d. Can't allocate enough RAM for compression window, trying smaller.\n", SZ_ERROR_MEM);
 				goto retry;
 			}
-			/* lzma compress can be fragile on 32 bit. If it fails,
-			 * fall back to bzip2 compression so the block doesn't
-			 * remain uncompressed */
-			print_verbose("Unable to allocate enough RAM for any sized compression window, falling back to bzip2 compression.\n");
-			return bzip2_compress_buf(control, cthread, current_thread);
-		} else if (lzma_ret == SZ_ERROR_OUTPUT_EOF)
+			/* All compression levels failed. Abort */
+			print_err("Unable to allocate enough RAM for any sized LZMA compression window. Aborting \n");
+		} else if (lzma_ret == SZ_ERROR_OUTPUT_EOF) {
+			print_maxverbose("Harmless LZMA Output Buffer Overflow error: %d. Incompressible block.\n", SZ_ERROR_OUTPUT_EOF);
 			return 0;
+		} else if (lzma_ret == SZ_ERROR_PARAM) {
+			print_err("LZMA Parameter ERROR: %d. This should not happen.\n", SZ_ERROR_PARAM);
+		} else if (lzma_ret == SZ_ERROR_THREAD) {
+			print_err("LZMA Multi Thread ERROR: %d. This should not happen. Aborting\n", SZ_ERROR_THREAD);
+		} else
+			print_err("Unidentified LZMA ERROR: %d. This should not happen.\n", lzma_ret);
 		return -1;
 	}
 
@@ -505,18 +492,6 @@ retry:
 		dealloc(c_buf);
 		return 0;
 	}
-
-	/* Make sure multiple threads don't race on writing lzma_properties */
-	lock_mutex(control, &control->control_lock);
-	if (!control->lzma_prop_set) {
-		memcpy(control->lzma_properties, lzma_properties, 5);
-		control->lzma_prop_set = true;
-		/* Reset the magic written flag so we write it again if we
-		 * get lzma properties and haven't written them yet. */
-		if (TMP_OUTBUF)
-			control->magic_written = 0;
-	}
-	unlock_mutex(control, &control->control_lock);
 
 	cthread->c_len = dlen;
 	dealloc(cthread->s_buf);
