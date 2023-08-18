@@ -22,8 +22,10 @@ COMPRESSION/DECOMPRESSION
 * lz4 Threshold testing (replaces lzo).
 * Users can add Comments with -C|--comment option
 * Magic header will store compression level used.
+* Magic header will store compression method used.
 * BZIP3 Support - Kamila Szewczyk
 * ZSTD Support
+* Ability to inhibit use of multi-threading by compression backends --nobemt (No BackEnd Multi Threading).
 
 HASHING/ENCRYPTION
 * Substitute libgcrypt functions for separate sources for **md5** and **sha512** hash functions, and **aes 128 bit** encryption.\
