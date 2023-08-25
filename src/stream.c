@@ -1468,11 +1468,11 @@ again:
 			goto failed;
 		}
 		/* protect again 0 length c_ and u_ len */
-		if (unlikely(v1 < 1)) {
+		if (unlikely(v1)) {
 			print_err("Unexpected initial c_len %'"PRId64" in streams %'"PRId64"\n", v1, v2);
 			goto failed;
 		}
-		if (unlikely(v2 < 1)) {
+		if (unlikely(v2)) {
 			print_err("Unexpected initial u_len %'"PRId64" in streams\n", v2);
 			goto failed;
 		}
