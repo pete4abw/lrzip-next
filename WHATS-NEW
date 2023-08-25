@@ -1,3 +1,6 @@
+lrzip-next: August 25, 2023 v 0.12.2
+BUGFIX. Revert the fix for #132. Again...
+
 lrzip-next: August 15, 2023 v 0.12.1
 Add --nobemt option. No Backend Multi Threading.
 This option will inhibit lzma from using multiple
