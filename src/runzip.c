@@ -440,7 +440,7 @@ i64 runzip_fd(rzip_control *control, int fd_in, int fd_out, int fd_hist, i64 exp
 	}
 
 	if (HAS_HASH) {
-		int i,j;
+		int i;
 
 		/* if we're using an XOF function, i.e. SLACK128, then use md_extract */
 		if ( control->hash_code < SHAKE128_16 )
@@ -461,26 +461,24 @@ i64 runzip_fd(rzip_control *control, int fd_in, int fd_out, int fd_hist, i64 exp
 			// pass decrypt flag
 			if (unlikely(!lrz_decrypt(control, hash_stored, *control->hash_len, control->salt_pass, LRZ_DECRYPT)))
 				return -1;
-		for (i = 0; i < *control->hash_len; i++) {
-			if (hash_stored[i] != control->hash_resblock[i]) {
-				print_err("%s CHECK FAILED.\nStored:", control->hash_label);
-				for (j = 0; j < *control->hash_len; j++)
-					print_err("%02x", hash_stored[j]);
-				print_progress("\nOutput file:");
-				for (j = 0; j < *control->hash_len; j++)
-					print_err("%02x", control->hash_resblock[j]);
-				fatal("\n");
-			}
+		/* Here we check the hash on decompression */
+		if (unlikely(strncmp(hash_stored, control->hash_resblock, *control->hash_len) != 0)) {
+			print_err("%s CHECK FAILED.\nStored:            ", control->hash_label);
+			for (i = 0; i < *control->hash_len; i++)
+				print_err("%02x", hash_stored[i]);
+			print_err("\nDecompressed hash: ");
+			for (i = 0; i < *control->hash_len; i++)
+				print_err("%02x", control->hash_resblock[i]);
+			fatal("\nCorrupt Decompression.\n");
 		}
-
-		print_progress("%s:", control->hash_label);
+		print_progress("%s: ", control->hash_label);
 		for (i = 0; i < *control->hash_len; i++)
 			print_progress("%02x", control->hash_resblock[i]);
 		print_progress("\n");
 
+		/* Here we check the hash of the actual decompressed file if --check is used */
 		if (CHECK_FILE) {
 			FILE *hash_fstream;
-			int i, j;
 
 			if (TMP_OUTBUF)
 				close_tmpoutbuf(control);
@@ -492,16 +490,14 @@ i64 runzip_fd(rzip_control *control, int fd_in, int fd_out, int fd_hist, i64 exp
 			if (unlikely(hash_stream(hash_fstream, control->hash_resblock, *control->hash_gcode, *control->hash_len)))
 				fatal("Failed to %s_stream in runzip_fd\n", control->hash_label);
 			/* We don't close the file here as it's closed in main */
-			for (i = 0; i < *control->hash_len; i++) {
-				if (hash_stored[i] != control->hash_resblock[i]) {
-					print_err("%s CHECK FAILED.\nStored: ", control->hash_label);
-					for (j = 0; j < *control->hash_len; j++)
-						print_output("%02x", hash_stored[j]);
-					print_err("\nOutput file:");
-					for (j = 0; j < *control->hash_len; j++)
-						print_err("%02x", control->hash_resblock[j]);
-					fatal("\n");
-				}
+			if (unlikely(strncmp(hash_stored, control->hash_resblock, *control->hash_len) != 0)) {
+				print_err("%s CHECK FAILED.\nStored:      ", control->hash_label);
+				for (i = 0; i < *control->hash_len; i++)
+					print_err("%02x", hash_stored[i]);
+				print_err("\nOutput file: ");
+				for (i = 0; i < *control->hash_len; i++)
+					print_err("%02x", control->hash_resblock[i]);
+				fatal("\nCorrupt Decompressed File.\n");
 			}
 			print_progress("%s integrity of written file matches archive\n", control->hash_label);
 		}
