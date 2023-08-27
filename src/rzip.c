@@ -1216,7 +1216,8 @@ retry:
 			print_progress("%s: ", control->hash_label);
 			for (j = 0; j < *control->hash_len; j++)
 				print_progress("%02x", control->hash_resblock[j]);
-			print_progress("\n");
+			if (!MAX_VERBOSE)
+				print_progress("\n");
 		}
 		/* When encrypting data, we encrypt the hash value as well */
 		if (ENCRYPT)

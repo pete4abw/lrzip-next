@@ -1643,7 +1643,7 @@ bool decompress_file(rzip_control *control)
 				strcpy(control->outfile, tmpoutfile);
 		}
 
-		print_progress("Output filename is: %s\n", control->outfile);
+		print_verbose("Output filename is: %s\n", control->outfile);
 
 		if (unlikely(!strcmp(control->outfile, infilecopy))) {
 			control->flags |= FLAG_TEST_ONLY;	// stop and no more decompres or deleting files.
@@ -1762,7 +1762,7 @@ bool decompress_file(rzip_control *control)
 		if (!VERBOSE) print_progress("\n");	// output LF to prevent overwriing decompression output
 	}
 	show_version(control);	// show version here to preserve output formatting
-	print_progress("Decompressing...\n");
+	print_progress("Decompressing...%s", MAX_VERBOSE ? "" : "\n");
 	if (control->comment_length)
 		print_progress("Archive Comment: %s\n", control->comment);
 
@@ -1787,9 +1787,9 @@ bool decompress_file(rzip_control *control)
 	if (!expected_size)
 		expected_size = control->st_size;
 	if (!ENCRYPT)
-		print_progress("[OK] - %'"PRId64" bytes                                \n", expected_size);
+		print_progress("[OK] - %'"PRId64" bytes                                ", expected_size);
 	else
-		print_progress("[OK]                                             \n");
+		print_progress("[OK]                                             ");
 
 	if (TMP_OUTBUF)
 		close_tmpoutbuf(control);
