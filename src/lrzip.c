@@ -501,7 +501,7 @@ static void get_magic_v11(rzip_control *control, int fd_in, unsigned char *magic
 		control->zstd_strategy = magic[17] >> 4;	// zstd strategy 1-9
 		control->zstd_level = magic[18];		// zstd level 1-22
 	}
-	else							// Corrupt file
+	else if (magic[17] != 0)				// Corrupt file
 		fatal("Invalid compression type %d stored in magic header. Aborting...\n", magic[17]);
 
 	get_hash_from_magic(control, &magic[14]);
