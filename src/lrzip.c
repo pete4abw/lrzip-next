@@ -501,7 +501,7 @@ static void get_magic_v11(rzip_control *control, int fd_in, unsigned char *magic
 		control->zstd_strategy = magic[17] >> 4;	// zstd strategy 1-9
 		control->zstd_level = magic[18];		// zstd level 1-22
 	}
-	else							// Corrupt file
+	else if (magic[17] != 0)				// Corrupt file
 		fatal("Invalid compression type %d stored in magic header. Aborting...\n", magic[17]);
 
 	get_hash_from_magic(control, &magic[14]);
@@ -1643,7 +1643,7 @@ bool decompress_file(rzip_control *control)
 				strcpy(control->outfile, tmpoutfile);
 		}
 
-		print_progress("Output filename is: %s\n", control->outfile);
+		print_verbose("Output filename is: %s\n", control->outfile);
 
 		if (unlikely(!strcmp(control->outfile, infilecopy))) {
 			control->flags |= FLAG_TEST_ONLY;	// stop and no more decompres or deleting files.
@@ -1762,7 +1762,7 @@ bool decompress_file(rzip_control *control)
 		if (!VERBOSE) print_progress("\n");	// output LF to prevent overwriing decompression output
 	}
 	show_version(control);	// show version here to preserve output formatting
-	print_progress("Decompressing...\n");
+	print_progress("Decompressing...%s", MAX_VERBOSE ? "" : "\n");
 	if (control->comment_length)
 		print_progress("Archive Comment: %s\n", control->comment);
 
@@ -1787,9 +1787,9 @@ bool decompress_file(rzip_control *control)
 	if (!expected_size)
 		expected_size = control->st_size;
 	if (!ENCRYPT)
-		print_progress("[OK] - %'"PRId64" bytes                                \n", expected_size);
+		print_progress("[OK] - %'"PRId64" bytes                                ", expected_size);
 	else
-		print_progress("[OK]                                             \n");
+		print_progress("[OK]                                             ");
 
 	if (TMP_OUTBUF)
 		close_tmpoutbuf(control);

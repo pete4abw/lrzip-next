@@ -838,7 +838,7 @@ int main(int argc, char *argv[])
 
 	/* if any filter used, disable LZ4 testing or certain compression modes */
 	if ((control->flags & FLAG_THRESHOLD) && (FILTER_USED || ZLIB_COMPRESS || LZO_COMPRESS || NO_COMPRESS)) {
-		print_output("LZ4 Threshold testing disabled due to Filtering and/or Compression type (gzip, lzo, rzip).\n");
+		print_verbose("LZ4 Threshold testing disabled due to Filtering and/or Compression type (gzip, lzo, rzip).\n");
 		control->flags &= ~FLAG_THRESHOLD;
 	}
 
