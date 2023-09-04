@@ -218,28 +218,34 @@ size_t round_up_page(rzip_control *control, size_t len)
 bool read_config(rzip_control *control)
 {
 	/* check for lrzip.conf in ., $HOME/.lrzip and /etc/lrzip */
-	char *HOME, homeconf[255];
+	char *HOME, *homeconf, *line, *msg;
 	char *parametervalue;
 	char *parameter;
-	char line[255];
+	int first_time=0;
 	FILE *fp;
+
+	homeconf=malloc(255);
+	line=malloc(255);
+	msg=malloc(255);
+	if (unlikely(!homeconf || !line || !msg))
+		fatal("Cannot allocate ram in read_config\n");
 
 	fp = fopen("lrzip.conf", "r");
 	if (fp)
-		print_output("Using configuration file ./lrzip.conf\n");
+		strcpy(msg, "Using configuration file ./lrzip.conf");
 	if (fp == NULL) {
 		HOME=getenv("HOME");
 		if (HOME) {
 			snprintf(homeconf, sizeof(homeconf), "%s/.lrzip/lrzip.conf", HOME);
 			fp = fopen(homeconf, "r");
 			if (fp)
-				print_output("Using configuration file %s\n", homeconf);
+				msg = homeconf;
 		}
 	}
 	if (fp == NULL) {
 		fp = fopen("/etc/lrzip/lrzip.conf", "r");
 		if (fp)
-			print_output("Using configuration file /etc/lrzip/lrzip.conf\n");
+			strcpy(msg, "Using configuration file /etc/lrzip/lrzip.conf");
 	}
 	if (fp == NULL)
 		return false;
@@ -273,18 +279,26 @@ bool read_config(rzip_control *control)
 		}
 		else if (isparameter(parameter, "compressionlevel")) {
 			control->compression_level = atoi(parametervalue);
-			if ( control->compression_level < 1 || control->compression_level > 9 )
-				fatal("CONF.FILE error. Compression Level must between 1 and 9\n");
+			if ( control->compression_level < 1 || control->compression_level > 9 ) {
+				print_err("CONF.FILE error. Compression Level must between 1 and 9. Resetting to 7\n");
+				control->compression_level = 7;
+				continue;
+			}
 		}
 		else if (isparameter(parameter, "rziplevel")) {
 			control->rzip_compression_level = atoi(parametervalue);
-			if ( control->rzip_compression_level < 1 || control->rzip_compression_level > 9 )
-				fatal("CONF.FILE error. RZIP Compression Level must between 1 and 9\n");
+			if ( control->rzip_compression_level < 1 || control->rzip_compression_level > 9 ) {
+				print_err("CONF.FILE error. RZIP Compression Level must between 1 and 9. Resetting to 7\n");
+				control->rzip_compression_level = 7;
+				continue;
+			}
 		}
 		else if (isparameter(parameter, "compressionmethod")) {
 			/* valid are rzip, gzip, bzip2, lzo, lzma (default), and zpaq */
-			if (control->flags & FLAG_NOT_LZMA)
-				fatal("CONF.FILE error. Can only specify one compression method\n");
+			if (control->flags & FLAG_NOT_LZMA) {
+				print_err("CONF.FILE error. Can only specify one compression method. Resetting to lzma.\n");
+				control->flags &= ~FLAG_NOT_LZMA;
+			}
 			if (isparameter(parametervalue, "bzip2"))
 				control->flags |= FLAG_BZIP2_COMPRESS;
 			else if (isparameter(parametervalue, "gzip"))
@@ -299,8 +313,11 @@ bool read_config(rzip_control *control)
 				control->flags |= FLAG_BZIP3_COMPRESS;
 			else if (isparameter(parametervalue, "zstd"))
 				control->flags |= FLAG_ZSTD_COMPRESS;
-			else if (!isparameter(parametervalue, "lzma")) /* oops, not lzma! */
-				fatal("CONF.FILE error. Invalid compression method %s specified\n", parametervalue);
+			else if (!isparameter(parametervalue, "lzma")) { /* oops, not lzma! */
+				print_err("CONF.FILE error. Invalid compression method %s specified. Resetting to lzma\n", parametervalue);
+				control->flags &= ~FLAG_NOT_LZMA;
+				continue;
+			}
 		}
 		else if (isparameter(parameter, "lzotest")) {
 			/* default is yes */
@@ -310,8 +327,10 @@ bool read_config(rzip_control *control)
 		else if (isparameter(parameter, "threshold")) {
 			/* default is 100 */
 			control->threshold = atoi(parametervalue);
-			if (control->threshold < 1 || control->threshold > 99)
-				fatal("CONF.FILE error. LZO Threshold must be between 1 and 99\n");
+			if (control->threshold < 1 || control->threshold > 99) {
+				print_err("CONF.FILE error. LZO Threshold must be between 1 and 99. Resetting to default.\n");
+				control->threshold = 100;
+			}
 		}
 		else if (isparameter(parameter, "hashcheck")) {
 			if (isparameter(parametervalue, "yes")) {
@@ -328,6 +347,7 @@ bool read_config(rzip_control *control)
 				print_err("lrzip.conf hash value (%d) out of bounds. Please check\n", control->hash_code);
 				control->hash_code = 0;
 				control->flags &= ~FLAG_HASHED;
+				continue;
 			}
 		}
 		else if (isparameter(parameter, "outputdirectory")) {
@@ -339,14 +359,18 @@ bool read_config(rzip_control *control)
 				strcat(control->outdir, "/");
 		}
 		else if (isparameter(parameter,"verbosity")) {
-			if (control->flags & FLAG_VERBOSE)
-				fatal("CONF.FILE error. Verbosity already defined.\n");
+			if (control->flags & FLAG_VERBOSE) {
+				print_err("CONF.FILE error. Verbosity already defined.\n");
+				continue;
+			}
 			if (isparameter(parametervalue, "yes"))
 				control->flags |= FLAG_VERBOSITY;
 			else if (isparameter(parametervalue,"max"))
 				control->flags |= FLAG_VERBOSITY_MAX;
-			else /* oops, unrecognized value */
+			else { /* oops, unrecognized value */
 				print_err("lrzip.conf: Unrecognized verbosity value %s. Ignored.\n", parametervalue);
+				continue;
+			}
 		}
 		else if (isparameter(parameter, "showprogress")) {
 			/* Yes by default */
@@ -355,8 +379,11 @@ bool read_config(rzip_control *control)
 		}
 		else if (isparameter(parameter,"nice")) {
 			control->nice_val = atoi(parametervalue);
-			if (control->nice_val < -20 || control->nice_val > 19)
-				fatal("CONF.FILE error. Nice must be between -20 and 19\n");
+			if (control->nice_val < -20 || control->nice_val > 19) {
+				print_err("CONF.FILE error. Nice must be between -20 and 19. Resetting to 0.\n");
+				control->nice_val = 0;
+				continue;
+			}
 		}
 		else if (isparameter(parameter, "keepbroken")) {
 			if (isparameter(parametervalue, "yes" ))
@@ -389,13 +416,16 @@ bool read_config(rzip_control *control)
 				print_err("lrzip.conf encryption value (%d) out of bounds. Please check.\n", control->enc_code);
 				control->enc_code = 0;
 				control->flags &= ~FLAG_ENCRYPT;
+				continue;
 			}
 		}
 		else if (isparameter(parameter, "dictionarysize")) {
 			int p;
 			p = atoi(parametervalue);
-			if (p < 0 || p > 40)
-				fatal("CONF FILE error. Dictionary Size must be between 0 and 40.\n");
+			if (p < 0 || p > 40) {
+				print_err("CONF FILE error. Dictionary Size must be between 0 and 40. Resetting to default.\n");
+				continue;
+			}
 			control->dictSize = ((p == 40) ? 0xFFFFFFFF : ((2 | ((p) & 1)) << ((p) / 2 + 11)));	// Slight modification to lzma2 spec 2^31 OK
 		}
 		else if (isparameter(parameter, "locale")) {
@@ -410,11 +440,22 @@ bool read_config(rzip_control *control)
 			/* oops, we have an invalid parameter, display */
 			print_err("lrzip.conf: Unrecognized parameter value, %s = %s. Continuing.\n",\
 			       parameter, parametervalue);
+			continue;
 		}
+		/* print initial message if verbose */
+		if (!first_time) {
+		       first_time = 1;
+		       print_verbose("%s\n", msg);
+		}
+		print_maxverbose("Reading lrzip.conf parameter: %s = %s\n", parameter, parametervalue);
 	}
 
 	if (unlikely(fclose(fp)))
 		fatal("Failed to fclose fp in read_config\n");
+
+	free(homeconf);
+	free(line);
+	free(msg);
 
 /*	fprintf(stderr, "\nWindow = %'d \
 		\nCompression Level = %'d \
