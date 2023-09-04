@@ -1,4 +1,4 @@
-.TH "lrzip.conf" "5" "January 2009, updated March 2023" "lrzip-next"
+.TH "lrzip.conf" "5" "January 2009, updated September 2023" "lrzip-next"
 .SH "NAME"
 lrzip.conf \- Configuration File for lrzip-next
 .SH "DESCRIPTION"
@@ -21,6 +21,10 @@ Parameter values are not case sensitive except where specified\&.
 .PP
 .SH "CONFIG FILE EXAMPLE"
 .nf
+# Put VERBOSITY first to print lrzip.conf values if verbose selected.
+# Verbosity, YES or MAX (v, vv)
+# \fBVERBOSITY = max\fP
+
 # lrzip.conf example file
 # Compression Window size in 100MB. Normally selected by program. (-w)
 # \fBWINDOW = 20\fP
@@ -81,9 +85,6 @@ Parameter values are not case sensitive except where specified\&.
 # Default output directory (-O)
 # \fBOUTPUTDIRECTORY = location\fP
 
-# Verbosity, YES or MAX (v, vv)
-# \fBVERBOSITY = max\fP
-
 # Show Progress as file is parsed, YES or no (NO = -q option)
 # \fBSHOWPROGRESS = YES\fP
 
@@ -113,12 +114,12 @@ Parameter values are not case sensitive except where specified\&.
 #  1 AES 128 - 128 bit AES with 16 Byte key and 16 Byte Initialization Vector
 #  2 AES 256 - 256 bit AES with 32 Byte key and 16 Byte Initialization Vector
 
-# \fB ENCRYPT = NO | 1..MAXENC\fP
+# \fBENCRYPT = NO | 1..MAXENC\fP
 
 # Override default LOCALE
 # Will control how radix and separators are presented.
 # DEFAULT (Current locale), NONE (ignore locale setting), or LOCALE value
-# LOCALE = DEFAULT
+# \fBLOCALE = DEFAULT\fP
 .fi
 .PP
 .SH "NOTES"

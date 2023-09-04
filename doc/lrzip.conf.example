@@ -6,6 +6,10 @@
 # lrzip 0.24+, peter hyman, pete@peterhyman.com
 # ignored by earlier versions.
 
+# Put VERBOSITY first to print lrzip.conf values if verbose selected.
+# Verbosity, YES or MAX (v, vv)
+# VERBOSITY = max
+
 # Compression Window size in 100MB. Normally selected by program. (-w)
 # WINDOW = 20
 
@@ -64,9 +68,6 @@
 
 # Default output directory (-O)
 # OUTPUTDIRECTORY = location
-
-# Verbosity, YES or MAX (v, vv)
-# VERBOSITY = max
 
 # Show Progress as file is parsed, YES or no (NO = -q option)
 # SHOWPROGRESS = YES
