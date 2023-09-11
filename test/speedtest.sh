@@ -2,14 +2,18 @@
 # lrzip-next speed test
 # if running as root, uncomment drop_caches line
 usage() {
-	echo "LRZIP-NEXT Speed Testi\
-usage: $0 filename [compression method(s)] [levels]\n\
-methods may be one or more of [no-compress, bzip2, bzip3, gzip, lzo, lzma, zpaq, zstd]\n\
-for multiple methods, be sure to quote. i.e. \"bzip2 lzo gzip\" etc...\n\
-levels may be one or more of [1, 2, 3, 4, 5, 6, 7, 8, 9] in any order.\n\
-for levels, must follow methods and levels must be quoted. i.e. \"1 2 3\" etc...\n\
-if not methods or levels specified, all methods and levels will be tested.\n\
-Output file will be $TESTFILE, a comma-delimited file."
+	echo "LRZIP-NEXT Speed Test\n\
+usage: $0 -f filename [ -m MEHOD(S) ] [ -l LEVELS ] [ -o TESTFILE ] [ -x EXTRA OPTIONS ] [ -h | -? ]\n\n\
+METHODS may be one or more of [no-compress, bzip2, bzip3, gzip, lzo, lzma, zpaq, zstd]\n\
+- for multiple METHODS, be sure to quote. i.e. \"bzip2 lzo gzip\" etc...\n\
+- if no METHODS are selected, all compression methods will be used.\n\
+LEVELS may be one or more of [1, 2, 3, 4, 5, 6, 7, 8, 9] in any order.\n\
+- for multiple LEVELS, be sure to quote, i,e, \"1 2 3\"\n\
+- if no LEVELS are selected, then all compression levels will be used.\n\
+if TESTFILE is not speciied, default is testfile.csv\n\
+- Output file will be a comma-delimited (CSV) file.\n\
+Extra Options will be passed to lrzip-next, e.g. \"--x86\" or \"-p1\", etc. Be sure to quote.\n\
+- Extra options will only be applied to Compression, not Decompression test."
 	exit 1
 }
 
@@ -18,24 +22,27 @@ die() {
 	exit 1
 }
 
-TESTFILE=testfile.csv
+while getopts "f:m:l:o:x:h?" Options
+do
+	case ${Options} in
+		f)	INPUT=${OPTARG} ;;
+		m)	METHODS="${OPTARG}" ;;
+		l)	LEVELS="${OPTARG}" ;;
+		o)	TESTFILE="${OPTARG}" ;;
+		x)	EXTRAOPTS="${OPTARG}" ;;
+		h|?|*)	usage ;;
+	esac
+done
 
-[ -z $1 ] && usage
-if [ -z "$2" ]; then
-	methods="no-compress bzip2 bzip3 gzip lzo lzma zpaq zstd"
-else
-	methods="$2"
-fi
-if [ -z "$3" ]; then
-	levels="1 2 3 4 5 6 7 8 9"
-else
-	levels="$3"
-fi
+[ $# -eq "0" ] && usage
+[ -z "$INPUT" ] && die "No Input File to test"
+[ -z "$METHODS" ] && METHODS="no-compress bzip2 bzip3 gzip lzo lzma zpaq zstd"
+[ -z "$LEVELS" ] && LEVELS="1 2 3 4 5 6 7 8 9"
+[ -z "$TESTFILE" ] && TESTFILE="testfile.csv"
 
 export LRZIP=NOCONFIG
 
 # Customize as needed
-INPUT=$1
 OUTPUTDIR=$PWD
 BASENAME=$(basename $INPUT)
 UID=$(id -u)
@@ -46,9 +53,11 @@ STAT=$(which stat)
 [ $? -ne 0 ] && die "stat program not found"
 INPUTSIZE=$( $STAT --print "%s" $INPUT )
 [ $? -ne 0 ] && die "Input file $INPUT not found"
-echo "Compression/Decompression test for file $INPUT, $INPUTSIZE  using method(s): $methods"
-
 [ $UID -eq 0 ] && echo "Running as root user."
+echo -n "Compression/Decompression test for file $INPUT, $INPUTSIZE using method(s): $METHODS with level(s) $LEVELS"
+[ ! -z "$EXTRAOPTS" ] && echo -n " using user-selected options $EXTRAOPTS"
+echo
+echo
 
 # Write headers
 
@@ -56,9 +65,9 @@ echo "Method, Level, Input File, Input Size, Compress Time, \
 Compressed File, Compressed Size, Decompress Time, Compression Ratio, \
 Bits per Byte, Compression MB/s" >$TESTFILE
 
-for LEVEL in $levels
+for LEVEL in $LEVELS
 do
-	for METHOD in $methods
+	for METHOD in $METHODS
 	do
 		sync
 		sleep 1
@@ -68,8 +77,10 @@ do
 			sleep 1
 		fi
 		OUTPUT=$BASENAME.L$LEVEL.$METHOD.lrz
-		echo -n "Testing $INPUT using $METHOD at Level $LEVEL: "
-		COMPRESSTIME=$( { $TIME --format "%e" lrzip-next -Qf --$METHOD -L$LEVEL -o $OUTPUTDIR/$OUTPUT $INPUT; } 2>&1 )
+		echo -n "Testing $INPUT using:level $LEVEL, method $METHOD"
+		[ ! -z "$EXTRAOPTS" ] && echo -n ", extra options $EXTRAOPTS"
+		echo -n ": "
+		COMPRESSTIME=$( { $TIME --format "%e" lrzip-next -Qf --$METHOD -L$LEVEL -o $OUTPUTDIR/$OUTPUT $EXTRAOPTS $INPUT; } 2>&1 )
 		[ $? -ne 0 ] && die "An error occured during compression!"
 		OUTPUTSIZE=$( $STAT --print "%s" $OUTPUT )
 		echo "Compression Time: $COMPRESSTIME, Compressed Size: $OUTPUTSIZE"
