@@ -512,38 +512,21 @@ static int lzo_compress_buf(rzip_control *control, struct compress_thread *cthre
 	lzo_compress_t lzo_compress_func;
 
 	/* There are 5 lzo1x compress functions
+	 * but we will only use the existing lzo1x_1_compress
+	 * and one for level 9 lzo1x_999_compress
 	 * Adjust workmem as needed and set function
 	 * pointer */
 
 	switch(control->compression_level) {
-		case 1:
-		case 2:
-			/* 8kb work memory */
-			wrkmem = (lzo_bytep) calloc(1, LZO1X_1_11_MEM_COMPRESS);
-			lzo_compress_func = &lzo1x_1_11_compress;
-			break;
-		case 3:
-		case 4:
-			/* 16kb work memory */
-			wrkmem = (lzo_bytep) calloc(1, LZO1X_1_12_MEM_COMPRESS);
-			lzo_compress_func = &lzo1x_1_12_compress;
-			break;
-		case 5:
-		case 6:
-			/* 64kb work memory */
-			wrkmem = (lzo_bytep) calloc(1, LZO1X_1_MEM_COMPRESS);
-			lzo_compress_func = &lzo1x_1_compress;
-			break;
-		case 7:
-		case 8:
-			/* 128kb work memory */
-			wrkmem = (lzo_bytep) calloc(1, LZO1X_1_15_MEM_COMPRESS);
-			lzo_compress_func = &lzo1x_1_15_compress;
-			break;
-		default:
+		case 9:
 			/* level 9, best compression. 224kb work memory */
 			wrkmem = (lzo_bytep) calloc(1, LZO1X_999_MEM_COMPRESS);
 			lzo_compress_func = &lzo1x_999_compress;
+			break;
+		default:
+			/* 64kb work memory */
+			wrkmem = (lzo_bytep) calloc(1, LZO1X_1_MEM_COMPRESS);
+			lzo_compress_func = &lzo1x_1_compress;
 			break;
 	}
 
