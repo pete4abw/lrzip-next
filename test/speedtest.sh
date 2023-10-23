@@ -55,12 +55,12 @@ BASENAME=$(basename $INPUT)
 UID=$(id -u)
 # use binary versions of time and stat
 TIME=time
-[ $? -ne 0 ] && die "time program not found"
 STAT=$(which stat)
 [ $? -ne 0 ] && die "stat program not found"
 INPUTSIZE=$( $STAT --print "%s" $INPUT )
 [ $? -ne 0 ] && die "Input file $INPUT not found"
 [ $UID -eq 0 ] && echo "Running as root user."
+
 echo -n "Compression/Decompression test for file $INPUT, $INPUTSIZE using method(s): $METHODS with level(s) $LEVELS"
 [ ! -z "$EXTRAOPTS" ] && echo -n " using user-selected options $EXTRAOPTS"
 echo
