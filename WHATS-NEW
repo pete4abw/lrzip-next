@@ -1,3 +1,7 @@
+lrzip-next: October 24, 2023 v 0.12.3
+Update lzo backend compressor to use
+lzo1x_999_compress() function for compression level 9.
+
 lrzip-next: August 25, 2023 v 0.12.2
 BUGFIX. Revert the fix for #132. Again...
 
