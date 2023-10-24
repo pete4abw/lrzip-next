@@ -508,7 +508,25 @@ static int lzo_compress_buf(rzip_control *control, struct compress_thread *cthre
 	uchar *c_buf;
 	int ret = -1;
 
-	wrkmem = (lzo_bytep) calloc(1, LZO1X_1_MEM_COMPRESS);
+	/* pointer to proper lzo compress function */
+	lzo_compress_t lzo_compress_func;
+
+	/* There are 5 lzo1x compress functions
+	 * but we will only use the existing lzo1x_1_compress
+	 * and one for level 9 lzo1x_999_compress
+	 * Adjust workmem as needed and set function
+	 * pointer */
+
+	if (control->compression_level < 9) {
+		/* levels 1-8 64kb work memory */
+		wrkmem = (lzo_bytep) calloc(1, LZO1X_1_MEM_COMPRESS);
+		lzo_compress_func = &lzo1x_1_compress;
+	} else {
+		/* level 9, best compression. 224kb work memory */
+		wrkmem = (lzo_bytep) calloc(1, LZO1X_999_MEM_COMPRESS);
+		lzo_compress_func = &lzo1x_999_compress;
+	}
+
 	if (unlikely(wrkmem == NULL)) {
 		print_maxverbose("Failed to malloc wkmem\n");
 		return ret;
@@ -522,7 +540,8 @@ static int lzo_compress_buf(rzip_control *control, struct compress_thread *cthre
 
 	/* lzo1x_1_compress does not return anything but LZO_OK so we ignore
 	 * the return value */
-	lzo1x_1_compress(cthread->s_buf, in_len, c_buf, &dlen, wrkmem);
+	/* use pointer function */
+	lzo_compress_func(cthread->s_buf, in_len, c_buf, &dlen, wrkmem);
 	ret = 0;
 
 	if (dlen >= in_len){
