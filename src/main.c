@@ -711,6 +711,7 @@ int main(int argc, char *argv[])
 								if (control->zstd_level <= zstd_compression_level[local])
 								{
 									control->zstd_strategy=local;
+									control->rzip_compression_level=local;	/* set rzip level to strategy (1-9) */
 									break;
 								}
 						}
