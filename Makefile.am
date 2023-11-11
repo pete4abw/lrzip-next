@@ -24,7 +24,8 @@ SUBDIRS = src/lzma \
 	  src/lib/libzpaq \
 	  src \
 	  man \
-	  doc
+	  doc \
+	  LICENSES
 
 dist_doc_DATA = \
 	AUTHORS \
