@@ -1,4 +1,6 @@
-lrzip ChangeLog
+lrzip-next ChangeLog
+
+This file is obsolete. See git log.
 
 DECEMBER 2020, version 0.7.27, Peter Hyman, pete@peterhyman.com
 * Revert get_fileinfo function to allow STDIN checks
