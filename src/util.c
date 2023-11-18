@@ -224,10 +224,10 @@ bool read_config(rzip_control *control)
 	if (fp == NULL) {
 		HOME=getenv("HOME");
 		if (HOME) {
-			snprintf(homeconf, sizeof(homeconf), "%s/.lrzip/lrzip.conf", HOME);
+			snprintf(homeconf, 255, "%s/.lrzip/lrzip.conf", HOME);
 			fp = fopen(homeconf, "r");
 			if (fp)
-				msg = homeconf;
+				strcpy(msg, homeconf);
 		}
 	}
 	if (fp == NULL) {
@@ -235,8 +235,12 @@ bool read_config(rzip_control *control)
 		if (fp)
 			strcpy(msg, "Using configuration file /etc/lrzip/lrzip.conf");
 	}
-	if (fp == NULL)
+	if (fp == NULL)	{	/* no configuration file found */
+		free(homeconf);
+		free(line);
+		free(msg);
 		return false;
+	}
 
 	/* if we get here, we have a file. read until no more. */
 
