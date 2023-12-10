@@ -1,21 +1,9 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
    Copyright (C) 2006-2016, 2021 Con Kolivas
    Copyright (C) 2011 Serge Belyshev
-   Copyright (C) 2008, 2011, 2019, 2020, 2021 Peter Hyman
+   Copyright (C) 2008, 2011, 2019-2023 Peter Hyman
    Copyright (C) 1998 Andrew Tridgell
-
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 /*
@@ -236,10 +224,10 @@ bool read_config(rzip_control *control)
 	if (fp == NULL) {
 		HOME=getenv("HOME");
 		if (HOME) {
-			snprintf(homeconf, sizeof(homeconf), "%s/.lrzip/lrzip.conf", HOME);
+			snprintf(homeconf, 255, "%s/.lrzip/lrzip.conf", HOME);
 			fp = fopen(homeconf, "r");
 			if (fp)
-				msg = homeconf;
+				strcpy(msg, homeconf);
 		}
 	}
 	if (fp == NULL) {
@@ -247,8 +235,12 @@ bool read_config(rzip_control *control)
 		if (fp)
 			strcpy(msg, "Using configuration file /etc/lrzip/lrzip.conf");
 	}
-	if (fp == NULL)
+	if (fp == NULL)	{	/* no configuration file found */
+		free(homeconf);
+		free(line);
+		free(msg);
 		return false;
+	}
 
 	/* if we get here, we have a file. read until no more. */
 

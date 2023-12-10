@@ -1,6 +1,6 @@
 lrzip-next features file.
 
-Last updated 3-July 2023
+Last updated 24-October 2023
 
 Many new changes, not in the lrzip.
 
@@ -26,6 +26,7 @@ COMPRESSION/DECOMPRESSION
 * BZIP3 Support - Kamila Szewczyk
 * ZSTD Support
 * Ability to inhibit use of multi-threading by compression backends --nobemt (No BackEnd Multi Threading).
+* lzo backend: use lzo1x_999_compress() function for level 9 to enhance compression.
 
 HASHING/ENCRYPTION
 * Substitute libgcrypt functions for separate sources for **md5** and **sha512** hash functions, and **aes 128 bit** encryption.\

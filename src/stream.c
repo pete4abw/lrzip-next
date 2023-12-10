@@ -1,21 +1,9 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
    Copyright (C) 2006-2016,2018, 2021 Con Kolivas
    Copyright (C) 2011 Serge Belyshev
-   Copyright (C) 2011, 2019, 2020, 2021 Peter Hyman
+   Copyright (C) 2011, 2019, 2020-2023 Peter Hyman
    Copyright (C) 1998 Andrew Tridgell
-
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 /* multiplex N streams into a file - the streams are passed
    through different compressors */
@@ -517,17 +505,14 @@ static int lzo_compress_buf(rzip_control *control, struct compress_thread *cthre
 	 * Adjust workmem as needed and set function
 	 * pointer */
 
-	switch(control->compression_level) {
-		case 9:
-			/* level 9, best compression. 224kb work memory */
-			wrkmem = (lzo_bytep) calloc(1, LZO1X_999_MEM_COMPRESS);
-			lzo_compress_func = &lzo1x_999_compress;
-			break;
-		default:
-			/* 64kb work memory */
-			wrkmem = (lzo_bytep) calloc(1, LZO1X_1_MEM_COMPRESS);
-			lzo_compress_func = &lzo1x_1_compress;
-			break;
+	if (control->compression_level < 9) {
+		/* levels 1-8 64kb work memory */
+		wrkmem = (lzo_bytep) calloc(1, LZO1X_1_MEM_COMPRESS);
+		lzo_compress_func = &lzo1x_1_compress;
+	} else {
+		/* level 9, best compression. 224kb work memory */
+		wrkmem = (lzo_bytep) calloc(1, LZO1X_999_MEM_COMPRESS);
+		lzo_compress_func = &lzo1x_999_compress;
 	}
 
 	if (unlikely(wrkmem == NULL)) {

@@ -1,0 +1,5 @@
+zpaq is written by Matt Mahoney and released to the public
+domain. It includes code from libdivsufsort 2.0 (C) Yuta Mori,
+2003-2008, MIT license, public domain code for AES from
+libtomcrypt by Tom St Denis and public domain code for salsa20 by
+D. J. Bernstein.

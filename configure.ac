@@ -197,6 +197,7 @@ src/lzma/C/Makefile
 src/lib/libzpaq/Makefile
 doc/Makefile
 man/Makefile
+LICENSES/Makefile
 ])
 
 AS_IF([test x"$ASM" = xyes],
