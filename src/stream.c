@@ -2314,7 +2314,7 @@ static int lz4_compresses(rzip_control *control, uchar *s_buf, i64 s_len)
 	int workcounter = 0;	/* count # of passes */
 	int lz4_ret;
 
-	in_len = MIN(test_len, STREAM_BUFSIZE); // Set min of s_len or 10MB
+	in_len = MIN(test_len, 100 * ONE_MB); // Set min of s_len or 100MB
 	buftest_size = in_len;
 	d_len = in_len+1;
 
