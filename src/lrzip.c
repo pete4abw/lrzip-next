@@ -1719,8 +1719,6 @@ bool decompress_file(rzip_control *control)
 	control->fd_out = fd_out;
 	control->fd_hist = fd_hist;
 
-	show_version(control);
-
 	if (NO_HASH)
 		print_verbose("Not performing hash check\n");
 	if (HAS_HASH)

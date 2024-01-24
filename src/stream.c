@@ -194,17 +194,22 @@ static int zstd_compress_buf(rzip_control *control, struct compress_thread *cthr
 	/* if compressed data is bigger then original data leave as
 	 * CTYPE_NONE */
 
-	if (zstd_ret == ZSTD_error_dstSize_tooSmall) {
-		print_maxverbose("Thread %d: Incompressible block\n", current_thread);
-		/* Incompressible, leave as CTYPE_NONE */
-		dealloc(c_buf);
-		return 0;
-	}
-
 	if (unlikely(ZSTD_isError(zstd_ret))) {
+		int ret = 0;
+		switch (-zstd_ret)			// error codes are negative. ENUM values are positive!
+		{
+			case ZSTD_error_dstSize_tooSmall:
+				/* Incompressible, leave as CTYPE_NONE */
+				print_maxverbose("Thread %d: Incompressible block\n", current_thread);
+				break;
+			default:
+				/* Some other zstd error */
+				print_maxverbose("Thread %d: zstd compress failed\n", current_thread);
+				ret = -1;
+				break;
+		}
 		dealloc(c_buf);
-		print_maxverbose("Thread %d: zstd compress failed\n", current_thread);
-		return -1;
+		return ret;
 	}
 
 	/* zstd_ret is return size, not dlen */
@@ -2314,7 +2319,7 @@ static int lz4_compresses(rzip_control *control, uchar *s_buf, i64 s_len)
 	int workcounter = 0;	/* count # of passes */
 	int lz4_ret;
 
-	in_len = MIN(test_len, STREAM_BUFSIZE); // Set min of s_len or 10MB
+	in_len = MIN(test_len, 100 * ONE_MB); // Set min of s_len or 100MB
 	buftest_size = in_len;
 	d_len = in_len+1;
 
