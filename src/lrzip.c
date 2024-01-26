@@ -678,9 +678,9 @@ bool write_fdout(rzip_control *control, void *buf, i64 len)
 
 	while (len > 0) {
 		nmemb = len;
-# ifdef APPLE__
+# ifdef __APPLE__
 		if (nmemb > 0x7FFF0000)
-		       numb = 0x7FFF0000;
+		       nmemb = 0x7FFF0000;
 # endif
 		ret = write(control->fd_out, offset_buf, (size_t)nmemb);
 		/* error if ret == -1 only. Otherwise, buffer not wholly written */
