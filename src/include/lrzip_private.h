@@ -177,9 +177,11 @@ typedef struct cksem cksem_t;
 typedef sem_t cksem_t;
 #endif
 
-#if !defined(__linux)
- #define mremap fake_mremap
-#endif
+/* This define is not needed. Already defined in rzip.c
+ * #if !defined(__linux)
+ *   #define mremap fake_mremap
+*  #endif
+*/
 
 /* Since 2011 Apple was prohibited from
  * computing MD5 because of some unknown
