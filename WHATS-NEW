@@ -1,3 +1,19 @@
+lrzip-next: January 27, 2024 v 0.12.6
+BUGFIX: Correct two MacOS related errors.
+1. write_fd() must limit buffer size to < 2G. Issue #88.
+2. fake_mremap() function failed with fatal() macro.
+   Reverted to using fprintf() and exit. Issue #151.
+Thanks to Nick Chan for pointing this out.
+
+lrzip-next: January 7, 2024 v 0.12.5
+Expand threshhold testing buffer to 100MB from 10MB.
+Handle zstd errors properly. Fixes bug 148.
+
+lrzip-next: November 18, 2023 v 0.12.4
+Update file headers with SPDX license identifiers.
+Fix double free bug when reading user configuration file.
+Obsolete changelog file.
+
 lrzip-next: October 24, 2023 v 0.12.3
 Update lzo backend compressor to use
 lzo1x_999_compress() function for compression level 9.
