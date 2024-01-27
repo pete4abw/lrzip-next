@@ -678,10 +678,14 @@ bool write_fdout(rzip_control *control, void *buf, i64 len)
 
 	while (len > 0) {
 		nmemb = len;
+# ifdef __APPLE__
+		if (nmemb > 0x7FFF0000)
+		       nmemb = 0x7FFF0000;
+# endif
 		ret = write(control->fd_out, offset_buf, (size_t)nmemb);
 		/* error if ret == -1 only. Otherwise, buffer not wholly written */
-		if (unlikely(ret == -1))	/* error, not underflow */
-			fatal("Failed to write %'"PRId64" bytes to fd_out in write_fdout\n", nmemb);
+		if (unlikely(ret == -1)) 	/* error, not underflow */
+			fatal("Failed to write %'"PRId64" bytes to fd_out in write_fdout: Error %s\n", nmemb, strerror(errno));
 		len -= ret;
 		offset_buf += ret;
 	}
