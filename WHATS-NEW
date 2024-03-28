@@ -1,3 +1,8 @@
+lrzip-next: March 18, 2024 v 0.12.6
+Add shortcut for lrzip-next, lrzn.
+Update manpage.
+Remove .PHONY directive in Makefile.am to make doc directory.
+
 lrzip-next: January 27, 2024 v 0.12.6
 BUGFIX: Correct two MacOS related errors.
 1. write_fd() must limit buffer size to < 2G. Issue #88.
