@@ -40,6 +40,9 @@
 # Set Threshold limit for LZO Test. Default 100. Set 1-99 to limit
 # THRESHOLD = 99
 
+# Set number of PROCESSORS to use and override threads identified. Must be >= 1.
+# PROCESSORS = ##
+
 # Hash Check on decompression, (-c)
 # HASHCHECK = YES
 
