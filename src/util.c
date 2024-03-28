@@ -324,6 +324,13 @@ bool read_config(rzip_control *control)
 				control->threshold = 100;
 			}
 		}
+		else if (isparameter(parameter, "processors")) {
+			control->threads = atoi(parametervalue);
+			if (control->threads < 1) {
+				print_err("CONF.FILE error. PROCESSORS value must be >= 1. Resetting to default. %d\n", PROCESSORS);
+				control->threads = PROCESSORS;
+			}
+		}
 		else if (isparameter(parameter, "hashcheck")) {
 			if (isparameter(parametervalue, "yes")) {
 				control->flags |= FLAG_CHECK;
@@ -449,12 +456,6 @@ bool read_config(rzip_control *control)
 	free(line);
 	free(msg);
 
-/*	fprintf(stderr, "\nWindow = %'d \
-		\nCompression Level = %'d \
-		\nThreshold = %1.2f \
-		\nOutput Directory = %s \
-		\nFlags = %'d\n", control->window,control->compression_level, control->threshold, control->outdir, control->flags);
-*/
 	return true;
 }
 
