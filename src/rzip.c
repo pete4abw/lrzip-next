@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
    Copyright (C) 2006-2016,2018 Con Kolivas
-   Copyright (C) 2020-2023 Peter Hyman
+   Copyright (C) 2020-2024 Peter Hyman
    Copyright (C) 1998 Andrew Tridgell
 */
 /* rzip compression algorithm */

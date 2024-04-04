@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
    Copyright (C) 2006-2016, 2021 Con Kolivas
-   Copyright (C) 2011, 2019, 2020-2023 Peter Hyman
+   Copyright (C) 2011, 2019, 2020-2024 Peter Hyman
    Copyright (C) 1998-2003 Andrew Tridgell
 */
 /* lrzip compression - main program */
@@ -110,7 +110,7 @@ static void usage(void)
 {
 	print_output("%s version %s\n", PACKAGE, PACKAGE_VERSION);
 	print_output("Copyright (C) Con Kolivas 2006-2021\n");
-	print_output("Copyright (C) Peter Hyman 2007-2022\n");
+	print_output("Copyright (C) Peter Hyman 2007-2024\n");
 	print_output("Based on rzip ");
 	print_output("Copyright (C) Andrew Tridgell 1998-2003\n\n");
 	print_output("Usage: lrzip-next [options] <file...>\n");
@@ -186,7 +186,7 @@ static void license(void)
 {
 	print_output("%s version %s\n\
 Copyright (C) Con Kolivas 2006-2016\n\
-Copyright (C) Peter Hyman 2007-2023\n\
+Copyright (C) Peter Hyman 2007-2024\n\
 Based on rzip Copyright (C) Andrew Tridgell 1998-2003\n\n\
 This is free software.  You may redistribute copies of it under the terms of\n\
 the GNU General Public License <http://www.gnu.org/licenses/gpl.html>.\n\
