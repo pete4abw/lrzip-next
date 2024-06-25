@@ -1,4 +1,4 @@
-LZMA SDK 23.01
+LZMA SDK 24.07
 --------------
 
 LZMA SDK provides the documentation, samples, header files,
@@ -140,6 +140,9 @@ bin/installer/   - example script to create installer that uses SFX module,
 bin/7zdec.exe    - simplified 7z archive decoder
 bin/7zr.exe      - 7-Zip console program (reduced version)
 bin/x64/7zr.exe  - 7-Zip console program (reduced version) (x64 version)
+bin/x64/7zdec.exe  - simplified 7z archive decoder (x64 version)
+bin/arm64/7zr.exe  - 7-Zip console program (reduced version) (arm64 version)
+bin/arm64/7zdec.exe  - simplified 7z archive decoder (arm64 version)
 bin/lzma.exe     - file->file LZMA encoder/decoder for Windows
 bin/7zS2.sfx     - small SFX module for installers (GUI version)
 bin/7zS2con.sfx  - small SFX module for installers (Console version)
