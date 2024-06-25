@@ -2,7 +2,7 @@
 .\" Comment lines for readability
 .\"
 .nh
-.TH "lrzip-next" 1 "March 2024" "lrzip-next Command Reference"
+.TH "lrzip-next" 1 "June 2024" "lrzip-next Command Reference"
 .SH "NAME"
 lrzip-next \- a large-file compression program
 .SH "SYNOPSIS"
@@ -51,6 +51,7 @@ Filtering Options (for all compression modes):
  \-\-ppc                   Use PPC filter
  \-\-sparc                 Use SPARC filter
  \-\-ia64                  Use IA64 filter
+ \-\-riscv                 Use RISC-V filter
  \-\-delta [=offset]       Use DELTA filter (offset 1 (default) - 15, then multiples of 16 to 256)
 Additional Compression Options:
  \-C, \-\-comment [comment] Add a comment up to 64 chars
@@ -244,6 +245,9 @@ Unconditionally use SPARC filter prior to compression. Works for all
 compression modes.
 .IP "\fB--ia64\fP"
 Unconditionally use IA64 filter prior to compression. Works for all
+compression modes.
+.IP "\fB--riscv\fP"
+Unconditionally use RISC-V filter prior to compression. Works for all
 compression modes.
 .IP "\fB--delta\fR [1\&.\&.31]\fP"
 Unconditionally use DELTA filter prior to compression. Works for all

@@ -1,3 +1,18 @@
+lrzip-next-0.13x file format
+Peter Hyman
+June 2024
+Adds RISC-V BCJ filter. Change to filter coding method at Byte 0x16
+The rest of magic header remains the same as 0.12x see below.
+
+Magic Data
+----------
+16	Filtering. 0=none, x86, ARM, ARMT, ARM64, PPC, SPARC, IA64, RISC-V (1..8)
+	-- OR --
+	Bit 7 will be set for Delta
+	Delta Offset, 1..32, stored as 0..31
+	stored as normal without byte shift used earlier.
+	Filtering is for all compression methods.
+
 lrzip-next-0.12x file format
 Peter Hyman
 July 2023
