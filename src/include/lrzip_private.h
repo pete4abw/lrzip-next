@@ -375,9 +375,14 @@ static inline unsigned char bzip3_prop_from_block_size(u32 bs)
  * 4 = PPC
  * 5 = SPARC
  * 6 = IA64
- * 8 = Delta
- * Updated 7/2023 to include ARM64
+ * 8 = RISC-V
+ * 128 = Delta
+ * Updated 6/2024 to include RISC-V
  * This alters the way filter for Delta is stored.
+ * Beginning with 0.13, Delta is stored independent
+ * of filter with high bit set. Delta Values will be stored 1-31 and ANDed with 128.
+ * Example: 0b10011111 will be DELTA coded offset 31. which would be a 256 byte Delta offset.
+ * Regular filters will be stored as is: 1-8.
 */
 #define FILTER_FLAG_X86		1
 #define FILTER_FLAG_ARM		2
@@ -386,13 +391,17 @@ static inline unsigned char bzip3_prop_from_block_size(u32 bs)
 #define FILTER_FLAG_SPARC	5
 #define FILTER_FLAG_IA64	6
 #define FILTER_FLAG_ARM64	7				// new for version 0.12
-#define FILTER_FLAG_DELTA	8				// value won't be stored
-#define OLD_FILTER_FLAG_DELTA	7				// for earlier versions
+#define FILTER_FLAG_RISCV	8				// new for version 0.13
+#define FILTER_FLAG_DELTA	128				// value stored in 0.13
 #define DEFAULT_DELTA		1				// delta diff is 1 by default
 #define FILTER_USED		(control->filter_flag > 0)
 #define FILTER_NOT_USED		(!FILTER_USED)
+
+/* these are for versions <= 0.12 */
+#define OLD_FILTER_FLAG_DELTA	7				// for earlier versions
 #define FILTER_MASK		0b00000111			// decode magic
 #define DELTA_OFFSET_MASK	0b11111000			// delta high 5 bits
+
 
 struct sliding_buffer {
 	uchar *buf_low;	/* The low window buffer */

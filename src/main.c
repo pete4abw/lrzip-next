@@ -139,6 +139,7 @@ static void usage(void)
 	print_output("	--ppc			Use PPC filter (for all compression modes)\n");
 	print_output("	--sparc			Use SPARC filter (for all compression modes)\n");
 	print_output("	--ia64			Use IA64 filter (for all compression modes)\n");
+	print_output("	--riscv			Use RISC-V filter (for all compression modes)\n");
 	print_output("	--delta	[1..31]		Use Delta filter (for all compression modes) (1 (default) - 15, then multiples of 16 to 256)\n");
 	print_output("    Additional Compression Options:\n");
 	print_output("	-C, --comment [comment]	Add a comment up to 64 chars\n");
@@ -268,7 +269,8 @@ static void show_summary(void)
 					((control->filter_flag == FILTER_FLAG_PPC) ? "PPC" :
 					((control->filter_flag == FILTER_FLAG_SPARC) ? "SPARC" :
 					((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
-					((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf?")))))))));
+					((control->filter_flag == FILTER_FLAG_RISCV) ? "RISC-V" :
+					((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf?"))))))))));
 				if (control->delta)
 					print_output(", offset - %'d", control->delta);
 				print_output("\n");
@@ -348,8 +350,9 @@ static struct option long_options[] = {
 	{"ppc",		no_argument,	0,	0},
 	{"sparc",	no_argument,	0,	0},
 	{"ia64",	no_argument,	0,	0},
-	{"delta",	optional_argument,	0,	0},	/* 50 */
-	{0,	0,	0,	0},				/* 51 */
+	{"riscv",	no_argument,	0,	0},		/* 50 */
+	{"delta",	optional_argument,	0,	0},
+	{0,	0,	0,	0},				/* 52 */
 };
 
 /* constants for ease of maintenance in getopt loop */
@@ -731,6 +734,9 @@ int main(int argc, char *argv[])
 						control->filter_flag = FILTER_FLAG_IA64;	// IA64
 						break;
 					case FILTERSTART+7:
+						control->filter_flag = FILTER_FLAG_RISCV;	// RISC-V
+						break;
+					case FILTERSTART+8:
 						control->filter_flag = FILTER_FLAG_DELTA;	// DELTA
 						/* Delta Values are 1-16, then multiples of 16 to 256 */
 						if (optarg) {

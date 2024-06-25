@@ -1588,7 +1588,8 @@ retry:
 				((control->filter_flag == FILTER_FLAG_PPC) ? "PPC" :
 				((control->filter_flag == FILTER_FLAG_SPARC) ? "SPARC" :
 				((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
-				((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf")))))))), current_thread);
+				((control->filter_flag == FILTER_FLAG_RISCV) ? "RISC-V" :
+				((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf"))))))))), current_thread);
 		if (control->filter_flag == FILTER_FLAG_X86) {
 			UInt32 x86State = Z7_BRANCH_CONV_ST_X86_STATE_INIT_VAL;
 			z7_BranchConvSt_X86_Enc(cti->s_buf, cti->s_len, 0, &x86State);
@@ -1608,10 +1609,13 @@ retry:
 		else if (control->filter_flag == FILTER_FLAG_SPARC) {
 			z7_BranchConv_SPARC_Enc(cti->s_buf, cti->s_len, 0);
 		}
-		if (control->filter_flag == FILTER_FLAG_IA64) {
+		else if (control->filter_flag == FILTER_FLAG_IA64) {
 			z7_BranchConv_IA64_Enc(cti->s_buf, cti->s_len, 0);
 		}
-		if (control->delta) {
+		else if (control->filter_flag == FILTER_FLAG_RISCV) {
+			z7_BranchConv_RISCV_Enc(cti->s_buf, cti->s_len, 0);
+		}
+		else if (control->filter_flag == FILTER_FLAG_DELTA) {
 			uchar delta_state[DELTA_STATE_SIZE];
 			Delta_Init(delta_state);
 			Delta_Encode(delta_state, control->delta, cti->s_buf,  cti->s_len);
@@ -1943,7 +1947,7 @@ retry:
 			if (control->filter_flag == FILTER_FLAG_IA64) {
 				z7_BranchConv_IA64_Dec(uci->s_buf, uci->u_len, 0);
 			}
-		} else {	// new version
+		} else {	// new version 0.12+
 			print_maxverbose("Restoring %s filter data post decompression for thread %'d...\n",
 					((control->filter_flag == FILTER_FLAG_X86) ? "x86" :
 					((control->filter_flag == FILTER_FLAG_ARM) ? "ARM" :
@@ -1952,7 +1956,8 @@ retry:
 					((control->filter_flag == FILTER_FLAG_PPC) ? "PPC" :
 					((control->filter_flag == FILTER_FLAG_SPARC) ? "SPARC" :
 					((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
-					((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf")))))))), current_thread);
+					((control->filter_flag == FILTER_FLAG_RISCV) ? "RISC-V" :
+					((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf"))))))))), current_thread);
 			if (control->filter_flag == FILTER_FLAG_X86) {
 				UInt32 x86State = Z7_BRANCH_CONV_ST_X86_STATE_INIT_VAL;
 				z7_BranchConvSt_X86_Dec(uci->s_buf, uci->u_len, 0, &x86State);
@@ -1975,7 +1980,11 @@ retry:
 			if (control->filter_flag == FILTER_FLAG_IA64) {
 				z7_BranchConv_IA64_Dec(uci->s_buf, uci->u_len, 0);
 			}
+			if (control->filter_flag == FILTER_FLAG_RISCV) {
+				z7_BranchConv_RISCV_Dec(uci->s_buf, uci->u_len, 0);
+			}
 		}
+		/* Regardless, Delta conversion the same */
 		if (control->delta) {
 			uchar delta_state[DELTA_STATE_SIZE];
 			Delta_Init(delta_state);
