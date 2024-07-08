@@ -824,6 +824,7 @@ static bool read_tmpinmagic(rzip_control *control, int fd_in)
 				break;
 			case 11:
 			case 12:
+			case 13:
 				bytes_to_read = MAGIC_LEN;
 				break;
 			default:
