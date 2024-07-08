@@ -826,6 +826,9 @@ static bool read_tmpinmagic(rzip_control *control, int fd_in)
 			case 12:
 				bytes_to_read = MAGIC_LEN;
 				break;
+			case 13:
+				bytes_to_read = MAGIC_LEN;
+				break;
 			default:
 				fatal("Unknown lrzip-next version %d. Aborting...\n", magic[5]);
 				break;
