@@ -126,7 +126,7 @@ static void usage(void)
 	print_output("	-L#, --level #		set lzma/bzip2/gzip compression level (1-9, default 7)\n");
 	print_output("	--fast			alias for -L1\n");
 	print_output("	--best			alias for -L9\n");
-	print_output("	--dictsize		Set lzma Dictionary Size for LZMA ds=0 to 40 expressed as 2<<11, 3<<11, 2<<12, 3<<12...2<<31-1\n");
+	print_output("	--dictsize		Set lzma Dictionary Size for LZMA ds=0 to 40 expressed as 2<<11, 3 * 2<<10, 2<<12, 3 * 2<<11...2<<31-1\n");
 	print_output("	--nobemt		Inhibit backend compressor using multiple threads\n");
 	print_output("	--zpaqbs		Set ZPAQ Block Size overriding defaults. 1-11, 2^zpaqbs * 1MB\n");
 	print_output("	--bzip3bs		Set bzip3 Block Size. 0-8, 32MB to 511MB.\n");

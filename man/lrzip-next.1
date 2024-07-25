@@ -38,7 +38,7 @@ Here is a summary of the options to lrzip-next.
  \-z, \-\-zpaq              zpaq compression (best, extreme compression, extremely slow)
  \-Z, \-\-zstd              zstd compression
  \-L, \-\-level level       Set lzma/bzip2/gzip compression level (1-9, default 7)
- \-\-dictsize = ds         Set lzma Dictionary Size for LZMA ds=0 to 40 expressed as 2<<11, 3<<11, 2<<12, 3<<12...2<<31-1
+ \-\-dictsize = ds         Set lzma Dictionary Size for LZMA ds=0 to 40 expressed as 2<<11, 3 * 2<<10, 2<<12, 3 * 2<<11...2<<31-1
  \-\-nobemt                Inhibit backend compressor using multiple threads
  \-\-zpaqbs = bs           Set ZPAQ Block Size overriding defaults. 1-11, 2^zpaqbs * 1MB
  \-\-bzip3bs = bs          Set BZIP3 Block Size. 0-8, 32MB - 511MB
