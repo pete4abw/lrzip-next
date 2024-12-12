@@ -15,6 +15,6 @@ lzmadoc_DATA = \
 	doc/README \
 	doc/README-Alloc \
 	doc/README.threading \
-	doc/README.ASMDecompress
+	doc/README.ASM
 
 EXTRA_DIST = $(lzmadoc_DATA)

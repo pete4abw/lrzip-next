@@ -1,12 +1,12 @@
 lrzip-next features file.
 
-Last updated 24-October 2023
+Last updated 25-June 2024
 
 Many new changes, not in the lrzip.
 
 COMPRESSION/DECOMPRESSION
-* latest LZMA (23.01) and ZPAQ (7.15) libraries (**ABI Compatible** with earlier versions. No need to re-compress files).
-* filters for x86, ARM, ARMT, ARM64 (new in 23.01), PPC, SPARC, IA64 processors, and delta.
+* latest LZMA (24.07) and ZPAQ (7.15) libraries (**ABI Compatible** with earlier versions. No need to re-compress files).
+* filters for x86, ARM, ARMT, ARM64 (new in 23.01), PPC, SPARC, IA64 RISC-V (new in 24.07)  processors, and delta.
 * ASM LZMA DeCompressor (up to 40% faster. x86_64 only).
 * ASM LZMA Match Finder (x86_64 only).
 * ability to set rzip pre-compression level independently of compression level.

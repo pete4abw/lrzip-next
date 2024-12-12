@@ -1,3 +1,7 @@
+lrzip-next: June 25, 2024 v 0.13.0
+Update to lzma SDK 24.07.
+Adds RISC-V BCJ filter.
+
 lrzip-next: March 28, 2024 v 0.12.7
 Add configuration item to lrzip.conf.
 PROCESSORS = ## which will always override found processors.

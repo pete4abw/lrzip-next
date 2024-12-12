@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
    Copyright (C) 2006-2016, 2021 Con Kolivas
-   Copyright (C) 2011, 2019, 2020-2023 Peter Hyman
+   Copyright (C) 2011, 2019, 2020-2024 Peter Hyman
    Copyright (C) 1998-2003 Andrew Tridgell
 */
 /* lrzip compression - main program */
@@ -110,7 +110,7 @@ static void usage(void)
 {
 	print_output("%s version %s\n", PACKAGE, PACKAGE_VERSION);
 	print_output("Copyright (C) Con Kolivas 2006-2021\n");
-	print_output("Copyright (C) Peter Hyman 2007-2022\n");
+	print_output("Copyright (C) Peter Hyman 2007-2024\n");
 	print_output("Based on rzip ");
 	print_output("Copyright (C) Andrew Tridgell 1998-2003\n\n");
 	print_output("Usage: lrzip-next [options] <file...>\n");
@@ -126,7 +126,7 @@ static void usage(void)
 	print_output("	-L#, --level #		set lzma/bzip2/gzip compression level (1-9, default 7)\n");
 	print_output("	--fast			alias for -L1\n");
 	print_output("	--best			alias for -L9\n");
-	print_output("	--dictsize		Set lzma Dictionary Size for LZMA ds=0 to 40 expressed as 2<<11, 3<<11, 2<<12, 3<<12...2<<31-1\n");
+	print_output("	--dictsize		Set lzma Dictionary Size for LZMA ds=0 to 40 expressed as 2<<11, 3 * 2<<10, 2<<12, 3 * 2<<11...2<<31-1\n");
 	print_output("	--nobemt		Inhibit backend compressor using multiple threads\n");
 	print_output("	--zpaqbs		Set ZPAQ Block Size overriding defaults. 1-11, 2^zpaqbs * 1MB\n");
 	print_output("	--bzip3bs		Set bzip3 Block Size. 0-8, 32MB to 511MB.\n");
@@ -139,6 +139,7 @@ static void usage(void)
 	print_output("	--ppc			Use PPC filter (for all compression modes)\n");
 	print_output("	--sparc			Use SPARC filter (for all compression modes)\n");
 	print_output("	--ia64			Use IA64 filter (for all compression modes)\n");
+	print_output("	--riscv			Use RISC-V filter (for all compression modes)\n");
 	print_output("	--delta	[1..31]		Use Delta filter (for all compression modes) (1 (default) - 15, then multiples of 16 to 256)\n");
 	print_output("    Additional Compression Options:\n");
 	print_output("	-C, --comment [comment]	Add a comment up to 64 chars\n");
@@ -186,7 +187,7 @@ static void license(void)
 {
 	print_output("%s version %s\n\
 Copyright (C) Con Kolivas 2006-2016\n\
-Copyright (C) Peter Hyman 2007-2023\n\
+Copyright (C) Peter Hyman 2007-2024\n\
 Based on rzip Copyright (C) Andrew Tridgell 1998-2003\n\n\
 This is free software.  You may redistribute copies of it under the terms of\n\
 the GNU General Public License <http://www.gnu.org/licenses/gpl.html>.\n\
@@ -268,7 +269,8 @@ static void show_summary(void)
 					((control->filter_flag == FILTER_FLAG_PPC) ? "PPC" :
 					((control->filter_flag == FILTER_FLAG_SPARC) ? "SPARC" :
 					((control->filter_flag == FILTER_FLAG_IA64) ? "IA64" :
-					((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf?")))))))));
+					((control->filter_flag == FILTER_FLAG_RISCV) ? "RISC-V" :
+					((control->filter_flag == FILTER_FLAG_DELTA) ? "Delta" : "wtf?"))))))))));
 				if (control->delta)
 					print_output(", offset - %'d", control->delta);
 				print_output("\n");
@@ -348,8 +350,9 @@ static struct option long_options[] = {
 	{"ppc",		no_argument,	0,	0},
 	{"sparc",	no_argument,	0,	0},
 	{"ia64",	no_argument,	0,	0},
-	{"delta",	optional_argument,	0,	0},	/* 50 */
-	{0,	0,	0,	0},				/* 51 */
+	{"riscv",	no_argument,	0,	0},		/* 50 */
+	{"delta",	optional_argument,	0,	0},
+	{0,	0,	0,	0},				/* 52 */
 };
 
 /* constants for ease of maintenance in getopt loop */
@@ -731,6 +734,9 @@ int main(int argc, char *argv[])
 						control->filter_flag = FILTER_FLAG_IA64;	// IA64
 						break;
 					case FILTERSTART+7:
+						control->filter_flag = FILTER_FLAG_RISCV;	// RISC-V
+						break;
+					case FILTERSTART+8:
 						control->filter_flag = FILTER_FLAG_DELTA;	// DELTA
 						/* Delta Values are 1-16, then multiples of 16 to 256 */
 						if (optarg) {
