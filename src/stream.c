@@ -617,7 +617,12 @@ static int bzip3_decompress_buf(rzip_control *control __UNUSED__, struct uncomp_
 
 	state = bz3_new(control->bzip3_block_size);
 
+/* call proper decode function based on compile time ABI check */
+#ifdef LIBBZ3_ABI1
+	dlen = bz3_decode_block(state, ucthread->s_buf, dlen, ucthread->c_len, ucthread->u_len);
+#else
 	dlen = bz3_decode_block(state, ucthread->s_buf, ucthread->c_len, ucthread->u_len);
+#endif
 	if (bz3_last_error(state) != BZ3_OK)
 		fatal("Failed to decompress with bz3 %s\n", bz3_strerror(state));
 
