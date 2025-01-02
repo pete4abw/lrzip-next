@@ -161,6 +161,17 @@ AC_CHECK_LIB(zstd, ZSTD_compress, ,
 	AC_MSG_ERROR([Could not find zstd library - please install libzstd-dev]))
 AC_CHECK_LIB(bzip3, bz3_compress, ,
 	AC_MSG_ERROR([Could not find bzip3 library - please install libbzip3-dev]))
+## Kludge to determine if new bzip3 library is used or not based on function name
+## bz3_decode_block()
+## Will allow for conditional compilation in bzip3_decompress_buf function.
+## Thanks @genivia-inc
+## Dr. Robert van Engelen
+
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[@%:@include <libbz3.h>]],
+		  [[struct bz3_state *s=0; uint8_t *b=0; bz3_decode_block(s,b,0,0,0)]])],
+		  [AC_DEFINE([LIBBZ3_ABI1],,[LIBBZ3 ABI check])],
+		  []
+		  )
 AC_CHECK_LIB(gpg-error, gpg_err_code_to_errno, ,
 	AC_MSG_ERROR([Could not find gpg-error library - please install libgpg-error-dev]))
 AC_CHECK_LIB(gcrypt, gcry_md_open, ,
