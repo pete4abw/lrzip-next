@@ -1,3 +1,8 @@
+lrzip-next: December 31, 2024 v 0.13.2
+Update to check for bzip3 version so correct
+ABI function calls are made. Applies to
+bzip3_decompress_buf at present.
+
 lrzip-next: June 25, 2024 v 0.13.0
 Update to lzma SDK 24.07.
 Adds RISC-V BCJ filter.
