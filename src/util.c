@@ -564,11 +564,17 @@ error:
 /* now use scrypt for key generation and hashing
  * same code used in some Bitcoins */
 
+/* 01/25, add check for error and adjust
+ * cost factor downward if total ram < memory  * required.
+ * memreq = 128 * cost factor * 8 */
+
 void lrz_stretch(rzip_control *control)
 {
 	gpg_error_t error;
+	gpg_err_code_t code_error;
 	const int parallelization = 1;
 	i64 costfactor;
+	i64 mem_required;
 	int i;
 
 	for (i = 1; i <= 30; i++)
@@ -578,12 +584,35 @@ void lrz_stretch(rzip_control *control)
 
 	print_maxverbose("SCRYPTing password: Cost factor %'d, Parallelization Factor: %'d\n", costfactor , parallelization);
 
+	/* now, check if there is enough memory */
+	mem_required = 1024 * costfactor; // 128 * 8 = 1024
+	if ( unlikely(mem_required > control->ramsize ) )
+	{
+		do
+		{
+			costfactor /= 2;
+			mem_required /=2;
+
+		} while ( control->ramsize < mem_required );
+		control->encloops = costfactor;	// reset encloops so decrypt will work
+
+		print_maxverbose( "Costfactor reduced to %'d due to ram limitations\n", costfactor );
+	}
+
+
 	error = gcry_kdf_derive(control->salt_pass, control->salt_pass_len, GCRY_KDF_SCRYPT, costfactor,
 			control->salt, SALT_LEN, parallelization,
 			HASH_LEN, control->hash);
 
 	if (unlikely(error))
-		fatal("Unable to hash password. Not enough memory? Error: %'d\n");
+	{
+		char buf[32];
+		/* separate error into source and code components */
+		code_error = gpg_err_code(error);
+		gpg_strerror_r( code_error, &buf[0], 32 ); // thread safe
+		fatal("Unable to hash password. Not enough memory? Error: %d - %s\n",
+				code_error, buf);
+	}
 }
 
 /* The block headers are all encrypted so we read the data and salt associated

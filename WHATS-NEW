@@ -1,3 +1,8 @@
+lrzip-next: January 10, 2025 v 0.13.3
+Add check for memory requirements for SCRYPT.
+control->encloops is used to determine costfactor.
+If too high, there will not be enough ram.
+
 lrzip-next: December 31, 2024 v 0.13.2
 Update to check for bzip3 version so correct
 ABI function calls are made. Applies to
