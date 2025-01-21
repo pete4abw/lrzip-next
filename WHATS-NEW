@@ -1,7 +1,10 @@
-lrzip-next: January 10, 2025 v 0.13.3
+lrzip-next: January 21, 2025 v 0.13.3
 Add check for memory requirements for SCRYPT.
 control->encloops is used to determine costfactor.
 If too high, there will not be enough ram.
+Rewrote lrz_stretch so that costfactor is only
+computed on COMPRESSION and stored as bytes 7 and 8
+of magic header in place of encryption loops.
 
 lrzip-next: December 31, 2024 v 0.13.2
 Update to check for bzip3 version so correct

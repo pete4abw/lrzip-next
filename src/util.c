@@ -2,7 +2,7 @@
 /*
    Copyright (C) 2006-2016, 2021 Con Kolivas
    Copyright (C) 2011 Serge Belyshev
-   Copyright (C) 2008, 2011, 2019-2024 Peter Hyman
+   Copyright (C) 2008, 2011, 2019-2025 Peter Hyman
    Copyright (C) 1998 Andrew Tridgell
 */
 
@@ -565,7 +565,7 @@ error:
  * same code used in some Bitcoins */
 
 /* 01/25, add check for error and adjust
- * cost factor downward if total ram < memory  * required.
+ * cost factor downward if total ram < memory required.
  * memreq = 128 * cost factor * 8 */
 
 void lrz_stretch(rzip_control *control)
@@ -575,30 +575,36 @@ void lrz_stretch(rzip_control *control)
 	const int parallelization = 1;
 	i64 costfactor;
 	i64 mem_required;
-	int i;
+	int byte1, byte2;	/* encloop bytes */
 
-	for (i = 1; i <= 30; i++)
-		if ( control->encloops < (1 << i) ) break;
+	byte1=control->salt[0];
+	byte2=(int) (control->salt[1]/2 * 2);	/* must be a power of 2 */
 
-	costfactor = (1 << i-1);
-
+	/* cost factor must also be a power of 2 */
+	costfactor = byte2 << byte1;
 	print_maxverbose("SCRYPTing password: Cost factor %'d, Parallelization Factor: %'d\n", costfactor , parallelization);
 
-	/* now, check if there is enough memory */
-	mem_required = 1024 * costfactor; // 128 * 8 = 1024
-	if ( unlikely(mem_required > control->ramsize ) )
+	if (!(DECOMPRESS || TEST_ONLY || INFO))
 	{
-		do
+		/* now, check if there is enough memory */
+		mem_required = 1024 * costfactor; // 128 * 8 = 1024
+		if ( unlikely(mem_required > control->ramsize ) )
 		{
-			costfactor /= 2;
-			mem_required /=2;
+			do
+			{
+				costfactor /= 2;
+				mem_required /=2;
+				byte1--;	/* reduce shift count */
 
-		} while ( control->ramsize < mem_required );
-		control->encloops = costfactor;	// reset encloops so decrypt will work
-
-		print_maxverbose( "Costfactor reduced to %'d due to ram limitations\n", costfactor );
+			} while ( control->ramsize < mem_required );
+			print_maxverbose( "Costfactor reduced to %'d due to ram limitations\n", costfactor );
+		}
+		/* now set salt bytes 0 and 1 */
+		control->salt[0] = (uchar) byte1;
+		control->salt[1] = (uchar) byte2;
+		control->salt_pass[0] = (uchar) byte1;
+		control->salt_pass[1] = (uchar) byte2;
 	}
-
 
 	error = gcry_kdf_derive(control->salt_pass, control->salt_pass_len, GCRY_KDF_SCRYPT, costfactor,
 			control->salt, SALT_LEN, parallelization,
