@@ -578,9 +578,15 @@ void lrz_stretch(rzip_control *control)
 	int byte1, byte2;	/* encloop bytes */
 
 	byte1=control->salt[0];
-	byte2=(int) (control->salt[1]/2 * 2);	/* must be a power of 2 */
+	/* cost factor must be a power of 2. This means that base^exponent must
+	 * equal cost factor. The nloops function used in lrzip is not needed
+	 * here since hashing is randomized by the salt, salted password, and
+	 * the cost factor. the nloops function also created two bytes, exponend
+	 * and base, and base is always >=128 and <255. However, only 128 is a
+	 * power of 2.
+	 */
+	byte2 = 128;
 
-	/* cost factor must also be a power of 2 */
 	costfactor = byte2 << byte1;
 	print_maxverbose("SCRYPTing password: Cost factor %'d, Parallelization Factor: %'d\n", costfactor , parallelization);
 
