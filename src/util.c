@@ -2,7 +2,7 @@
 /*
    Copyright (C) 2006-2016, 2021 Con Kolivas
    Copyright (C) 2011 Serge Belyshev
-   Copyright (C) 2008, 2011, 2019-2025 Peter Hyman
+   Copyright (C) 2008, 2011, 2019-2024 Peter Hyman
    Copyright (C) 1998 Andrew Tridgell
 */
 
@@ -562,11 +562,12 @@ error:
 }
 
 /* now use scrypt for key generation and hashing
- * same code used in some Bitcoins */
+ * same code used in some Bitcoins
+ * 01/25 cost factor is used and computed in
+ * the initialise function in lrzip.c.
+ * encloops is now retrieved from salt bytes
+ * [0] and [1] */
 
-/* 01/25, add check for error and adjust
- * cost factor downward if total ram < memory required.
- * memreq = 128 * cost factor * 8 */
 
 void lrz_stretch(rzip_control *control)
 {
@@ -574,43 +575,23 @@ void lrz_stretch(rzip_control *control)
 	gpg_err_code_t code_error;
 	const int parallelization = 1;
 	i64 costfactor;
-	i64 mem_required;
-	int byte1, byte2;	/* encloop bytes */
+	size_t encloops;
 
-	byte1=control->salt[0];
-	/* cost factor must be a power of 2. This means that base^exponent must
-	 * equal cost factor. The nloops function used in lrzip is not needed
-	 * here since hashing is randomized by the salt, salted password, and
-	 * the cost factor. the nloops function also created two bytes, exponend
-	 * and base, and base is always >=128 and <255. However, only 128 is a
-	 * power of 2.
-	 */
-	byte2 = 128;
-
-	costfactor = byte2 << byte1;
-	print_maxverbose("SCRYPTing password: Cost factor %'d, Parallelization Factor: %'d\n", costfactor , parallelization);
-
-	if (!(DECOMPRESS || TEST_ONLY || INFO))
+	if (control->major_version == 0 &&
+		control->minor_version < 14)
 	{
-		/* now, check if there is enough memory */
-		mem_required = 1024 * costfactor; // 128 * 8 = 1024
-		if ( unlikely(mem_required > control->ramsize ) )
-		{
-			do
-			{
-				costfactor /= 2;
-				mem_required /=2;
-				byte1--;	/* reduce shift count */
+		int i;
+		int exponent = (int) log2f((double) control->salt[1]);	// must be a power of 2
+		exponent = ( 1 << exponent );
+		/* use old version to compute cost factor */
+		encloops = exponent << control->salt[0];
+		for (i = 1; i <= 30; i++)
+			if ( encloops < (1 << i) ) break;
+		costfactor = (1 << --i);
+	} else	// new version 0.14
+		costfactor = (i64) pow(2,control->costfactor);
 
-			} while ( control->ramsize < mem_required );
-			print_maxverbose( "Costfactor reduced to %'d due to ram limitations\n", costfactor );
-		}
-		/* now set salt bytes 0 and 1 */
-		control->salt[0] = (uchar) byte1;
-		control->salt[1] = (uchar) byte2;
-		control->salt_pass[0] = (uchar) byte1;
-		control->salt_pass[1] = (uchar) byte2;
-	}
+	print_maxverbose("SCRYPTing password: Cost factor %'lld, Parallelization Factor: %'d\n", costfactor , parallelization);
 
 	error = gcry_kdf_derive(control->salt_pass, control->salt_pass_len, GCRY_KDF_SCRYPT, costfactor,
 			control->salt, SALT_LEN, parallelization,
@@ -623,10 +604,9 @@ void lrz_stretch(rzip_control *control)
 		code_error = gpg_err_code(error);
 		gpg_strerror_r( code_error, &buf[0], 32 ); // thread safe
 		fatal("Unable to hash password. Not enough memory? Error: %d - %s\n",
-				code_error, buf);
+			code_error, buf);
 	}
 }
-
 /* The block headers are all encrypted so we read the data and salt associated
  * with them, decrypt the data, then return the decrypted version of the
  * values */

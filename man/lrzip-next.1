@@ -64,9 +64,10 @@ Additional Compression Options:
  \-O, \-\-outdir directory  specify the output directory when -o is not used
  \-S, \-\-suffix suffix     specify compressed suffix (default '.lrz')
 Low level Compression Options:
- \-N, \-\-nice-level value  Set nice value to value (default 19)
+ \-\-costfactor value      Force SCRYPT costfactor to 2^N where N is between 10 and 40 (1KB to 1TB)
  \-m, \-\-maxram size       Set maximum available ram in hundreds of MB
                          overrides detected amount of available ram
+ \-N, \-\-nice-level value  Set nice value to value (default 19)
  \-R, \-\-rzip-level level  Set independent RZIP Compression Level (1-9) for pre-processing (default=compression level)
  \-T, \-\-threshold [limit] Disable LZ4 compressibility testing OR set limit to determine compressibiity (1-99)
  \-U, \-\-unlimited         Use unlimited window size beyond ramsize (potentially much slower)
@@ -316,13 +317,19 @@ cannot be combined with \-o.
 Set the compression suffix. The default is '.lrz'.
 .\"
 .SH "Low Level Compression Options:"
+.IP "\fB--costfactor \fIcostfactor\fR"
+Specify the cost factor for SCRYPT key derivation. Accepted values are
+10-40 expressed as a 2s exponent (1KB to 1TB). Default if option not
+used is the power of 2 / 1024 less than available RAM.
+Ex. If available RAM is 16GB (2^34), the power of 2 less than that is 8GB (2^33).
+8GB / 1024 = 8MB (2^23). RAM requirements for costfactor is N * 128 * 8.
+.IP "\fB-m | --maxram \fImaxram\fR"
+Specify the maximum system memory in 100MB blocks. Overrides detected ram.
+Ex. 40=4GB.
 .IP "\fB-N | --nice-val \fIvalue\fP"
 The default nice value is 19. This option can be used to set the priority
 scheduling for the lrzip-next backup or decompression. Valid nice values are
 from \-20 to 19. Note this does NOT speed up or slow down compression.
-.IP "\fB-m | --maxram \fImaxram\fR"
-Specify the maximum system memory in 100MB blocks. Overrides detected ram.
-Ex. 40=4GB.
 .IP "\fB-R | --rzip-level \fIlevel\fP"
 Specify the rzip pre-processing compression level. If not set, will default
 to compression level.

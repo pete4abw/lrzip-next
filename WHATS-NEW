@@ -1,10 +1,14 @@
-lrzip-next: January 21, 2025 v 0.13.3
-Add check for memory requirements for SCRYPT.
-control->encloops is used to determine costfactor.
-If too high, there will not be enough ram.
-Rewrote lrz_stretch so that costfactor is only
-computed on COMPRESSION and stored as bytes 7 and 8
-of magic header in place of encryption loops.
+lrzip-next: January 28, 2025 v 0.14.0
+Rewrite of lrz_stretch and costfactor computation.
+Removal of nloops, enc_loops functions and #define
+constants for encloops computation. No longer needed.
+Cost factor stored as 1 byte, 2s exponent between
+10 and 40 as per spec. Costfactor value will be
+2^exponent that is less than available ram/1024 by default.
+Add option --costfactor=N where N is between 10 and 40
+to override computed cost factor. High values may cause
+excessive use of swap space or end in an error.
+Salt value will be costfactor byte + 7 nonce values.
 
 lrzip-next: December 31, 2024 v 0.13.2
 Update to check for bzip3 version so correct

@@ -40,6 +40,7 @@
 #include <dirent.h>
 #include <getopt.h>
 #include <libgen.h>
+#include <math.h>
 
 #include "lrzip_core.h"
 #include "rzip.h"
@@ -152,9 +153,10 @@ static void usage(void)
 	print_output("	-O, --outdir directory	specify the output directory when -o is not used\n");
 	print_output("	-S, --suffix suffix	specify compressed suffix (default '.lrz')\n");
 	print_output("    Low level Compression Options:\n");
-	print_output("	-N, --nice-level value	Set nice value to value (default 19)\n");
+	print_output("	--costfactor value	Force SCRYPT costfactor to 2^N where N is between 10 and 40 (1KB to 1TB)\n");
 	print_output("	-m, --maxram size	Set maximum available ram in hundreds of MB\n\t\t\t\tOverrides detected amount of available ram. \
 Useful for testing\n");
+	print_output("	-N, --nice-level value	Set nice value to value (default 19)\n");
 	print_output("	-R, --rzip-level level	Set independent RZIP Compression Level (1-9) for pre-processing (default=compression level)\n");
 	print_output("	-T, --threshold [limit]	Disable LZ4 compressibility testing OR set limit to determine compressibiity (1-99)\n\t\t\t\t\
 Note: Since limit is optional, the short option must not have a space. e.g. -T75, not -T 75\n");
@@ -294,7 +296,6 @@ static void show_summary(void)
 			}
 			if (UNLIMITED)
 				print_verbose("Using Unlimited Window size\n");
-			print_maxverbose("Storage time in seconds %'"PRId64"\n", control->secs);
 		}
 	}
 }
@@ -351,13 +352,15 @@ static struct option long_options[] = {
 	{"sparc",	no_argument,	0,	0},
 	{"ia64",	no_argument,	0,	0},
 	{"riscv",	no_argument,	0,	0},		/* 50 */
-	{"delta",	optional_argument,	0,	0},
-	{0,	0,	0,	0},				/* 52 */
+	{"delta",	optional_argument,	0,	0},	/* 51 FILTEREND */
+	{"costfactor",	required_argument,	0,	0},
+	{0,	0,	0,	0},				/* 53 */
 };
 
 /* constants for ease of maintenance in getopt loop */
 #define LONGSTART	37
 #define FILTERSTART	43
+#define FILTEREND	51
 
 static void set_stdout(struct rzip_control *control)
 {
@@ -749,6 +752,16 @@ int main(int argc, char *argv[])
 						} else
 							control->delta = DEFAULT_DELTA;		// 1 is default
 						break;
+					case FILTEREND+1:
+						if (optarg) {
+							i=strtol(optarg, &endptr, 10);
+							if (*endptr)
+								fatal("Extra characters after delta offset: \'%s\'\n", endptr);
+							if (i < 10 || i > 40)
+								fatal("Cost factor 2s exponent must be between 10 and 40\n");
+							control->costfactor = control->salt[0] = i;
+						}
+						break;
 				}	//switch
 			}	//if filter used
 			break;	// break out of longopt switch
@@ -776,6 +789,13 @@ int main(int argc, char *argv[])
 	if ( !control->hash_code ) control->hash_code = 1;
 	/* IF using encryption and encryption method not defined, make it AES128 */
 	if ( ENCRYPT && !control->enc_code ) control->enc_code = 1;
+	if ( ENCRYPT && control->costfactor == 0)	// Only set if not already by command line
+	{
+		/* set default costfactor cf between 10 and 40
+		 * costfactor ram requirements are N*128*8 */
+		int cf = (int) log2f((double) control->ramsize);
+		control->costfactor = control->salt[0] = cf-10;
+	}
 
 	/* now set hash, crc, or encryption pointers
 	 * codes are either set in initialise function or

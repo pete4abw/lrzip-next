@@ -127,21 +127,6 @@ i64 get_ram(rzip_control *control)
 	return ramsize;
 }
 
-i64 nloops(i64 seconds, uchar *b1, uchar *b2)
-{
-	i64 nloops;
-	int nbits;
-
-	nloops = ARBITRARY_AT_EPOCH * pow(MOORE_TIMES_PER_SECOND, seconds);
-	if (nloops < ARBITRARY)
-		nloops = ARBITRARY;
-	for (nbits = 0; nloops > 255; nbits ++)
-		nloops = nloops >> 1;
-	*b1 = nbits;
-	*b2 = nloops;
-	return nloops << nbits;
-}
-
 
 bool write_magic(rzip_control *control)
 {
@@ -222,11 +207,6 @@ bool write_magic(rzip_control *control)
 	return true;
 }
 
-static inline i64 enc_loops(uchar b1, uchar b2)
-{
-	return (i64)b2 << (i64)b1;
-}
-
 // check for comments
 // Called only if comment length > 0
 
@@ -292,10 +272,12 @@ static void get_encryption(rzip_control *control, unsigned char *magic, unsigned
 		control->enc_code = *magic;
 		/* In encrypted files, the size field is used to store the salt
 		 * instead and the size is unknown, just like a STDOUT chunked
-		 * file */
+		 * file
+		 * In version 0.14, cost factor is stored in byte [0].
+		 * In earlier versions > 0.6x, enccryption loops were
+		 * bytes[0] and [1] where [1] << [0] would be loops */
 		memcpy(&control->salt, salt, 8);
 		control->st_size = 0;
-		control->encloops = enc_loops(control->salt[0], control->salt[1]);
 	} else if (ENCRYPT) {
 		print_err("Asked to decrypt a non-encrypted archive. Bypassing decryption. May fail!\n");
 		control->flags &= ~FLAG_ENCRYPT;
@@ -540,6 +522,7 @@ static bool get_magic(rzip_control *control, int fd_in, unsigned char *magic)
 		case 11:
 		case 12:
 		case 13: /* only filter changes */
+		case 14:
 			get_magic_v11(control, fd_in, magic);
 			break;
 		default:
@@ -582,6 +565,7 @@ static bool read_magic(rzip_control *control, int fd_in, i64 *expected_size)
 			case 11:
 			case 12:
 			case 13:
+			case 14:
 				bytes_to_read = MAGIC_LEN;
 				break;
 			default:
@@ -825,6 +809,7 @@ static bool read_tmpinmagic(rzip_control *control, int fd_in)
 			case 11:
 			case 12:
 			case 13:
+			case 14:
 				bytes_to_read = MAGIC_LEN;
 				break;
 			default:
@@ -1160,6 +1145,7 @@ bool get_fileinfo(rzip_control *control)
 				case 11:
 				case 12:
 				case 13:
+				case 14:
 					ofs = MAGIC_LEN + 2 + control->comment_length;
 					break;
 			}
@@ -1182,6 +1168,7 @@ bool get_fileinfo(rzip_control *control)
 					case 11:
 					case 12:
 					case 13:
+					case 14:
 						ofs = MAGIC_LEN + 2 + control->comment_length;
 						break;
 					default: fatal("Cannot decrypt earlier versions of lrzip-next\n");
@@ -1481,6 +1468,10 @@ bool compress_file(rzip_control *control)
 	int fd_in = -1, fd_out = -1, len = MAGIC_LEN + control->comment_length;
 	char *header;
 
+	/* this is needed so costfactor is coputed correctly in lrz_stretch */
+	control->major_version = LRZIP_MAJOR_VERSION;
+	control->minor_version = LRZIP_MINOR_VERSION;
+
 	header = calloc(len, 1);
 
 	control->flags |= FLAG_HASHED;
@@ -1748,7 +1739,6 @@ bool decompress_file(rzip_control *control)
 	if (ENCRYPT && !control->salt_pass_len) {	// Only get password if needed
 		if (unlikely(!get_hash(control, 0)))
 			return false;
-		print_maxverbose("Encryption hash loops %'"PRId64"\n", control->encloops);
 		if (!INFO)
 			print_verbose("%s Encryption Used\n", control->enc_label);
 	}
@@ -1821,7 +1811,6 @@ bool decompress_file(rzip_control *control)
 
 bool initialise_control(rzip_control *control)
 {
-	time_t now_t, tdiff;
 	char *eptr; 				/* for environment. OR Default to /tmp if none set */
 	size_t len;
 	/* set all values to 0 */
@@ -1840,22 +1829,7 @@ bool initialise_control(rzip_control *control)
 	control->page_size = PAGE_SIZE;
 	control->nice_val = 19;
 
-	/* The first 5 bytes of the salt is the time in seconds.
-	 * The next 2 bytes encode how many times to hash the password.
-	 * The last 9 bytes are random data, making 16 bytes of salt */
-	if (unlikely((now_t = time(NULL)) == ((time_t)-1)))
-		fatal("Failed to call time in main\n");
-	if (unlikely(now_t < T_ZERO)) {
-		print_output("Warning your time reads before the year 2011, check your system clock\n");
-		now_t = T_ZERO;
-	}
-	/* Workaround for CPUs no longer keeping up with Moore's law!
-	 * This way we keep the magic header format unchanged. */
-	tdiff = (now_t - T_ZERO) / 4;
-	now_t = T_ZERO + tdiff;
-	control->secs = now_t;
-	control->encloops = nloops(control->secs, control->salt, control->salt + 1);
-	gcry_create_nonce(control->salt + 2, 6);
+	gcry_create_nonce(control->salt, 8);
 
 	/* Get Temp Dir. Try variations on canonical unix environment variable */
 	eptr = getenv("TMPDIR");
