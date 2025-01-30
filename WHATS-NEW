@@ -9,6 +9,7 @@ Add option --costfactor=N where N is between 10 and 40
 to override computed cost factor. High values may cause
 excessive use of swap space or end in an error.
 Salt value will be costfactor byte + 7 nonce values.
+Add COSTFACTOR = option to lrzip.conf file.
 
 lrzip-next: December 31, 2024 v 0.13.2
 Update to check for bzip3 version so correct

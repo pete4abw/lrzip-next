@@ -427,6 +427,14 @@ bool read_config(rzip_control *control)
 			}
 			control->dictSize = ((p == 40) ? 0xFFFFFFFF : ((2 | ((p) & 1)) << ((p) / 2 + 11)));	// Slight modification to lzma2 spec 2^31 OK
 		}
+		else if (isparameter(parameter, "costfactor")) {
+			control->costfactor = atoi(parametervalue);
+			if (control->costfactor < 10 || control->costfactor > 40) {
+				print_err("CONF FILE error. Costfactor parameter must be between 10 and 40. Out of bounds %d. Resetting to default.\n", control->costfactor);
+				control->costfactor = 0;
+				continue;
+			}
+		}
 		else if (isparameter(parameter, "locale")) {
 			if (!isparameter(parametervalue, "DEFAULT")) {
 				if (isparameter(parametervalue, "NONE"))
