@@ -789,12 +789,15 @@ int main(int argc, char *argv[])
 	if ( !control->hash_code ) control->hash_code = 1;
 	/* IF using encryption and encryption method not defined, make it AES128 */
 	if ( ENCRYPT && !control->enc_code ) control->enc_code = 1;
-	if ( ENCRYPT && control->costfactor == 0)	// Only set if not already by command line
+	if (!DECOMPRESS && !INFO && !TEST_ONLY)			// Only set CF if compressing
 	{
-		/* set default costfactor cf between 10 and 40
-		 * costfactor ram requirements are N*128*8 */
-		int cf = (int) log2f((double) control->ramsize);
-		control->costfactor = control->salt[0] = cf-10;
+		if ( ENCRYPT && control->costfactor == 0)	// Only set if not already by command line
+		{
+			/* set default costfactor cf between 10 and 40
+			 * costfactor ram requirements are N*128*8 */
+				int cf = (int) log2f((double) control->ramsize);
+			control->costfactor = control->salt[0] = cf-10;
+		}
 	}
 
 	/* now set hash, crc, or encryption pointers

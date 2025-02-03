@@ -277,6 +277,7 @@ static void get_encryption(rzip_control *control, unsigned char *magic, unsigned
 		 * In earlier versions > 0.6x, enccryption loops were
 		 * bytes[0] and [1] where [1] << [0] would be loops */
 		memcpy(&control->salt, salt, 8);
+		control->costfactor = control->salt[0];
 		control->st_size = 0;
 	} else if (ENCRYPT) {
 		print_err("Asked to decrypt a non-encrypted archive. Bypassing decryption. May fail!\n");
