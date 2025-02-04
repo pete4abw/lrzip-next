@@ -105,6 +105,11 @@
 
 # ENCRYPT = NO | 1..MAXENC
 
+# Override the default method of determining costfactor.
+# Costfactor will be 2^N.
+
+# COSTFACTOR = 10...40
+
 # Override default LOCALE
 # Will control how radix and separators are presented.
 # DEFAULT (Current locale), NONE (ignore locale setting), or LOCALE value

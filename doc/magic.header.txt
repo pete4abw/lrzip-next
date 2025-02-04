@@ -1,3 +1,21 @@
+lrzip-next-0.14x file format
+Peter Hyman
+February 2025
+Update encryption salt bytes
+Magic Header length and contents unchanged from v0.13x.
+
+Magic Data
+----------
+6-13	Source File Decompressed Size
+or	If encrypted, Encryption Cost Factor 2s exponent + Salt (1 byte + 7 bytes)
+
+Cost factor byte value must be between 10 and 40 or 2^10 (1KB) to 2^40 (1TB).
+
+Encrypted salt (bytes 6->13 in magic if encrypted):
+0	2s exponent of Cost factor. 2^N = costfactor
+1->7	Random data
+(RCD0 is set to 8 bytes always on encrypted files)
+
 lrzip-next-0.13x file format
 Peter Hyman
 June 2024

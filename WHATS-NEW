@@ -1,3 +1,16 @@
+lrzip-next: February 4, 2025 v 0.14.0
+Rewrite of lrz_stretch and costfactor computation.
+Removal of nloops, enc_loops functions and #define
+constants for encloops computation. No longer needed.
+Cost factor stored as 1 byte, 2s exponent between
+10 and 40 as per spec. Costfactor value will be
+2^exponent that is less than available ram/1024 by default.
+Add option --costfactor=N where N is between 10 and 40
+to override computed cost factor. High values may cause
+excessive use of swap space or end in an error.
+Salt value will be costfactor byte + 7 nonce values.
+Add COSTFACTOR = option to lrzip.conf.example file.
+
 lrzip-next: December 31, 2024 v 0.13.2
 Update to check for bzip3 version so correct
 ABI function calls are made. Applies to

@@ -1,4 +1,4 @@
-.TH "lrzip.conf" "5" "January 2009, updated September 2023" "lrzip-next"
+.TH "lrzip.conf" "5" "January 2009, updated January 2025" "lrzip-next"
 .SH "NAME"
 lrzip.conf \- Configuration File for lrzip-next
 .SH "DESCRIPTION"
@@ -118,6 +118,11 @@ Parameter values are not case sensitive except where specified\&.
 #  2 AES 256 - 256 bit AES with 32 Byte key and 16 Byte Initialization Vector
 
 # \fBENCRYPT = NO | 1..MAXENC\fP
+
+# Override the default method of determining costfactor.
+# Costfactor will be 2^N.
+
+# \fBCOSTFACTOR = 10...40\fP
 
 # Override default LOCALE
 # Will control how radix and separators are presented.
