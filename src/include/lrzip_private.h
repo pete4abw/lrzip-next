@@ -320,10 +320,11 @@ static inline unsigned char bzip3_prop_from_block_size(u32 bs)
 	ptr = NULL; \
 } while (0)
 
-/* Determine how many times to hash the password when encrypting, based on
+/* remove all encryption hash loop stuff
+ * Determine how many times to hash the password when encrypting, based on
  * the date such that we increase the number of loops according to Moore's
  * law relative to when the data is encrypted. It is then stored as a two
- * byte value in the header */
+ * byte value in the header
 #define MOORE 1.835          // world constant  [TIMES per YEAR]
 #define ARBITRARY  1000000   // number of sha2 calls per one second in 2011
 #define T_ZERO 1293840000    // seconds since epoch in 2011
@@ -331,6 +332,7 @@ static inline unsigned char bzip3_prop_from_block_size(u32 bs)
 #define SECONDS_IN_A_YEAR (365*86400)
 #define MOORE_TIMES_PER_SECOND pow (MOORE, 1.0 / SECONDS_IN_A_YEAR)
 #define ARBITRARY_AT_EPOCH (ARBITRARY * pow (MOORE_TIMES_PER_SECOND, -T_ZERO))
+*/
 
 #define FLAG_VERBOSE (FLAG_VERBOSITY | FLAG_VERBOSITY_MAX)
 #define FLAG_NOT_LZMA (FLAG_NO_COMPRESS | FLAG_LZO_COMPRESS | FLAG_BZIP2_COMPRESS \
@@ -523,10 +525,9 @@ struct rzip_control {
 	int fd_in;
 	int fd_out;
 	int fd_hist;
-	i64 encloops;
-	i64 secs;
 
 	/* encryption */
+	uchar costfactor;		// cost factor 2s exponent. Will plug into salt[0]
 	uchar enc_code;			// encryption code from magic header or command line
 	/* encryption key lengths will be determined at run time */
 	char *enc_label;		// encryption label

@@ -427,6 +427,14 @@ bool read_config(rzip_control *control)
 			}
 			control->dictSize = ((p == 40) ? 0xFFFFFFFF : ((2 | ((p) & 1)) << ((p) / 2 + 11)));	// Slight modification to lzma2 spec 2^31 OK
 		}
+		else if (isparameter(parameter, "costfactor")) {
+			control->costfactor = atoi(parametervalue);
+			if (control->costfactor < 10 || control->costfactor > 40) {
+				print_err("CONF FILE error. Costfactor parameter must be between 10 and 40. Out of bounds %d. Resetting to default.\n", control->costfactor);
+				control->costfactor = 0;
+				continue;
+			}
+		}
 		else if (isparameter(parameter, "locale")) {
 			if (!isparameter(parametervalue, "DEFAULT")) {
 				if (isparameter(parametervalue, "NONE"))
@@ -562,30 +570,51 @@ error:
 }
 
 /* now use scrypt for key generation and hashing
- * same code used in some Bitcoins */
+ * same code used in some Bitcoins
+ * 01/25 cost factor is used and computed in
+ * the initialise function in lrzip.c.
+ * encloops is now retrieved from salt bytes
+ * [0] and [1] */
+
 
 void lrz_stretch(rzip_control *control)
 {
 	gpg_error_t error;
+	gpg_err_code_t code_error;
 	const int parallelization = 1;
 	i64 costfactor;
-	int i;
+	size_t encloops;
 
-	for (i = 1; i <= 30; i++)
-		if ( control->encloops < (1 << i) ) break;
+	if (control->major_version == 0 &&
+		control->minor_version < 14)
+	{
+		int i;
+		int exponent = (int) log2f((double) control->salt[1]);	// must be a power of 2
+		exponent = ( 1 << exponent );
+		/* use old version to compute cost factor */
+		encloops = exponent << control->salt[0];
+		for (i = 1; i <= 30; i++)
+			if ( encloops < (1 << i) ) break;
+		costfactor = (1 << --i);
+	} else	// new version 0.14
+		costfactor = (i64) pow(2,control->costfactor);
 
-	costfactor = (1 << i-1);
-
-	print_maxverbose("SCRYPTing password: Cost factor %'d, Parallelization Factor: %'d\n", costfactor , parallelization);
+	print_maxverbose("SCRYPTing password: Cost factor %'lld, Parallelization Factor: %'d\n", costfactor , parallelization);
 
 	error = gcry_kdf_derive(control->salt_pass, control->salt_pass_len, GCRY_KDF_SCRYPT, costfactor,
 			control->salt, SALT_LEN, parallelization,
 			HASH_LEN, control->hash);
 
 	if (unlikely(error))
-		fatal("Unable to hash password. Not enough memory? Error: %'d\n");
+	{
+		char buf[32];
+		/* separate error into source and code components */
+		code_error = gpg_err_code(error);
+		gpg_strerror_r( code_error, &buf[0], 32 ); // thread safe
+		fatal("Unable to hash password. Not enough memory? Error: %d - %s\n",
+			code_error, buf);
+	}
 }
-
 /* The block headers are all encrypted so we read the data and salt associated
  * with them, decrypt the data, then return the decrypted version of the
  * values */
