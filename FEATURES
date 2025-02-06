@@ -1,6 +1,6 @@
 lrzip-next features file.
 
-Last updated 25-June 2024
+Last updated 06-February-2025
 
 Many new changes, not in the lrzip.
 
@@ -34,6 +34,7 @@ HASHING/ENCRYPTION
 * SCRYPT (Bitcoin style) Key Derivation.
 * 13 Hash options (see CURRENT_HASHES)
 * 2 Encryption options (see CURRENT_ENCMETHODS)
+* --costfactor=N option added to permit custom SCRYPT KDF hashing.
 * Configurable with `lrzip.conf` file
 
 BUILD
